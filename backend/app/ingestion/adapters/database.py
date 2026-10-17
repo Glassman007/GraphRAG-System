@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from backend.app.ingestion.adapters.base import FixtureJsonAdapter, checksum_payload
+from backend.app.ingestion.adapters.base import FixtureJsonAdapter, checksum_payload, credential_values
 from backend.app.ingestion.models import AdapterPage, SourceConfig, SourceRecordEnvelope
 from backend.app.services.phase3_utils import now_iso
 
@@ -19,7 +19,8 @@ class DatabaseAdapter(FixtureJsonAdapter):
     def health_check(self) -> dict[str, Any]:
         if self.config.fixture_path:
             return super().health_check()
-        return {"ok": bool(self.row_provider or self.config.settings.get("dsn_env")), "source_id": self.config.id, "live": True, "read_only": True}
+        creds = credential_values(self.config)
+        return {"ok": bool(self.row_provider or creds.get("dsn") or self.config.settings.get("dsn_env")), "source_id": self.config.id, "live": True, "read_only": True}
 
     def fetch(self, *, cursor: str | None = None, limit: int = 100) -> AdapterPage:
         if self.config.fixture_path:
@@ -33,7 +34,7 @@ class DatabaseAdapter(FixtureJsonAdapter):
                 import psycopg  # type: ignore
             except ImportError as exc:
                 raise RuntimeError("Live PostgreSQL ingestion requires optional psycopg") from exc
-            dsn = os.getenv(str(self.config.settings.get("dsn_env") or "INGESTION_DATABASE_DSN"))
+            dsn = credential_values(self.config).get("dsn") or os.getenv(str(self.config.settings.get("dsn_env") or "INGESTION_DATABASE_DSN"))
             query = self.config.settings.get("query")
             cursor_column = self.config.settings.get("cursor_column")
             if not dsn or not query or not cursor_column:

@@ -14,6 +14,7 @@ from backend.app.api_v1.models import (
     ActionExecuteExternal, ActionProposalExternal, BusFactorExternal, CheckpointRequestExternal,
     ClaimRevalidateExternal, CounterfactualExternal, EvidenceInvalidateExternal, InvestigationCreate,
     ErrorResponse, PageResponse, PlanCreateExternal, RetrievalRequestExternal, SituationCreate, TaskActorRequest,
+    SourceCreateExternal, SourceUpdateExternal, SourcePreviewExternal, SourceSyncExternal, IdentityResolveExternal,
 )
 from backend.app.api_v1.security import Principal, authenticate, client_for, require
 from backend.app.retrieval.models import RetrievalMode, RetrievalRequest
@@ -40,6 +41,7 @@ from backend.app.services.simulation_service import CounterfactualSimulationServ
 from backend.app.services.temporal_service import TemporalService
 from backend.app.services.work_planning_service import WorkPlanningService
 from backend.app.services.phase4_graph import GraphSnapshot, has_label
+from backend.app.ingestion.source_control import SourceControlService
 
 router = APIRouter(prefix="/api/v1", responses={400:{"model":ErrorResponse},401:{"model":ErrorResponse},403:{"model":ErrorResponse},404:{"model":ErrorResponse},409:{"model":ErrorResponse},422:{"model":ErrorResponse},429:{"model":ErrorResponse},503:{"model":ErrorResponse}})
 
@@ -106,7 +108,7 @@ def _active_execution(coord: CoordinationService, task_id: str) -> str | None:
 
 @router.get("/capabilities", tags=["System"], summary="List public capabilities")
 def capabilities():
-    return {"api_version":"v1","graph_reasoning":True,"planning":True,"coordination":True,"learning":True,"company_brain_analytics":True,"ingestion":True,"graphrag":True,"external_api":True}
+    return {"api_version":"v1","graph_reasoning":True,"planning":True,"coordination":True,"learning":True,"company_brain_analytics":True,"ingestion":True,"source_control":True,"human_interpretation":True,"graphrag":True,"external_api":True}
 
 @router.get("/session", tags=["System"], summary="Get authenticated principal context")
 def session(principal:Principal=Depends(authenticate)):
@@ -670,3 +672,121 @@ def retrieval_search(body:RetrievalRequestExternal,request:Request,principal:Pri
         except ValueError as exc:raise ApiError(422,"VALIDATION_FAILED",f"Unsupported retrieval mode: {raw}") from exc
     req=RetrievalRequest(query=body.query,tenant_id=principal.tenant_id,seed_entity_ids=body.seed_entity_ids,as_of=body.as_of,retrieval_modes=modes,max_results=body.max_results,max_graph_hops=body.max_graph_hops,metadata_filters=body.metadata_filters,writeback=True)
     return _retrieval_service_for(principal).search(req).model_dump(mode="json")
+
+
+# -------------------- Phase 13 Source Control --------------------
+def _sources(principal: Principal) -> SourceControlService:
+    return SourceControlService(client_for(principal))
+
+@router.get("/connectors", tags=["Sources"], summary="List supported connector definitions")
+def list_connectors(principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    return {"items": _sources(principal).list_connectors()}
+
+@router.get("/connectors/{connector_type}", tags=["Sources"], summary="Get connector definition")
+def get_connector(connector_type:str, principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).connector(connector_type)
+    except ValueError as exc: raise ApiError(404,"NOT_FOUND",str(exc)) from exc
+
+@router.get("/sources", tags=["Sources"], summary="List organization source instances")
+def list_sources(principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    return {"items": _sources(principal).list_sources()}
+
+@router.post("/sources", tags=["Sources"], status_code=201, summary="Create a source instance")
+def create_source(body:SourceCreateExternal, principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).create_source(body.model_dump(exclude_none=True), actor_id=principal.subject)
+    except FileExistsError as exc: raise ApiError(409,"CONFLICT","A source with this ID already exists.",details={"source_id":str(exc)}) from exc
+    except ValueError as exc: raise ApiError(422,"VALIDATION_FAILED",str(exc)) from exc
+
+@router.get("/sources/runs", tags=["Sources"], summary="List ingestion runs")
+def list_ingestion_runs(source_id:str|None=None, principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    return {"items": _sources(principal).list_runs(source_id=source_id)}
+
+@router.get("/sources/runs/{run_id}", tags=["Sources"], summary="Get ingestion run detail")
+def get_ingestion_run(run_id:str, principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).get_run(run_id)
+    except KeyError as exc: _not_found("IngestionRun",run_id)
+
+@router.get("/sources/identity-review", tags=["Sources"], summary="List unresolved ingestion identities")
+def list_identity_review(source_id:str|None=None,status:str="OPEN",principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    return {"items": _sources(principal).identity_review(source_id=source_id,status=status)}
+
+@router.post("/sources/identity-review/{review_id}/resolve", tags=["Sources"], summary="Resolve an ambiguous source identity")
+def resolve_identity(review_id:str,body:IdentityResolveExternal,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).resolve_identity(review_id,body.action,actor_id=principal.subject,canonical_id=body.canonical_id,reason=body.reason)
+    except KeyError as exc:_not_found("IdentityReview",review_id)
+    except ValueError as exc:raise ApiError(422,"VALIDATION_FAILED",str(exc)) from exc
+
+@router.get("/sources/{source_id}", tags=["Sources"], summary="Get a source instance")
+def get_source(source_id:str, principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).get_source(source_id)
+    except KeyError as exc:_not_found("Source",source_id)
+
+@router.patch("/sources/{source_id}", tags=["Sources"], summary="Update a source instance")
+def update_source(source_id:str,body:SourceUpdateExternal,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).update_source(source_id,body.model_dump(exclude_none=True),actor_id=principal.subject)
+    except KeyError as exc:_not_found("Source",source_id)
+
+@router.post("/sources/{source_id}/test", tags=["Sources"], summary="Test a source connection without ingesting")
+def test_source(source_id:str,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).test_connection(source_id,actor_id=principal.subject)
+    except KeyError as exc:_not_found("Source",source_id)
+
+@router.get("/sources/{source_id}/mapping", tags=["Sources"], summary="Preview source mapping")
+def source_mapping(source_id:str,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).mapping_preview(source_id)
+    except KeyError as exc:_not_found("Source",source_id)
+
+@router.post("/sources/{source_id}/preview", tags=["Sources"], summary="Dry-run ingestion preview")
+def preview_source(source_id:str,body:SourcePreviewExternal,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).preview(source_id,max_records=body.max_records)
+    except KeyError as exc:_not_found("Source",source_id)
+    except ValueError as exc:raise ApiError(422,"VALIDATION_FAILED",str(exc)) from exc
+
+@router.post("/sources/{source_id}/sync", tags=["Sources"], summary="Run source synchronization")
+def sync_source(source_id:str,body:SourceSyncExternal,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).sync(source_id,actor_id=principal.subject,mode=body.mode,max_records=body.max_records)
+    except KeyError as exc:_not_found("Source",source_id)
+    except ValueError as exc:raise ApiError(422,"VALIDATION_FAILED",str(exc)) from exc
+
+@router.post("/sources/{source_id}/disable", tags=["Sources"], summary="Disable future synchronization")
+def disable_source(source_id:str,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).set_enabled(source_id,False,actor_id=principal.subject)
+    except KeyError as exc:_not_found("Source",source_id)
+
+@router.post("/sources/{source_id}/enable", tags=["Sources"], summary="Enable synchronization")
+def enable_source(source_id:str,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).set_enabled(source_id,True,actor_id=principal.subject)
+    except KeyError as exc:_not_found("Source",source_id)
+
+@router.delete("/sources/{source_id}", tags=["Sources"], summary="Remove active source configuration while retaining provenance")
+def delete_source(source_id:str,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).delete_configuration(source_id,actor_id=principal.subject)
+    except KeyError as exc:_not_found("Source",source_id)
+
+@router.get("/sources/{source_id}/runs", tags=["Sources"], summary="List source ingestion runs")
+def source_runs(source_id:str,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:_sources(principal).get_source(source_id)
+    except KeyError as exc:_not_found("Source",source_id)
+    return {"items":_sources(principal).list_runs(source_id=source_id)}
+
+@router.get("/sources/{source_id}/records", tags=["Sources"], summary="Browse bounded source records")
+def source_records(source_id:str,limit:int=Query(50,ge=1,le=100),offset:int=Query(0,ge=0),principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:return _sources(principal).list_records(source_id,limit=limit,offset=offset)
+    except KeyError as exc:_not_found("Source",source_id)
+
+@router.get("/sources/{source_id}/errors", tags=["Sources"], summary="List source ingestion errors and review items")
+def source_errors(source_id:str,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:_sources(principal).get_source(source_id)
+    except KeyError as exc:_not_found("Source",source_id)
+    return {"items":_sources(principal).errors(source_id)}
+
+@router.get("/sources/{source_id}/identity-review", tags=["Sources"], summary="List identity issues for a source")
+def source_identity_review(source_id:str,principal:Principal=Depends(require("MANAGE_INGESTION"))):
+    try:_sources(principal).get_source(source_id)
+    except KeyError as exc:_not_found("Source",source_id)
+    return {"items":_sources(principal).identity_review(source_id=source_id)}
+
+@router.get("/lineage/entities/{entity_id}", tags=["Sources","Entities"], summary="Explain how GraphHacks learned an entity")
+def entity_lineage(entity_id:str,principal:Principal=Depends(require("READ_GRAPH"))):
+    try:return _sources(principal).lineage_for_entity(entity_id)
+    except KeyError as exc:_not_found("Entity",entity_id)

@@ -20,7 +20,7 @@ def project_root() -> Path:
     return ROOT
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def integration_client():
     graph_name = f"company_brain_test_{uuid.uuid4().hex[:8]}"
     settings = Settings(
@@ -30,12 +30,19 @@ def integration_client():
         falkordb_password=os.getenv("FALKORDB_PASSWORD") or None,
         tenant_id="northstar",
     )
+
     try:
         client = FalkorGraphClient(settings)
         client.health_check()
     except Exception as exc:
-        pytest.skip(f"FalkorDB integration instance is unavailable at {settings.falkordb_host}:{settings.falkordb_port}: {exc}")
+        pytest.skip(
+            f"FalkorDB integration instance is unavailable at "
+            f"{settings.falkordb_host}:{settings.falkordb_port}: {exc}"
+        )
+
     client.delete_graph()
     seed_all(client)
+
     yield client
+
     client.delete_graph()

@@ -248,3 +248,12 @@ No provider is marked `LIVE_VERIFIED` because no real GitHub/Jira/Slack/Teams/do
 - Thin v1 facades for anomalies, conflict authority, company-wide expertise and session permissions — **IMPLEMENTED**.
 - Vitest/RTL test suites + Playwright acceptance harness — **IMPLEMENTED IN CODE**.
 - Frontend build + live Playwright against FalkorDB — **NOT VERIFIED IN THIS SANDBOX** because npm registry resolution/node_modules and FalkorDB are unavailable.
+
+## Phase 13
+- Product-facing Source Control Plane: implemented.
+- Source test/preview/manual sync, runs, records, errors, identity review: implemented.
+- Server-side credential abstraction with opaque graph refs: implemented.
+- Human presentation adapters, Technical Mode and navigable entity lineage: implemented.
+- First-run onboarding and source health UI: implemented.
+- Background scheduling worker: not implemented; schedules are configuration-only.
+- Full live browser verification: requires local FalkorDB + frontend dependencies.

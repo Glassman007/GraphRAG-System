@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from backend.app.ingestion.adapters.base import FixtureJsonAdapter, checksum_payload
+from backend.app.ingestion.adapters.base import FixtureJsonAdapter, checksum_payload, credential_values
 from backend.app.ingestion.adapters.http_json import ConfiguredJsonHttpClient
 from backend.app.ingestion.models import AdapterPage, SourceConfig, SourceRecordEnvelope
 from backend.app.services.phase3_utils import now_iso
@@ -16,13 +16,13 @@ class SlackAdapter(FixtureJsonAdapter):
     def health_check(self) -> dict[str, Any]:
         if self.config.fixture_path:
             return super().health_check()
-        token = os.getenv(str(self.config.settings.get("token_env") or "SLACK_BOT_TOKEN"))
+        token = credential_values(self.config).get("token") or os.getenv(str(self.config.settings.get("token_env") or "SLACK_BOT_TOKEN"))
         return {"ok": bool(token and self.config.base_url), "source_id": self.config.id, "live": True, "configured": bool(token)}
 
     def fetch(self, *, cursor: str | None = None, limit: int = 100) -> AdapterPage:
         if self.config.fixture_path:
             return super().fetch(cursor=cursor, limit=limit)
-        token = os.getenv(str(self.config.settings.get("token_env") or "SLACK_BOT_TOKEN"))
+        token = credential_values(self.config).get("token") or os.getenv(str(self.config.settings.get("token_env") or "SLACK_BOT_TOKEN"))
         channel = self.config.settings.get("channel")
         if not token or not channel:
             raise RuntimeError("Slack live adapter is not configured")

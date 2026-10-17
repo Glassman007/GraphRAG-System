@@ -93,7 +93,7 @@ def main()->int:
         # (SourceRecord -> Artifact and Evidence -> Artifact). Remove every graph provenance
         # edge that puts this artifact into the scoped neighborhood; otherwise deleting only
         # one redundant edge would correctly leave the artifact reachable through the other.
-        provenance_types={"REFERENCES","DERIVED_FROM","HAS_ARTIFACT","DOCUMENTED_BY"}
+        provenance_types={"REFERENCES","DERIVED_FROM","HAS_ARTIFACT","DOCUMENTED_BY","PART_OF","ABOUT"}
         provenance_edges=[e for e in snap.edges_to(artifact_id,provenance_types)]
         removed=sum(delete_relationship(client,e.source,e.type,artifact_id) for e in provenance_edges)
         after=set(service.graph_scope(RetrievalRequest(query="region_scope",writeback=False,**base)).artifacts)

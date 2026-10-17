@@ -37,3 +37,6 @@ The primary investigation retrieval operation remains graph-first. Vector search
 ## OpenAPI
 
 Swagger is available at `/docs`. External endpoints use explicit tags, request models, response models where appropriate, summaries, descriptions, validation bounds, and shared error responses.
+
+## Phase 13 source-management API
+The external API now includes `/api/v1/connectors`, CRUD-style `/api/v1/sources`, connection test, dry-run preview, manual sync, enable/disable, ingestion run/record/error browsing, identity review/resolution and `/api/v1/lineage/entities/{entity_id}`. Source credentials are write-only secret material and are never returned. Live DB/API access is server-registered rather than arbitrary SQL/URL input.

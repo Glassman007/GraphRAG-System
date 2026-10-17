@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from backend.app.ingestion.adapters.base import FixtureJsonAdapter, checksum_payload
+from backend.app.ingestion.adapters.base import FixtureJsonAdapter, checksum_payload, credential_values
 from backend.app.ingestion.adapters.http_json import ConfiguredJsonHttpClient
 from backend.app.ingestion.models import AdapterPage, SourceRecordEnvelope
 from backend.app.services.phase3_utils import now_iso
@@ -10,13 +10,36 @@ class InternalApiAdapter(FixtureJsonAdapter):
     source_type = "internal_api"
     adapter_version = "internal-api-v1"
 
+    def health_check(self) -> dict[str, object]:
+        if self.config.fixture_path:
+            return super().health_check()
+        if not self.config.base_url:
+            return {"ok": False, "live": True, "message": "Internal API source is not configured"}
+        try:
+            path = str(self.config.settings.get("path") or "/records")
+            headers = dict(self.config.settings.get("headers") or {})
+            creds = credential_values(self.config)
+            if creds.get("token"):
+                headers.setdefault("Authorization", f"Bearer {creds['token']}")
+            client = ConfiguredJsonHttpClient(base_url=self.config.base_url, headers=headers)
+            client.get_json(path, query={"limit": 1})
+            return {"ok": True, "live": True, "message": "Registered internal API is reachable"}
+        except PermissionError:
+            raise
+        except Exception as exc:
+            return {"ok": False, "live": True, "message": str(exc)}
+
     def fetch(self, *, cursor: str | None = None, limit: int = 100) -> AdapterPage:
         if self.config.fixture_path:
             return super().fetch(cursor=cursor, limit=limit)
         if not self.config.base_url:
             raise RuntimeError("Internal API source is not configured")
         path = str(self.config.settings.get("path") or "/records")
-        client = ConfiguredJsonHttpClient(base_url=self.config.base_url, headers=dict(self.config.settings.get("headers") or {}))
+        headers = dict(self.config.settings.get("headers") or {})
+        creds = credential_values(self.config)
+        if creds.get("token"):
+            headers.setdefault("Authorization", f"Bearer {creds["token"]}")
+        client = ConfiguredJsonHttpClient(base_url=self.config.base_url, headers=headers)
         payload = client.get_json(path, query={"cursor": cursor, "limit": min(limit, 500)})
         rows = payload.get("records", payload if isinstance(payload, list) else [])
         fetched = now_iso()

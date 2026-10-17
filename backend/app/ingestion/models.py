@@ -56,14 +56,22 @@ class SourceConfig(BaseModel):
     mapping_version: str = "phase9-v1"
     fixture_path: str | None = None
     settings: dict[str, Any] = Field(default_factory=dict)
+    credential_ref: str | None = None
+    connection_config: dict[str, Any] = Field(default_factory=dict)
+    scope_config: dict[str, Any] = Field(default_factory=dict)
+    mapping_profile: str | None = None
+    expected_sync_interval_minutes: int | None = None
 
     def public_dict(self) -> dict[str, Any]:
         payload = self.model_dump()
-        # Server-side config may contain environment-variable names, but never resolved secrets.
-        for key in list(payload.get("settings", {})):
-            if any(token in key.lower() for token in ("token", "password", "secret", "cookie", "private_key")):
-                payload["settings"][key] = "<redacted-config-reference>"
-        return payload
+        sensitive = ("token", "password", "secret", "cookie", "private_key", "authorization", "dsn")
+        def redact(value: Any) -> Any:
+            if isinstance(value, dict):
+                return {k: ("<redacted-config-reference>" if any(t in str(k).lower() for t in sensitive) else redact(v)) for k, v in value.items()}
+            if isinstance(value, list):
+                return [redact(v) for v in value]
+            return value
+        return redact(payload)
 
 
 class ArtifactPayload(BaseModel):

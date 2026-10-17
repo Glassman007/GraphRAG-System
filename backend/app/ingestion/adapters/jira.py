@@ -4,7 +4,7 @@ import base64
 import os
 from typing import Any
 
-from backend.app.ingestion.adapters.base import FixtureJsonAdapter, checksum_payload
+from backend.app.ingestion.adapters.base import FixtureJsonAdapter, checksum_payload, credential_values
 from backend.app.ingestion.adapters.http_json import ConfiguredJsonHttpClient
 from backend.app.ingestion.models import AdapterPage, SourceConfig, SourceRecordEnvelope
 from backend.app.services.phase3_utils import now_iso
@@ -17,21 +17,27 @@ class JiraAdapter(FixtureJsonAdapter):
     def health_check(self) -> dict[str, Any]:
         if self.config.fixture_path:
             return super().health_check()
-        user = os.getenv(str(self.config.settings.get("user_env") or "JIRA_EMAIL")) or os.getenv("JIRA_USER")
-        token = os.getenv(str(self.config.settings.get("token_env") or "JIRA_TOKEN"))
+        creds = credential_values(self.config)
+        user = creds.get("username") or creds.get("email") or os.getenv(str(self.config.settings.get("user_env") or "JIRA_EMAIL")) or os.getenv("JIRA_USER")
+        token = creds.get("token") or os.getenv(str(self.config.settings.get("token_env") or "JIRA_TOKEN"))
         return {"ok": bool(self.config.base_url and user and token), "source_id": self.config.id, "live": True, "configured": bool(user and token)}
 
     def fetch(self, *, cursor: str | None = None, limit: int = 100) -> AdapterPage:
         if self.config.fixture_path:
             return super().fetch(cursor=cursor, limit=limit)
-        user = os.getenv(str(self.config.settings.get("user_env") or "JIRA_EMAIL")) or os.getenv("JIRA_USER")
-        token = os.getenv(str(self.config.settings.get("token_env") or "JIRA_TOKEN"))
+        creds = credential_values(self.config)
+        user = creds.get("username") or creds.get("email") or os.getenv(str(self.config.settings.get("user_env") or "JIRA_EMAIL")) or os.getenv("JIRA_USER")
+        token = creds.get("token") or os.getenv(str(self.config.settings.get("token_env") or "JIRA_TOKEN"))
         if not self.config.base_url or not user or not token:
             raise RuntimeError("Jira live adapter is not configured")
         auth = base64.b64encode(f"{user}:{token}".encode()).decode()
         client = ConfiguredJsonHttpClient(base_url=self.config.base_url, headers={"Authorization": f"Basic {auth}", "Accept": "application/json"})
         start = int(cursor or 0)
-        payload = client.get_json("/rest/api/3/search", query={"startAt": start, "maxResults": min(limit, 100), "jql": self.config.settings.get("jql", "order by updated asc")})
+        selected=[str(x) for x in (self.config.scope_config.get("selected") or []) if str(x).replace("-","").replace("_","").isalnum()]
+        jql=self.config.settings.get("jql")
+        if not jql and selected:
+            jql="project in (" + ",".join(f'\"{x}\"' for x in selected) + ") order by updated asc"
+        payload = client.get_json("/rest/api/3/search", query={"startAt": start, "maxResults": min(limit, 100), "jql": jql or "order by updated asc"})
         fetched = now_iso()
         records = []
         for issue in payload.get("issues", [])[:limit]:

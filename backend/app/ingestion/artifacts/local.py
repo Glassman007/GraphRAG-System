@@ -2,121 +2,91 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
-import re
-import shutil
-from datetime import datetime, timezone
 from pathlib import Path
 
-from backend.app.ingestion.artifacts.base import DEFAULT_INLINE_THRESHOLD_BYTES, ArtifactStore, payload_bytes
+from backend.app.ingestion.artifacts.base import ArtifactStore
 from backend.app.ingestion.models import ArtifactMetadata, ArtifactPayload
-
-PAYLOAD_FILE = "payload.bin"
-METADATA_FILE = "metadata.json"
-INDEX_DIR = "_index"
-_UNSAFE = re.compile(r"[^A-Za-z0-9_.-]")
-_ARTIFACT_ID = re.compile(r"^ART-[0-9A-F]{24}$")
-
-
-def _segment(value: str) -> str:
-    cleaned = _UNSAFE.sub("_", value).strip(".") or "_"
-    return cleaned[:96]
+from backend.app.services.phase6_utils import now_iso
 
 
 class LocalArtifactStore(ArtifactStore):
-    """Deterministic filesystem ArtifactStore.
-
-    Layout: <root>/<tenant>/<source_type>/<sha[:2]>/<sha>/{payload.bin,metadata.json}
-    plus <root>/_index/<artifact_id>.json pointing at the payload directory.
-    The artifact id is derived from tenant + source type + sha256, so reingesting identical
-    content reuses the same physical object.
-    """
-
-    def __init__(self, root: str | os.PathLike[str], *, inline_threshold_bytes: int = DEFAULT_INLINE_THRESHOLD_BYTES):
-        super().__init__(inline_threshold_bytes=inline_threshold_bytes)
+    def __init__(self, root: str | Path, *, inline_threshold_bytes: int = 16_384):
         self.root = Path(root)
+        self.inline_threshold_bytes = int(inline_threshold_bytes)
+        if self.inline_threshold_bytes < 1:
+            raise ValueError("inline_threshold_bytes must be positive")
+        self.root.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
-    def artifact_id_for(tenant_id: str, source_type: str, sha256: str) -> str:
-        digest = hashlib.sha256(f"{tenant_id}|{source_type}|{sha256}".encode("utf-8")).hexdigest()[:24].upper()
-        return f"ART-{digest}"
+    def _bytes(payload: ArtifactPayload) -> bytes:
+        return payload.content if isinstance(payload.content, bytes) else payload.content.encode("utf-8")
 
-    def _index_path(self, artifact_id: str) -> Path | None:
-        if not _ARTIFACT_ID.match(artifact_id):
-            return None
-        return self.root / INDEX_DIR / f"{artifact_id}.json"
-
-    def _directory(self, artifact_id: str) -> Path | None:
-        index = self._index_path(artifact_id)
-        if index is None or not index.is_file():
-            return None
-        relative = json.loads(index.read_text(encoding="utf-8"))["path"]
-        directory = (self.root / relative).resolve()
-        if self.root.resolve() not in directory.parents:
-            return None
-        return directory
+    def should_externalize(self, payload: ArtifactPayload) -> bool:
+        from backend.app.ingestion.models import ArtifactType
+        always = {ArtifactType.PDF, ArtifactType.IMAGE, ArtifactType.LOG, ArtifactType.TRACE, ArtifactType.SOURCE_FILE, ArtifactType.ARCHIVE, ArtifactType.DOCUMENT}
+        return payload.artifact_type in always or len(self._bytes(payload)) > self.inline_threshold_bytes
 
     def put(self, payload: ArtifactPayload, *, tenant_id: str, source_type: str, source_record_id: str) -> ArtifactMetadata:
-        data = payload_bytes(payload)
-        sha = hashlib.sha256(data).hexdigest()
-        artifact_id = self.artifact_id_for(tenant_id, source_type, sha)
-        relative = Path(_segment(tenant_id)) / _segment(source_type) / sha[:2] / sha
-        directory = self.root / relative
-        existing = self.metadata(artifact_id)
-        if existing is not None and (directory / PAYLOAD_FILE).is_file():
-            return existing
-
-        directory.mkdir(parents=True, exist_ok=True)
-        payload_path = directory / PAYLOAD_FILE
-        tmp = payload_path.with_suffix(".tmp")
-        tmp.write_bytes(data)
-        os.replace(tmp, payload_path)
-
+        data = self._bytes(payload)
+        digest = hashlib.sha256(data).hexdigest()
+        artifact_id = f"ART-{digest[:24].upper()}"
+        folder = self.root / tenant_id / source_type / digest[:2] / digest
+        folder.mkdir(parents=True, exist_ok=True)
+        content_path = folder / "payload.bin"
+        if not content_path.exists():
+            content_path.write_bytes(data)
+        created_at = now_iso()
         meta = ArtifactMetadata(
             artifact_id=artifact_id,
-            uri=payload_path.resolve().as_uri(),
-            sha256=sha,
+            uri=content_path.resolve().as_uri(),
+            sha256=digest,
             size_bytes=len(data),
             mime_type=payload.mime_type,
             artifact_type=payload.artifact_type,
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=created_at,
             source_type=source_type,
             source_record_id=source_record_id,
             retention_class=payload.retention_class,
         )
-        (directory / METADATA_FILE).write_text(json.dumps(meta.model_dump(mode="json"), indent=2, sort_keys=True), encoding="utf-8")
-        index = self.root / INDEX_DIR / f"{artifact_id}.json"
-        index.parent.mkdir(parents=True, exist_ok=True)
-        index.write_text(json.dumps({"path": relative.as_posix()}), encoding="utf-8")
+        meta_path = folder / "metadata.json"
+        if not meta_path.exists():
+            meta_path.write_text(meta.model_dump_json(indent=2), encoding="utf-8")
         return meta
 
+    def _find_meta(self, artifact_id: str) -> Path | None:
+        for path in self.root.glob("*/*/*/*/metadata.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if data.get("artifact_id") == artifact_id:
+                return path
+        return None
+
     def get(self, artifact_id: str) -> bytes:
-        directory = self._directory(artifact_id)
-        if directory is None or not (directory / PAYLOAD_FILE).is_file():
-            raise KeyError(f"Artifact not found: {artifact_id}")
-        data = (directory / PAYLOAD_FILE).read_bytes()
-        meta = self.metadata(artifact_id)
-        if meta is not None and hashlib.sha256(data).hexdigest() != meta.sha256:
-            raise ValueError(f"Artifact integrity check failed: {artifact_id}")
-        return data
+        meta = self._find_meta(artifact_id)
+        if meta is None:
+            raise KeyError(artifact_id)
+        return (meta.parent / "payload.bin").read_bytes()
 
     def exists(self, artifact_id: str) -> bool:
-        directory = self._directory(artifact_id)
-        return directory is not None and (directory / PAYLOAD_FILE).is_file()
+        return self._find_meta(artifact_id) is not None
 
     def metadata(self, artifact_id: str) -> ArtifactMetadata | None:
-        directory = self._directory(artifact_id)
-        if directory is None or not (directory / METADATA_FILE).is_file():
+        meta = self._find_meta(artifact_id)
+        if meta is None:
             return None
-        return ArtifactMetadata.model_validate_json((directory / METADATA_FILE).read_text(encoding="utf-8"))
+        return ArtifactMetadata.model_validate_json(meta.read_text(encoding="utf-8"))
 
     def delete_if_safe(self, artifact_id: str) -> bool:
-        """Remove the physical payload. Callers own the graph-side reference check."""
-        directory = self._directory(artifact_id)
-        if directory is None:
+        meta = self._find_meta(artifact_id)
+        if meta is None:
             return False
-        shutil.rmtree(directory, ignore_errors=True)
-        index = self._index_path(artifact_id)
-        if index is not None:
-            index.unlink(missing_ok=True)
+        # Caller is responsible for proving there are no graph references.
+        (meta.parent / "payload.bin").unlink(missing_ok=True)
+        meta.unlink(missing_ok=True)
+        try:
+            meta.parent.rmdir()
+        except OSError:
+            pass
         return True

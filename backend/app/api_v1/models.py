@@ -94,3 +94,45 @@ class CounterfactualExternal(BaseModel):
 class BusFactorExternal(BaseModel):
     actor_ids: list[str] = Field(min_length=1, max_length=50)
     as_of: str | None = None
+
+class SourceCreateExternal(BaseModel):
+    source_id: str | None = None
+    display_name: str = Field(min_length=1)
+    connector_type: str = Field(min_length=1)
+    description: str = ""
+    source_instance: str | None = None
+    connection_mode: str = "fixture"
+    connection_config: dict[str, Any] = Field(default_factory=dict)
+    credentials: dict[str, Any] = Field(default_factory=dict)
+    scope_config: dict[str, Any] = Field(default_factory=dict)
+    mapping_profile: str | None = None
+    trust_class: str = "STANDARD"
+    sync_mode: str = "incremental"
+    sync_schedule: str = "manual"
+    expected_sync_interval_minutes: int | None = Field(default=None, ge=1, le=10080)
+    enabled: bool = True
+
+class SourceUpdateExternal(BaseModel):
+    display_name: str | None = None
+    description: str | None = None
+    enabled: bool | None = None
+    connection_config: dict[str, Any] | None = None
+    credentials: dict[str, Any] | None = None
+    scope_config: dict[str, Any] | None = None
+    mapping_profile: str | None = None
+    trust_class: str | None = None
+    sync_mode: str | None = None
+    sync_schedule: str | None = None
+    expected_sync_interval_minutes: int | None = Field(default=None, ge=1, le=10080)
+
+class SourcePreviewExternal(BaseModel):
+    max_records: int = Field(default=50, ge=1, le=100)
+
+class SourceSyncExternal(BaseModel):
+    mode: str = Field(default="incremental", pattern="^(incremental|full)$")
+    max_records: int = Field(default=100, ge=1, le=10000)
+
+class IdentityResolveExternal(BaseModel):
+    action: str = Field(pattern="^(confirm|choose|create|reject)$")
+    canonical_id: str | None = None
+    reason: str | None = None

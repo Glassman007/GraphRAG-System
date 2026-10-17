@@ -7,7 +7,7 @@ from backend.app.ingestion.adapters.base import FixtureJsonAdapter
 from backend.app.ingestion.adapters.http_json import ConfiguredJsonHttpClient
 from backend.app.ingestion.models import AdapterPage, SourceConfig, SourceRecordEnvelope
 from backend.app.services.phase3_utils import now_iso
-from backend.app.ingestion.adapters.base import checksum_payload
+from backend.app.ingestion.adapters.base import checksum_payload, credential_values
 
 
 class GitHubAdapter(FixtureJsonAdapter):
@@ -21,20 +21,23 @@ class GitHubAdapter(FixtureJsonAdapter):
     def health_check(self) -> dict[str, Any]:
         if self.config.fixture_path:
             return super().health_check()
-        token = os.getenv(str(self.config.settings.get("token_env") or "GITHUB_TOKEN"))
+        token = credential_values(self.config).get("token") or os.getenv(str(self.config.settings.get("token_env") or "GITHUB_TOKEN"))
         org = self.config.settings.get("org") or os.getenv("GITHUB_ORG")
         return {"ok": bool(token and org and self.config.base_url), "source_id": self.config.id, "live": True, "configured": bool(token and org)}
 
     def fetch(self, *, cursor: str | None = None, limit: int = 100) -> AdapterPage:
         if self.config.fixture_path:
             return super().fetch(cursor=cursor, limit=limit)
-        token = os.getenv(str(self.config.settings.get("token_env") or "GITHUB_TOKEN"))
+        token = credential_values(self.config).get("token") or os.getenv(str(self.config.settings.get("token_env") or "GITHUB_TOKEN"))
         org = self.config.settings.get("org") or os.getenv("GITHUB_ORG")
         if not token or not org or not self.config.base_url:
             raise RuntimeError("GitHub live adapter is not configured")
         client = ConfiguredJsonHttpClient(base_url=self.config.base_url, headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
         page = int(cursor or "1")
         repos = client.get_json(f"/orgs/{org}/repos", query={"per_page": min(limit, 100), "page": page})
+        selected = {str(x).lower() for x in (self.config.scope_config.get("selected") or [])}
+        if selected:
+            repos = [r for r in repos if str(r.get("name") or "").lower() in selected or str(r.get("full_name") or "").lower() in selected]
         fetched = now_iso()
         records = []
         for repo in repos[:limit]:

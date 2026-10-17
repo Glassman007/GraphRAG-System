@@ -28,3 +28,6 @@ All browser data comes from `/api/v1`.
 | Anomalies | `GET /api/v1/anomalies` |
 
 Phase 12 added only thin API facades for anomalies, authority resolution, company-wide expertise, and authenticated session/permission discovery. No reasoning algorithm was reimplemented in HTTP route handlers or React.
+
+## Phase 13 Sources
+`/sources*` → `/api/v1/connectors`, `/api/v1/sources*`, `/api/v1/sources/identity-review*`. Entity “Why?” lineage → `/api/v1/lineage/entities/{entity_id}`. Source wizard test/preview/sync maps directly to backend SourceControlService operations; no ingestion/entity-resolution/provenance logic runs in React.

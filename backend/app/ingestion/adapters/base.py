@@ -8,6 +8,7 @@ from typing import Any
 
 from backend.app.ingestion.models import AdapterPage, ArtifactPayload, SourceConfig, SourceRecordEnvelope
 from backend.app.services.phase3_utils import now_iso
+from backend.app.ingestion.credentials import default_credential_store
 
 
 def canonical_json(value: Any) -> str:
@@ -16,6 +17,15 @@ def canonical_json(value: Any) -> str:
 
 def checksum_payload(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
+
+
+def credential_values(config: SourceConfig) -> dict[str, Any]:
+    if not getattr(config, "credential_ref", None):
+        return {}
+    try:
+        return default_credential_store().resolve_for_connector(config.credential_ref)
+    except KeyError:
+        return {}
 
 
 class SourceAdapter(ABC):
@@ -67,7 +77,18 @@ class FixtureJsonAdapter(SourceAdapter):
             payload = payload.get("records", [])
         if not isinstance(payload, list):
             raise ValueError("Fixture payload must be a list or {'records': [...]} object")
-        return [dict(x) for x in payload]
+        rows = [dict(x) for x in payload]
+        selected = [str(x).strip().lower() for x in (self.config.scope_config.get("selected") or []) if str(x).strip()]
+        if selected:
+            # Scope filtering is deterministic and connector-agnostic for fixture verification.
+            # Identity/user rows are retained because scoped records may reference them.
+            scoped=[]
+            for row in rows:
+                haystack=canonical_json(row).lower()
+                if row.get("record_type") in {"user","person","identity"} or any(term in haystack for term in selected):
+                    scoped.append(row)
+            rows=scoped
+        return rows
 
     def fetch(self, *, cursor: str | None = None, limit: int = 100) -> AdapterPage:
         rows = self._raw_records()

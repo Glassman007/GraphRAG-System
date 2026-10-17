@@ -74,7 +74,7 @@ def main() -> int:
 
         inv=api.post("/api/v1/investigations",headers={**headers,"Idempotency-Key":"phase11-accept-investigation"},json={"situation_id":"INC-001","question":"Why did Checkout fail during DPL-882?","seed_entity_ids":["INC-001"]})
         check(inv.status_code==201,"create investigation",checks);iid=inv.json()["id"]
-        ret=api.post(f"/api/v1/investigations/{iid}/retrieve",headers=read_headers,json={"query":"region_scope cannot be null","retrieval_modes":["LEXICAL"],"max_results":5})
+        ret=api.post(f"/api/v1/investigations/{iid}/retrieve",headers=read_headers,json={"query":"region_scope cannot be null","retrieval_modes":["LEXICAL"],"max_results":5,"max_graph_hops":4})
         check(ret.status_code==200 and ret.json().get("graph_required") is True and ret.json().get("evidence_ids"),"graph-first retrieval",checks)
         evidence_id=ret.json()["evidence_ids"][0]
         check(api.get(f"/api/v1/evidence/{evidence_id}",headers=read_headers).status_code==200,"inspect returned Evidence",checks)
