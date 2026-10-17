@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -81,11 +82,16 @@ def main() -> int:
     backend_proc=frontend_proc=None
     report=ROOT/f"phase12_acceptance_report_{graph}.json"
     cypher=ROOT/f"phase12_browser_queries_{graph}.cypher"
+    # npm is npm.cmd on Windows, which CreateProcess cannot resolve from a bare "npm".
+    npm=shutil.which("npm") or "npm"
+    # Server output goes to files: an unread PIPE fills up and stalls the server mid-run.
+    backend_log=open(temp/"backend.log","w",encoding="utf-8")
+    frontend_log=open(temp/"frontend.log","w",encoding="utf-8")
     try:
-        backend_proc=subprocess.Popen([sys.executable,"-m","uvicorn","backend.app.main:app","--host","127.0.0.1","--port","8000"],cwd=ROOT,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
-        frontend_proc=subprocess.Popen(["npm","run","dev"],cwd=frontend,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        backend_proc=subprocess.Popen([sys.executable,"-m","uvicorn","backend.app.main:app","--host","127.0.0.1","--port","8000"],cwd=ROOT,env=env,stdout=backend_log,stderr=subprocess.STDOUT,text=True)
+        frontend_proc=subprocess.Popen([npm,"run","dev"],cwd=frontend,env=env,stdout=frontend_log,stderr=subprocess.STDOUT,text=True)
         wait_url("http://127.0.0.1:8000/health");wait_url("http://127.0.0.1:3000/")
-        run=subprocess.run(["npm","run","test:e2e"],cwd=frontend,env={**env,"PHASE12_BASE_URL":"http://127.0.0.1:3000"},capture_output=True,text=True)
+        run=subprocess.run([npm,"run","test:e2e"],cwd=frontend,env={**env,"PHASE12_BASE_URL":"http://127.0.0.1:3000"},capture_output=True,text=True)
         result={"graph":graph,"returncode":run.returncode,"stdout":run.stdout,"stderr":run.stderr,"company_brain_modified":False}
         report.write_text(json.dumps(result,indent=2),encoding="utf-8")
         cypher.write_text("""// Phase 12 isolated-browser inspection queries\nMATCH (i:Entity {id:'INC-001'})-[r]-(n:Entity) RETURN i,r,n LIMIT 100;\nMATCH (inv:Entity:Investigation)-[:HAS_RETRIEVAL]->(x:Entity:RetrievalExecution)-[:RETURNED]->(e:Entity:Evidence) RETURN inv,x,e;\nMATCH (p:Entity:Plan)-[:PLAN_HAS_TASK]->(t:Entity:Task) RETURN p,t LIMIT 100;\nMATCH (c:Entity:Claim)-[:CONTRADICTS]-(other:Entity:Claim) RETURN c,other;\nMATCH (d:Entity:Decision)-[r]-(n:Entity) RETURN d,r,n LIMIT 100;\nMATCH (a:Entity:Action)-[r]-(n:Entity) RETURN a,r,n LIMIT 100;\n""",encoding="utf-8")
@@ -95,9 +101,14 @@ def main() -> int:
     finally:
         for proc in (frontend_proc,backend_proc):
             if proc and proc.poll() is None:
-                proc.terminate()
+                if os.name=="nt":
+                    # terminate() only stops the npm.cmd wrapper; /T takes down the vite child too.
+                    subprocess.run(["taskkill","/PID",str(proc.pid),"/T","/F"],capture_output=True)
+                else:
+                    proc.terminate()
                 try:proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:proc.kill()
+        backend_log.close();frontend_log.close()
 
 
 if __name__ == "__main__":

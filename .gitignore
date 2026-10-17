@@ -82,6 +82,7 @@ test-results/
 .graphhacks_indexes/
 retrieval_indexes/
 artifacts/
+!backend/app/ingestion/artifacts/
 *.db
 *.sqlite
 *.sqlite3
