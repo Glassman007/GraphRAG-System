@@ -168,3 +168,6 @@ docs/*_collect.txt
 docs/*_targeted.txt
 docs/*_nonintegration*.txt
 
+# Generated acceptance artifacts
+phase*_acceptance_report_*.json
+phase*_browser_queries_*.cypher
