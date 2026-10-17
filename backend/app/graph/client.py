@@ -47,7 +47,7 @@ class FalkorGraphClient:
             return True
         except Exception as exc:  # graph-missing errors differ between server versions
             text = str(exc).lower()
-            if "does not exist" in text or "unknown graph" in text or "not found" in text:
+            if "does not exist" in text or "unknown graph" in text or "not found" in text or "empty key" in text:
                 self.graph = self.db.select_graph(self.settings.falkordb_graph)
                 return False
             raise

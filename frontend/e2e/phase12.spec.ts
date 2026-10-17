@@ -20,7 +20,7 @@ test('Phase 12 live frontend story uses the real Phase 11 API', async ({ page, r
     await page.getByPlaceholder('Question or investigation goal').fill('Why did Checkout fail during DPL-882?')
     await page.getByRole('button',{name:'Run Investigation'}).click()
     await expect(page).toHaveURL(/\/investigations\//)
-    await expect(page.getByRole('heading',{name:'Investigation'})).toBeVisible()
+    await expect(page.getByRole('heading',{name:'Investigation',exact:true})).toBeVisible()
   })
   await test.step('run graph-first retrieval and expose scope/provenance', async()=>{
     await page.getByPlaceholder('Evidence query').fill('region_scope cannot be null')
@@ -39,7 +39,7 @@ test('Phase 12 live frontend story uses the real Phase 11 API', async ({ page, r
     await expect(page.getByRole('heading',{name:/Claim C-001/})).toBeVisible()
     await page.getByPlaceholder('Subject entity ID').fill('INC-001')
     await page.getByRole('button',{name:'Resolve'}).click()
-    await expect(page.locator('pre').filter({hasText:'selected_claim_id'})).toBeVisible()
+    await expect(page.locator('pre').filter({hasText:'selected_claim_id'}).first()).toBeVisible()
   })
   await test.step('generate plan and inspect Task DAG', async()=>{
     await page.goto('/work?tab=plans')
@@ -56,13 +56,13 @@ test('Phase 12 live frontend story uses the real Phase 11 API', async ({ page, r
     await expect(page.getByText('Task detail')).toBeVisible()
     await expect(page.getByText('Coordination state')).toBeVisible()
     await page.goto('/work?tab=agents')
-    await expect(page.getByText('AGENT-P6-INVESTIGATOR')).toBeVisible()
+    await expect(page.getByRole('button',{name:'AGENT-P6-INVESTIGATOR'})).toBeVisible()
   })
   await test.step('inspect decision genealogy and governance', async()=>{
     await page.goto('/decisions/DEC-INC001-ROLLBACK')
     await expect(page.getByText(/Evidence → Claims → Decision/)).toBeVisible()
     await page.getByPlaceholder('Action ID').fill('ACT-ROLLBACK-MIG203')
-    await expect(page.getByText('Governance')).toBeVisible()
+    await expect(page.getByText('Governance',{exact:true})).toBeVisible()
   })
   await test.step('blast radius and explicit graph paths', async()=>{
     await page.goto('/entities/SYS-PRICING-API?tab=blast-radius&depth=3')
@@ -82,34 +82,34 @@ test('Phase 12 live frontend story uses the real Phase 11 API', async ({ page, r
     await page.goto('/company-brain?tab=processes')
     await page.getByLabel('Process scope ID').fill('INC-001')
     await expect(page.getByText('Timeline semantics')).toBeVisible()
-    await expect(page.locator('pre').filter({hasText:'BEFORE'})).toBeVisible()
+    await expect(page.locator('pre').filter({hasText:'BEFORE'}).first()).toBeVisible()
     await page.getByRole('button',{name:'policy-drift'}).click()
     await page.getByLabel('Policy ID').fill('POL-DB-04')
     await expect(page.getByText('Policy-vs-practice drift')).toBeVisible()
-    await expect(page.locator('pre').filter({hasText:'ACT-COMPAT-TEST'})).toBeVisible()
+    await expect(page.locator('pre').filter({hasText:'ACT-COMPAT-TEST'}).first()).toBeVisible()
 
     await page.getByRole('button',{name:'commitments'}).click()
-    await expect(page.locator('pre').filter({hasText:'COM-017'})).toBeVisible()
+    await expect(page.locator('pre').filter({hasText:'COM-017'}).first()).toBeVisible()
 
     await page.getByRole('button',{name:'ownership-gaps'}).click()
     await expect(page.getByText('Ownership gaps')).toBeVisible()
 
     await page.getByRole('button',{name:'expertise'}).click()
-    await expect(page.locator('pre').filter({hasText:'PERSON-RIYA'})).toBeVisible()
-    await expect(page.locator('pre').filter({hasText:'SYS-PRICING-DB'})).toBeVisible()
+    await expect(page.locator('pre').filter({hasText:'PERSON-RIYA'}).first()).toBeVisible()
+    await expect(page.locator('pre').filter({hasText:'SYS-PRICING-DB'}).first()).toBeVisible()
 
     await page.getByRole('button',{name:'bus-factor'}).click()
     await expect(page.getByText('Bus factor')).toBeVisible()
 
     await page.getByRole('button',{name:'bottlenecks'}).click()
-    await expect(page.getByText('Bottlenecks')).toBeVisible()
+    await expect(page.getByText('Bottlenecks',{exact:true})).toBeVisible()
 
     await page.getByRole('button',{name:'bridges'}).click()
     await expect(page.getByText('Bridge risks')).toBeVisible()
 
     await page.getByRole('button',{name:'duplicate-initiatives'}).click()
-    await expect(page.locator('pre').filter({hasText:'PROJ-REFUND-A'})).toBeVisible()
-    await expect(page.locator('pre').filter({hasText:'PROJ-REFUND-B'})).toBeVisible()
+    await expect(page.locator('pre').filter({hasText:'PROJ-REFUND-A'}).first()).toBeVisible()
+    await expect(page.locator('pre').filter({hasText:'PROJ-REFUND-B'}).first()).toBeVisible()
   })
   await test.step('anomaly view renders backend motif', async()=>{
     await page.goto('/anomalies')
@@ -117,7 +117,7 @@ test('Phase 12 live frontend story uses the real Phase 11 API', async ({ page, r
     await expect(page.getByRole('button',{name:'FRONTEND_DIRECT_DATABASE'})).toBeVisible()
     await page.getByRole('button',{name:'FRONTEND_DIRECT_DATABASE'}).click()
     await expect(page.getByText('Abnormal vs expected motif')).toBeVisible()
-    await expect(page.locator('pre').filter({hasText:'frontend -> service/api -> database'})).toBeVisible()
+    await expect(page.locator('pre').filter({hasText:'frontend -> service/api -> database'}).first()).toBeVisible()
   })
   await test.step('backend connectivity proof: external API state change appears after refresh', async()=>{
     const id=`INC-P12-LIVE-${Date.now()}`

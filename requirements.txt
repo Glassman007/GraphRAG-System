@@ -4,3 +4,4 @@ uvicorn[standard]>=0.37,<0.39
 pydantic>=2.10,<3
 pytest>=8.3,<9
 httpx>=0.28,<1
+tzdata>=2024.1
