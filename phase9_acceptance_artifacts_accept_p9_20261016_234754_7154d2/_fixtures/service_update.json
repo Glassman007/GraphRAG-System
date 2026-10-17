@@ -1,0 +1,10 @@
+{
+  "records": [
+    {
+      "external_id": "browser-catalog-pricing-api",
+      "record_type": "service_record",
+      "observed_at": "2026-10-16T17:00:00+05:30",
+      "deleted": true
+    }
+  ]
+}

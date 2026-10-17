@@ -1,0 +1,1 @@
+{"records":[{"external_id":"svc-pricing-api","record_type":"service_record","observed_at":"2026-10-16T13:30:00+05:30","id":1,"system":"Pricing API","system_canonical_id":"SYS-PRICING-API","owner_team":"Pricing Platform","team_canonical_id":"TEAM-PRICING","depends_on":"Pricing Database","dependency_canonical_id":"SYS-PRICING-DB","valid_from":"2026-01-01T00:00:00+05:30"}]}

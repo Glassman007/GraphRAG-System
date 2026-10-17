@@ -1,0 +1,104 @@
+{
+  "scenario_id": "SCN-DUP-001",
+  "title": "Duplicate Refund Automation Initiatives",
+  "description": "Supports duplicate-work / initiative collision detection.",
+  "tenant_id": "northstar",
+  "nodes": [
+    {
+      "id": "PROJ-REFUND-A",
+      "label": "Project",
+      "properties": {
+        "id": "PROJ-REFUND-A",
+        "tenant_id": "northstar",
+        "name": "Refund Automation Service",
+        "status": "ACTIVE",
+        "goal": "Automate refund eligibility and execution",
+        "created_at": "2026-09-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PROJ-REFUND-B",
+      "label": "Project",
+      "properties": {
+        "id": "PROJ-REFUND-B",
+        "tenant_id": "northstar",
+        "name": "Refund Copilot",
+        "status": "ACTIVE",
+        "goal": "Automate refund eligibility and execution",
+        "created_at": "2026-09-15T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TEAM-SUPPORT",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-SUPPORT",
+        "tenant_id": "northstar",
+        "name": "Support Platform Team",
+        "status": "ACTIVE",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-REFUND-API",
+      "label": "System",
+      "properties": {
+        "id": "SYS-REFUND-API",
+        "tenant_id": "northstar",
+        "name": "Refund API",
+        "system_type": "service",
+        "status": "ACTIVE",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "TEAM-PAYMENTS",
+      "type": "OWNS",
+      "target": "PROJ-REFUND-A",
+      "properties": {
+        "edge_id": "TEAM-PAYMENTS|OWNS|PROJ-REFUND-A|2026-09-01T00:00:00+05:30",
+        "valid_from": "2026-09-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TEAM-SUPPORT",
+      "type": "OWNS",
+      "target": "PROJ-REFUND-B",
+      "properties": {
+        "edge_id": "TEAM-SUPPORT|OWNS|PROJ-REFUND-B|2026-09-15T00:00:00+05:30",
+        "valid_from": "2026-09-15T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PROJ-REFUND-A",
+      "type": "DEPENDS_ON",
+      "target": "SYS-REFUND-API",
+      "properties": {
+        "edge_id": "PROJ-REFUND-A|DEPENDS_ON|SYS-REFUND-API|2026-09-01T00:00:00+05:30",
+        "valid_from": "2026-09-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PROJ-REFUND-B",
+      "type": "DEPENDS_ON",
+      "target": "SYS-REFUND-API",
+      "properties": {
+        "edge_id": "PROJ-REFUND-B|DEPENDS_ON|SYS-REFUND-API|2026-09-15T00:00:00+05:30",
+        "valid_from": "2026-09-15T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    }
+  ],
+  "ground_truth": {
+    "duplicate_pair": [
+      "PROJ-REFUND-A",
+      "PROJ-REFUND-B"
+    ],
+    "reason": "same goal and same core system dependency under different teams"
+  }
+}

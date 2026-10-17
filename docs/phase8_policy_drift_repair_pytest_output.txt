@@ -1,0 +1,494 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /opt/pyvenv/bin/python3
+cachedir: .pytest_cache
+metadata: {'Python': '3.13.5', 'Platform': 'Linux-6.18.44-x86_64-with-glibc2.41', 'Packages': {'pytest': '9.0.2', 'pluggy': '1.6.0'}, 'Plugins': {'anyio': '4.13.0', 'ddtrace': '4.4.0', 'Faker': '40.1.2', 'asyncio': '1.3.0', 'cov': '7.0.0', 'json-report': '1.5.0', 'metadata': '3.1.1'}, 'PLATFORM': 'linux/amd64', 'CI': 'true'}
+rootdir: /mnt/data/graphhacks_phase8_drift_fix/graphhacks_phase8_complete
+configfile: pytest.ini
+plugins: anyio-4.13.0, ddtrace-4.4.0, Faker-40.1.2, asyncio-1.3.0, cov-7.0.0, json-report-1.5.0, metadata-3.1.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 321 items
+
+backend/tests/test_fixture_integrity.py::test_canonical_incident_fixture_integrity PASSED [  0%]
+backend/tests/test_fixture_integrity.py::test_supporting_scenario_fixture_integrity PASSED [  0%]
+backend/tests/test_integration_graph.py::test_falkordb_connectivity SKIPPED [  0%]
+backend/tests/test_integration_graph.py::test_graph_health_check SKIPPED [  1%]
+backend/tests/test_integration_graph.py::test_schema_and_index_creation SKIPPED [  1%]
+backend/tests/test_integration_graph.py::test_deterministic_reseed_is_idempotent SKIPPED [  1%]
+backend/tests/test_integration_graph.py::test_node_creation SKIPPED      [  2%]
+backend/tests/test_integration_graph.py::test_relationship_creation SKIPPED [  2%]
+backend/tests/test_integration_graph.py::test_dependency_traversal SKIPPED [  2%]
+backend/tests/test_integration_graph.py::test_blast_radius_dependents SKIPPED [  3%]
+backend/tests/test_integration_graph.py::test_ownership_traversal_and_orphan SKIPPED [  3%]
+backend/tests/test_integration_graph.py::test_historical_ownership_lookup SKIPPED [  3%]
+backend/tests/test_integration_graph.py::test_claim_evidence_traversal SKIPPED [  4%]
+backend/tests/test_integration_graph.py::test_contradiction_detection SKIPPED [  4%]
+backend/tests/test_integration_graph.py::test_temporal_history_lookup SKIPPED [  4%]
+backend/tests/test_integration_graph.py::test_provenance_lookup SKIPPED  [  4%]
+backend/tests/test_integration_graph.py::test_event_reconstruction SKIPPED [  5%]
+backend/tests/test_integration_graph.py::test_graph_necessity_dependency_edge_foundation SKIPPED [  5%]
+backend/tests/test_models.py::test_claim_confidence_is_bounded PASSED    [  5%]
+backend/tests/test_models.py::test_event_type_is_explicit PASSED         [  6%]
+backend/tests/test_phase3_algorithms.py::test_claim_memory_state_distinguishes_required_states PASSED [  6%]
+backend/tests/test_phase3_algorithms.py::test_authority_clear_winner PASSED [  6%]
+backend/tests/test_phase3_algorithms.py::test_newer_non_authoritative_claim_does_not_win_on_recency_alone PASSED [  7%]
+backend/tests/test_phase3_algorithms.py::test_authoritative_but_stale_claim_is_ineligible PASSED [  7%]
+backend/tests/test_phase3_algorithms.py::test_equally_supported_conflicting_claims_remain_unresolved PASSED [  7%]
+backend/tests/test_phase3_algorithms.py::test_insufficient_evidence_remains_unresolved_even_with_authority PASSED [  8%]
+backend/tests/test_phase3_algorithms.py::test_orphan_risk_escalates_when_active_dependents_exist PASSED [  8%]
+backend/tests/test_phase3_algorithms.py::test_phase3_api_routes_are_registered_without_raw_cypher_endpoint PASSED [  8%]
+backend/tests/test_phase3_integration.py::test_phase3_conflict_memory_preserves_claims_contradiction_and_separate_evidence SKIPPED [  9%]
+backend/tests/test_phase3_integration.py::test_phase3_authority_resolution_is_explainable_for_canonical_conflict SKIPPED [  9%]
+backend/tests/test_phase3_integration.py::test_phase3_authority_resolution_can_return_unresolved_for_equal_support SKIPPED [  9%]
+backend/tests/test_phase3_integration.py::test_phase3_clear_authority_winner_and_graph_necessity SKIPPED [  9%]
+backend/tests/test_phase3_integration.py::test_phase3_current_ownership_respects_time_and_historical_owner_is_reconstructable SKIPPED [ 10%]
+backend/tests/test_phase3_integration.py::test_phase3_expertise_formal_responsibility_and_ownership_remain_distinct SKIPPED [ 10%]
+backend/tests/test_phase3_integration.py::test_phase3_responder_ranking_exposes_escalation_paths SKIPPED [ 10%]
+backend/tests/test_phase3_integration.py::test_phase3_legacy_promo_is_orphaned_with_historical_owner SKIPPED [ 11%]
+backend/tests/test_phase3_integration.py::test_phase3_ambiguous_owners_and_orphan_dependency_risk SKIPPED [ 11%]
+backend/tests/test_phase3_integration.py::test_phase3_graph_necessity_conflict_edge SKIPPED [ 11%]
+backend/tests/test_phase3_integration.py::test_phase3_graph_necessity_routing_expertise_edge SKIPPED [ 12%]
+backend/tests/test_phase3_integration.py::test_phase3_graph_necessity_orphan_history_edge SKIPPED [ 12%]
+backend/tests/test_phase3_integration.py::test_phase3_existing_canonical_incident_context_is_not_broken SKIPPED [ 12%]
+backend/tests/test_phase4_algorithms.py::test_phase4_entity_resolution_preserves_uncertain_candidate PASSED [ 13%]
+backend/tests/test_phase4_algorithms.py::test_phase4_relational_investigation_finds_connected_causal_path PASSED [ 13%]
+backend/tests/test_phase4_algorithms.py::test_phase4_blast_radius_distinguishes_observed_from_potential PASSED [ 13%]
+backend/tests/test_phase4_algorithms.py::test_phase4_knowledge_gaps_keep_q001_q004_explicit PASSED [ 14%]
+backend/tests/test_phase4_algorithms.py::test_phase4_tool_routing_is_graph_backed PASSED [ 14%]
+backend/tests/test_phase4_algorithms.py::test_phase4_decision_replay_excludes_future_ledger_events PASSED [ 14%]
+backend/tests/test_phase4_algorithms.py::test_phase4_structural_precedent_finds_inc074_without_keyword_dependency PASSED [ 14%]
+backend/tests/test_phase4_algorithms.py::test_phase4_constraint_plan_has_topological_action_order PASSED [ 15%]
+backend/tests/test_phase4_algorithms.py::test_phase4_counterfactual_rollback_is_isolated_and_recomputes_graph PASSED [ 15%]
+backend/tests/test_phase4_algorithms.py::test_phase4_anomaly_detection_flags_exact_shadow_dependency PASSED [ 15%]
+backend/tests/test_phase4_algorithms.py::test_phase4_api_routes_registered_without_raw_cypher_endpoint PASSED [ 16%]
+backend/tests/test_phase4_integration.py::test_phase4_entity_resolution_scn_identity SKIPPED [ 16%]
+backend/tests/test_phase4_integration.py::test_phase4_relational_investigation_inc001 SKIPPED [ 16%]
+backend/tests/test_phase4_integration.py::test_phase4_blast_radius_pricing_db SKIPPED [ 17%]
+backend/tests/test_phase4_integration.py::test_phase4_knowledge_gaps_q001_q004 SKIPPED [ 17%]
+backend/tests/test_phase4_integration.py::test_phase4_tool_routing_and_mock_acquisition_writes_provenance SKIPPED [ 17%]
+backend/tests/test_phase4_integration.py::test_phase4_decision_genealogy_replay_is_time_aware SKIPPED [ 18%]
+backend/tests/test_phase4_integration.py::test_phase4_structural_precedent_inc074 SKIPPED [ 18%]
+backend/tests/test_phase4_integration.py::test_phase4_constraint_plan_is_graph_backed_partial_order SKIPPED [ 18%]
+backend/tests/test_phase4_integration.py::test_phase4_counterfactual_simulation_does_not_mutate_canonical SKIPPED [ 19%]
+backend/tests/test_phase4_integration.py::test_phase4_anomaly_scn_anom SKIPPED [ 19%]
+backend/tests/test_phase4_integration.py::test_phase4_graph_necessity_entity_resolution_candidate_edge SKIPPED [ 19%]
+backend/tests/test_phase4_integration.py::test_phase4_graph_necessity_investigation_change_edges SKIPPED [ 19%]
+backend/tests/test_phase4_integration.py::test_phase4_graph_necessity_blast_radius_dependency_edge SKIPPED [ 20%]
+backend/tests/test_phase4_integration.py::test_phase4_graph_necessity_tool_route_edges SKIPPED [ 20%]
+backend/tests/test_phase4_integration.py::test_phase4_graph_necessity_replay_based_on_edges SKIPPED [ 20%]
+backend/tests/test_phase4_integration.py::test_phase4_graph_necessity_precedent_topology SKIPPED [ 21%]
+backend/tests/test_phase4_integration.py::test_phase4_graph_necessity_planning_constraints SKIPPED [ 21%]
+backend/tests/test_phase4_integration.py::test_phase4_graph_necessity_counterfactual_change_edges SKIPPED [ 21%]
+backend/tests/test_phase4_integration.py::test_phase4_graph_necessity_anomaly_shadow_edge SKIPPED [ 22%]
+backend/tests/test_phase5_algorithms.py::test_phase5_planner_derives_typed_work_from_existing_reasoning PASSED [ 22%]
+backend/tests/test_phase5_algorithms.py::test_phase5_knowledge_gaps_generate_q001_through_q004_work PASSED [ 22%]
+backend/tests/test_phase5_algorithms.py::test_phase5_question_task_type_comes_from_graph_tool_capability PASSED [ 23%]
+backend/tests/test_phase5_algorithms.py::test_phase5_conflict_resolution_depends_on_relevant_evidence_tasks PASSED [ 23%]
+backend/tests/test_phase5_algorithms.py::test_phase5_action_work_consumes_phase4_constraint_plan PASSED [ 23%]
+backend/tests/test_phase5_algorithms.py::test_phase5_plan_and_task_ids_are_deterministic PASSED [ 23%]
+backend/tests/test_phase5_algorithms.py::test_phase5_task_graph_is_acyclic PASSED [ 24%]
+backend/tests/test_phase5_algorithms.py::test_phase5_cycle_is_rejected_without_weakening_dependency_semantics PASSED [ 24%]
+backend/tests/test_phase5_algorithms.py::test_phase5_dedup_merges_same_semantic_work PASSED [ 24%]
+backend/tests/test_phase5_algorithms.py::test_phase5_expertise_requirement_prefers_explicit_expert_role PASSED [ 25%]
+backend/tests/test_phase5_algorithms.py::test_phase5_authority_requirement_preserves_owner_vs_expert_distinction PASSED [ 25%]
+backend/tests/test_phase5_algorithms.py::test_phase5_selected_claim_filter_does_not_invent_conflict PASSED [ 25%]
+backend/tests/test_phase5_algorithms.py::test_phase5_historical_planning_excludes_future_questions_claims_and_actions PASSED [ 26%]
+backend/tests/test_phase5_algorithms.py::test_phase5_blueprints_explain_why_each_task_exists PASSED [ 26%]
+backend/tests/test_phase5_algorithms.py::test_phase5_api_routes_exist_and_no_execution_routes_are_added PASSED [ 26%]
+backend/tests/test_phase5_algorithms.py::test_phase5_ready_task_requires_completed_task_predecessor PASSED [ 27%]
+backend/tests/test_phase5_algorithms.py::test_phase5_validation_detects_malformed_task PASSED [ 27%]
+backend/tests/test_phase5_algorithms.py::test_phase5_historical_cutoff_changes_plan_identity PASSED [ 27%]
+backend/tests/test_phase5_algorithms.py::test_phase5_explicit_selection_changes_plan_identity PASSED [ 28%]
+backend/tests/test_phase5_algorithms.py::test_phase5_task_reuse_signature_changes_when_prerequisite_structure_changes PASSED [ 28%]
+backend/tests/test_phase5_algorithms.py::test_phase5_historical_planning_excludes_future_action_and_policy_edges PASSED [ 28%]
+backend/tests/test_phase5_algorithms.py::test_phase5_explicit_constraint_reference_is_graph_backed_and_changes_plan_identity PASSED [ 28%]
+backend/tests/test_phase5_algorithms.py::test_phase5_unknown_explicit_constraint_reference_is_rejected PASSED [ 29%]
+backend/tests/test_phase5_algorithms.py::test_phase5_historical_planning_does_not_use_future_tool_routes PASSED [ 29%]
+backend/tests/test_phase5_algorithms.py::test_phase5_historical_claim_supersession_uses_edge_time_not_current_materialized_status PASSED [ 29%]
+backend/tests/test_phase5_integration.py::test_phase5_plan_and_tasks_are_persisted_in_falkordb SKIPPED [ 30%]
+backend/tests/test_phase5_integration.py::test_phase5_task_prerequisites_and_initial_readiness_are_graph_backed SKIPPED [ 30%]
+backend/tests/test_phase5_integration.py::test_phase5_evidence_requirements_are_explicit_graph_links SKIPPED [ 30%]
+backend/tests/test_phase5_integration.py::test_phase5_pricing_db_expertise_ranks_riya_above_formal_owner_for_technical_task SKIPPED [ 31%]
+backend/tests/test_phase5_integration.py::test_phase5_removing_expert_in_changes_candidate_ranking SKIPPED [ 31%]
+backend/tests/test_phase5_integration.py::test_phase5_same_state_same_goal_is_idempotent SKIPPED [ 31%]
+backend/tests/test_phase5_integration.py::test_phase5_recompute_preserves_explicit_plan_selection SKIPPED [ 32%]
+backend/tests/test_phase5_integration.py::test_phase5_plan_creation_writes_structured_event_ledger_entries SKIPPED [ 32%]
+backend/tests/test_phase5_integration.py::test_phase5_cycle_validation_detects_real_graph_cycle SKIPPED [ 32%]
+backend/tests/test_phase5_integration.py::test_phase5_graph_necessity_removing_question_membership_removes_gap_task SKIPPED [ 33%]
+backend/tests/test_phase5_integration.py::test_phase5_graph_necessity_removing_policy_scope_removes_policy_task SKIPPED [ 33%]
+backend/tests/test_phase5_integration.py::test_phase5_graph_necessity_removing_task_prerequisite_changes_readiness SKIPPED [ 33%]
+backend/tests/test_phase5_integration.py::test_phase5_historical_plan_does_not_use_future_reasoning_state SKIPPED [ 33%]
+backend/tests/test_phase5_integration.py::test_phase5_completion_status_for_evidence_task_tracks_resolved_by_evidence SKIPPED [ 34%]
+backend/tests/test_phase5_integration.py::test_phase5_shared_equivalent_tasks_do_not_allow_scoped_plan_to_rewrite_default_prerequisites SKIPPED [ 34%]
+backend/tests/test_phase5_integration.py::test_phase5_historical_plan_excludes_future_action_policy_relationships SKIPPED [ 34%]
+backend/tests/test_phase5_integration.py::test_phase5_explicit_constraint_is_persisted_as_plan_graph_relationship SKIPPED [ 35%]
+backend/tests/test_phase5_integration.py::test_phase5_historical_claim_supersession_respects_falkordb_edge_time SKIPPED [ 35%]
+backend/tests/test_phase6_algorithms.py::test_phase6_schema_additions_are_minimal_and_explicit PASSED [ 35%]
+backend/tests/test_phase6_algorithms.py::test_phase6_defines_exactly_four_default_specialist_types PASSED [ 36%]
+backend/tests/test_phase6_algorithms.py::test_investigator_accepts_investigation_work PASSED [ 36%]
+backend/tests/test_phase6_algorithms.py::test_investigator_rejects_remediation_work PASSED [ 36%]
+backend/tests/test_phase6_algorithms.py::test_unavailable_agent_is_ineligible_even_with_capability PASSED [ 37%]
+backend/tests/test_phase6_algorithms.py::test_agent_without_graph_read_permission_is_ineligible PASSED [ 37%]
+backend/tests/test_phase6_algorithms.py::test_active_claims_ignore_expired_claim_edges PASSED [ 37%]
+backend/tests/test_phase6_algorithms.py::test_latest_checkpoint_uses_step_index_not_insertion_order PASSED [ 38%]
+backend/tests/test_phase6_algorithms.py::test_latest_checkpoint_skips_archived_by_default PASSED [ 38%]
+backend/tests/test_phase6_algorithms.py::test_deadlock_cycle_detection_finds_two_task_cycle PASSED [ 38%]
+backend/tests/test_phase6_algorithms.py::test_deadlock_cycle_disappears_when_one_wait_edge_removed PASSED [ 38%]
+backend/tests/test_phase6_algorithms.py::test_deadlock_cycle_detection_deduplicates_rotations PASSED [ 39%]
+backend/tests/test_phase6_algorithms.py::test_mock_executor_is_idempotent_by_key PASSED [ 39%]
+backend/tests/test_phase6_algorithms.py::test_mock_executor_executes_distinct_keys_separately PASSED [ 39%]
+backend/tests/test_phase6_algorithms.py::test_handoff_validation_rejects_missing_evidence PASSED [ 40%]
+backend/tests/test_phase6_algorithms.py::test_handoff_validation_rejects_low_confidence PASSED [ 40%]
+backend/tests/test_phase6_algorithms.py::test_handoff_validation_reports_unresolved_blocker PASSED [ 40%]
+backend/tests/test_phase6_algorithms.py::test_handoff_validation_accepts_complete_contract PASSED [ 41%]
+backend/tests/test_phase6_algorithms.py::test_governance_allows_authorized_approved_action PASSED [ 41%]
+backend/tests/test_phase6_algorithms.py::test_governance_denies_agent_without_permission PASSED [ 41%]
+backend/tests/test_phase6_algorithms.py::test_governance_requires_missing_approval PASSED [ 42%]
+backend/tests/test_phase6_algorithms.py::test_policy_deny_overrides_agent_permission PASSED [ 42%]
+backend/tests/test_phase6_algorithms.py::test_blocked_task_is_denied_by_governance PASSED [ 42%]
+backend/tests/test_phase6_algorithms.py::test_compaction_validation_detects_broken_evidence_lineage PASSED [ 42%]
+backend/tests/test_phase6_algorithms.py::test_compaction_validation_accepts_preserved_evidence_lineage PASSED [ 43%]
+backend/tests/test_phase6_algorithms.py::test_phase6_api_routes_are_registered_without_raw_cypher PASSED [ 43%]
+backend/tests/test_phase6_algorithms.py::test_phase5_forbidden_route_name_contract_remains_true PASSED [ 43%]
+backend/tests/test_phase6_api_integration.py::test_phase6_fastapi_success_flow_persists_claim_checkpoint_transfer_action_and_outcome SKIPPED [ 44%]
+backend/tests/test_phase6_api_integration.py::test_phase6_fastapi_rejects_ineligible_claim SKIPPED [ 44%]
+backend/tests/test_phase6_api_integration.py::test_phase6_fastapi_handoff_accept_fails_when_contract_is_invalid SKIPPED [ 44%]
+backend/tests/test_phase6_integration.py::test_phase6_agent_registry_persists_and_does_not_reset_runtime_state SKIPPED [ 45%]
+backend/tests/test_phase6_integration.py::test_phase6_task_owner_claim_persists_across_service_reconstruction SKIPPED [ 45%]
+backend/tests/test_phase6_integration.py::test_phase6_second_worker_cannot_claim_owned_task SKIPPED [ 45%]
+backend/tests/test_phase6_integration.py::test_phase6_checkpoint_survives_restart_and_resume_starts_after_latest_step SKIPPED [ 46%]
+backend/tests/test_phase6_integration.py::test_phase6_another_eligible_agent_can_resume_and_prior_artifacts_remain SKIPPED [ 46%]
+backend/tests/test_phase6_integration.py::test_phase6_ineligible_agent_cannot_resume_execution SKIPPED [ 46%]
+backend/tests/test_phase6_integration.py::test_phase6_unresolved_blocker_persists_and_prevents_resume SKIPPED [ 47%]
+backend/tests/test_phase6_integration.py::test_phase6_shared_evidence_and_findings_are_visible_to_other_agents SKIPPED [ 47%]
+backend/tests/test_phase6_integration.py::test_phase6_graph_necessity_blackboard_loses_finding_when_about_link_removed SKIPPED [ 47%]
+backend/tests/test_phase6_integration.py::test_phase6_valid_handoff_is_accepted_and_persisted SKIPPED [ 47%]
+backend/tests/test_phase6_integration.py::test_phase6_handoff_missing_evidence_is_rejected SKIPPED [ 48%]
+backend/tests/test_phase6_integration.py::test_phase6_handoff_reports_unresolved_blocker_and_low_confidence SKIPPED [ 48%]
+backend/tests/test_phase6_integration.py::test_phase6_graph_necessity_handoff_requires_artifact_edges SKIPPED [ 48%]
+backend/tests/test_phase6_integration.py::test_phase6_branch_isolation_and_validated_merge SKIPPED [ 49%]
+backend/tests/test_phase6_integration.py::test_phase6_rejected_branch_remains_queryable_and_does_not_promote SKIPPED [ 49%]
+backend/tests/test_phase6_integration.py::test_phase6_graph_necessity_branch_merge_requires_parent_execution SKIPPED [ 49%]
+backend/tests/test_phase6_integration.py::test_phase6_deadlock_cycle_and_graph_necessity SKIPPED [ 50%]
+backend/tests/test_phase6_integration.py::test_phase6_conflicting_ownership_is_detected SKIPPED [ 50%]
+backend/tests/test_phase6_integration.py::test_phase6_expired_lock_is_detected_as_abandoned SKIPPED [ 50%]
+backend/tests/test_phase6_integration.py::test_phase6_starvation_heuristic_is_explainable SKIPPED [ 51%]
+backend/tests/test_phase6_integration.py::test_phase6_governance_allows_authorized_remediation_action SKIPPED [ 51%]
+backend/tests/test_phase6_integration.py::test_phase6_governance_denies_unauthorized_agent_even_if_action_exists SKIPPED [ 51%]
+backend/tests/test_phase6_integration.py::test_phase6_missing_required_approval_prevents_execution SKIPPED [ 52%]
+backend/tests/test_phase6_integration.py::test_phase6_agent_cannot_override_explicit_policy_denial SKIPPED [ 52%]
+backend/tests/test_phase6_integration.py::test_phase6_graph_necessity_removing_approval_changes_governance SKIPPED [ 52%]
+backend/tests/test_phase6_integration.py::test_phase6_duplicate_logical_action_executes_mock_side_effect_once SKIPPED [ 52%]
+backend/tests/test_phase6_integration.py::test_phase6_concurrent_duplicate_attempts_do_not_execute_twice SKIPPED [ 53%]
+backend/tests/test_phase6_integration.py::test_phase6_crash_before_external_call_can_be_recovered_safely SKIPPED [ 53%]
+backend/tests/test_phase6_integration.py::test_phase6_uncertain_external_result_becomes_unknown_and_is_not_blindly_retried SKIPPED [ 53%]
+backend/tests/test_phase6_integration.py::test_phase6_uncertain_result_can_reconcile_via_idempotent_sink_lookup SKIPPED [ 54%]
+backend/tests/test_phase6_integration.py::test_phase6_compaction_archives_old_checkpoints_but_keeps_latest SKIPPED [ 54%]
+backend/tests/test_phase6_integration.py::test_phase6_compaction_preserves_evidence_branch_and_action_lineage SKIPPED [ 54%]
+backend/tests/test_phase6_integration.py::test_phase6_graph_necessity_compaction_validation_fails_when_evidence_lineage_removed SKIPPED [ 55%]
+backend/tests/test_phase6_integration.py::test_phase6_event_ledger_records_coordination_transitions SKIPPED [ 55%]
+backend/tests/test_phase6_integration.py::test_phase6_specialist_investigator_runs_only_supported_owned_work SKIPPED [ 55%]
+backend/tests/test_phase6_integration.py::test_phase6_specialist_dependency_analyst_runs_graph_blast_radius SKIPPED [ 56%]
+backend/tests/test_phase6_integration.py::test_phase6_specialist_verifier_updates_shared_finding SKIPPED [ 56%]
+backend/tests/test_phase6_integration.py::test_phase6_remediation_worker_can_prepare_but_governance_remains_final SKIPPED [ 56%]
+backend/tests/test_phase6_integration.py::test_phase6_compaction_preserves_decision_explanation_relationships SKIPPED [ 57%]
+backend/tests/test_phase6_integration.py::test_phase6_compaction_keeps_action_outcome_reconstructable SKIPPED [ 57%]
+backend/tests/test_phase6_integration.py::test_phase6_different_actions_cannot_hold_same_resource_lease_concurrently SKIPPED [ 57%]
+backend/tests/test_phase6_integration.py::test_phase6_task_completion_requires_existing_phase5_completion_contract SKIPPED [ 57%]
+backend/tests/test_phase6_integration.py::test_phase6_task_completion_cannot_bypass_unsatisfied_graph_condition SKIPPED [ 58%]
+backend/tests/test_phase7_algorithms.py::test_promotion_accepts_verified_finding_with_independent_evidence PASSED [ 58%]
+backend/tests/test_phase7_algorithms.py::test_unverified_finding_cannot_promote PASSED [ 58%]
+backend/tests/test_phase7_algorithms.py::test_low_confidence_finding_cannot_promote PASSED [ 59%]
+backend/tests/test_phase7_algorithms.py::test_promotion_requires_validator PASSED [ 59%]
+backend/tests/test_phase7_algorithms.py::test_promotion_requires_evidence PASSED [ 59%]
+backend/tests/test_phase7_algorithms.py::test_self_reinforcing_evidence_does_not_validate_promotion PASSED [ 60%]
+backend/tests/test_phase7_algorithms.py::test_unresolved_contradiction_blocks_promotion PASSED [ 60%]
+backend/tests/test_phase7_algorithms.py::test_evidence_for_artifact_uses_graph_lineage PASSED [ 60%]
+backend/tests/test_phase7_algorithms.py::test_active_evidence_excludes_invalidated PASSED [ 61%]
+backend/tests/test_phase7_algorithms.py::test_invalidation_impact_follows_only_defined_dependency_edges PASSED [ 61%]
+backend/tests/test_phase7_algorithms.py::test_removing_support_edge_stops_stale_claim_propagation PASSED [ 61%]
+backend/tests/test_phase7_algorithms.py::test_removing_based_on_edge_stops_decision_impact PASSED [ 61%]
+backend/tests/test_phase7_algorithms.py::test_removing_task_derivation_stops_task_impact PASSED [ 62%]
+backend/tests/test_phase7_algorithms.py::test_plan_impact_requires_plan_has_task_edge PASSED [ 62%]
+backend/tests/test_phase7_algorithms.py::test_policy_governance_change_impacts_action_only PASSED [ 62%]
+backend/tests/test_phase7_algorithms.py::test_candidate_assignment_change_can_mark_task_affected PASSED [ 63%]
+backend/tests/test_phase7_algorithms.py::test_precedent_eligibility_rejects_open_incident PASSED [ 63%]
+backend/tests/test_phase7_algorithms.py::test_precedent_requires_root_cause_outcome_and_decision PASSED [ 63%]
+backend/tests/test_phase7_algorithms.py::test_precedent_eligible_when_learning_structure_is_complete PASSED [ 64%]
+backend/tests/test_phase7_algorithms.py::test_promotion_rejects_unsupported_artifact_type PASSED [ 64%]
+backend/tests/test_phase7_algorithms.py::test_invalidated_evidence_cannot_ground_promotion PASSED [ 64%]
+backend/tests/test_phase7_algorithms.py::test_open_blocker_blocks_promotion PASSED [ 65%]
+backend/tests/test_phase7_algorithms.py::test_resolved_blocker_does_not_block_promotion PASSED [ 65%]
+backend/tests/test_phase7_algorithms.py::test_random_neighbor_does_not_propagate_staleness PASSED [ 65%]
+backend/tests/test_phase7_algorithms.py::test_invalidation_depth_is_bounded PASSED [ 66%]
+backend/tests/test_phase7_algorithms.py::test_retracted_evidence_is_not_active_support PASSED [ 66%]
+backend/tests/test_phase7_algorithms.py::test_hypothesis_uses_same_guarded_promotion_rules PASSED [ 66%]
+backend/tests/test_phase7_api_integration.py::test_phase7_api_writeback_then_invalidate_and_revalidate SKIPPED [ 66%]
+backend/tests/test_phase7_api_integration.py::test_phase7_api_promotion_rejects_unverified_artifact SKIPPED [ 67%]
+backend/tests/test_phase7_api_integration.py::test_phase7_api_lineage_returns_relationships SKIPPED [ 67%]
+backend/tests/test_phase7_api_integration.py::test_phase7_api_process_requires_completed_execution SKIPPED [ 67%]
+backend/tests/test_phase7_integration.py::test_phase7_writeback_evidence_is_idempotent_and_keeps_provenance SKIPPED [ 68%]
+backend/tests/test_phase7_integration.py::test_phase7_unvalidated_finding_cannot_promote SKIPPED [ 68%]
+backend/tests/test_phase7_integration.py::test_phase7_validated_finding_promotes_without_destroying_source SKIPPED [ 68%]
+backend/tests/test_phase7_integration.py::test_phase7_promotion_is_idempotent SKIPPED [ 69%]
+backend/tests/test_phase7_integration.py::test_phase7_self_reinforcing_evidence_blocks_promotion SKIPPED [ 69%]
+backend/tests/test_phase7_integration.py::test_phase7_evidence_invalidation_propagates_to_claim_decision_task_plan_only SKIPPED [ 69%]
+backend/tests/test_phase7_integration.py::test_phase7_graph_necessity_removing_support_prevents_claim_invalidation SKIPPED [ 70%]
+backend/tests/test_phase7_integration.py::test_phase7_revalidation_restores_claim_with_new_valid_evidence SKIPPED [ 70%]
+backend/tests/test_phase7_integration.py::test_phase7_responsibility_promotion_closes_old_interval_and_changes_current_routing SKIPPED [ 70%]
+backend/tests/test_phase7_integration.py::test_phase7_unverified_responsibility_cannot_promote SKIPPED [ 71%]
+backend/tests/test_phase7_integration.py::test_phase7_expertise_learning_records_evidence_not_canonical_expertise SKIPPED [ 71%]
+backend/tests/test_phase7_integration.py::test_phase7_completed_execution_process_promotes_verified_findings SKIPPED [ 71%]
+backend/tests/test_phase7_integration.py::test_phase7_precedent_promotion_becomes_visible_to_existing_precedent_reasoning SKIPPED [ 71%]
+backend/tests/test_phase7_integration.py::test_phase7_decision_writeback_preserves_genealogy SKIPPED [ 72%]
+backend/tests/test_phase7_integration.py::test_phase7_action_outcome_is_distinct_from_execution_success SKIPPED [ 72%]
+backend/tests/test_phase7_integration.py::test_phase7_source_authority_drop_requires_revalidation SKIPPED [ 72%]
+backend/tests/test_phase7_integration.py::test_phase7_claim_supersession_preserves_old_claim_and_marks_dependents SKIPPED [ 73%]
+backend/tests/test_phase7_integration.py::test_phase7_ownership_change_marks_old_candidate_work_stale SKIPPED [ 73%]
+backend/tests/test_phase7_integration.py::test_phase7_duplicate_invalidation_does_not_duplicate_equivalent_event SKIPPED [ 73%]
+backend/tests/test_phase7_integration.py::test_phase7_dependency_change_marks_related_active_work_stale SKIPPED [ 74%]
+backend/tests/test_phase7_integration.py::test_phase7_entity_resolution_change_marks_identity_dependent_work_stale SKIPPED [ 74%]
+backend/tests/test_phase7_integration.py::test_phase7_contradictory_outcome_requires_claim_revalidation SKIPPED [ 74%]
+backend/tests/test_phase8_algorithms.py::test_process_reconstructs_event_workflow PASSED [ 75%]
+backend/tests/test_phase8_algorithms.py::test_process_temporal_order_is_chronological PASSED [ 75%]
+backend/tests/test_phase8_algorithms.py::test_process_explicit_trigger_is_preserved PASSED [ 75%]
+backend/tests/test_phase8_algorithms.py::test_process_dependency_is_distinct_from_trigger PASSED [ 76%]
+backend/tests/test_phase8_algorithms.py::test_process_validated_root_cause_is_causal PASSED [ 76%]
+backend/tests/test_phase8_algorithms.py::test_before_alone_does_not_imply_cause PASSED [ 76%]
+backend/tests/test_phase8_algorithms.py::test_equal_event_times_without_order_are_ambiguous PASSED [ 76%]
+backend/tests/test_phase8_algorithms.py::test_process_steps_include_provenance_paths PASSED [ 77%]
+backend/tests/test_phase8_algorithms.py::test_policy_expected_process_comes_from_require_edges PASSED [ 77%]
+backend/tests/test_phase8_algorithms.py::test_policy_observed_process_comes_from_events PASSED [ 77%]
+backend/tests/test_phase8_algorithms.py::test_policy_missing_required_step_detected PASSED [ 78%]
+backend/tests/test_phase8_algorithms.py::test_policy_order_violation_detected PASSED [ 78%]
+backend/tests/test_phase8_algorithms.py::test_policy_missing_approval_detected PASSED [ 78%]
+backend/tests/test_phase8_algorithms.py::test_policy_process_window_counts_container_approval_before_governed_change PASSED [ 79%]
+backend/tests/test_phase8_algorithms.py::test_policy_process_window_without_approval_still_reports_missing_approval PASSED [ 79%]
+backend/tests/test_phase8_algorithms.py::test_policy_approval_after_governed_operation_does_not_retroactively_satisfy PASSED [ 79%]
+backend/tests/test_phase8_algorithms.py::test_policy_governs_completely_outside_process_window_is_not_scope PASSED [ 80%]
+backend/tests/test_phase8_algorithms.py::test_policy_governs_partial_overlap_is_in_scope PASSED [ 80%]
+backend/tests/test_phase8_algorithms.py::test_policy_historical_as_of_before_approval_cannot_use_future_approval PASSED [ 80%]
+backend/tests/test_phase8_algorithms.py::test_policy_historical_as_of_after_approval_and_governed_action_sees_approval PASSED [ 80%]
+backend/tests/test_phase8_algorithms.py::test_policy_permitted_variation_not_violation PASSED [ 81%]
+backend/tests/test_phase8_algorithms.py::test_policy_historical_version_selected_for_old_process PASSED [ 81%]
+backend/tests/test_phase8_algorithms.py::test_policy_missing_evidence_has_distinct_classification PASSED [ 81%]
+backend/tests/test_phase8_algorithms.py::test_policy_unauthorized_actor_detected PASSED [ 82%]
+backend/tests/test_phase8_algorithms.py::test_policy_bypassed_control_detected_from_explicit_allowed_false PASSED [ 82%]
+backend/tests/test_phase8_algorithms.py::test_commitment_open_query PASSED [ 82%]
+backend/tests/test_phase8_algorithms.py::test_commitment_fulfilled_by_evidence PASSED [ 83%]
+backend/tests/test_phase8_algorithms.py::test_commitment_breached_by_evidence PASSED [ 83%]
+backend/tests/test_phase8_algorithms.py::test_commitment_overdue_is_not_automatically_breached PASSED [ 83%]
+backend/tests/test_phase8_algorithms.py::test_commitment_provenance_contains_source_paths PASSED [ 84%]
+backend/tests/test_phase8_algorithms.py::test_commitment_promisor_reconstructed PASSED [ 84%]
+backend/tests/test_phase8_algorithms.py::test_commitment_promisee_reconstructed PASSED [ 84%]
+backend/tests/test_phase8_algorithms.py::test_commitment_downstream_consequence_requires_dependency_edge PASSED [ 85%]
+backend/tests/test_phase8_algorithms.py::test_commitment_historical_query_excludes_future_fulfillment PASSED [ 85%]
+backend/tests/test_phase8_algorithms.py::test_collision_high_overlap_detected PASSED [ 85%]
+backend/tests/test_phase8_algorithms.py::test_collision_unrelated_projects_not_generated_without_shared_neighborhood PASSED [ 85%]
+backend/tests/test_phase8_algorithms.py::test_collision_shared_system_alone_not_high_collision PASSED [ 86%]
+backend/tests/test_phase8_algorithms.py::test_collision_collaboration_changes_classification PASSED [ 86%]
+backend/tests/test_phase8_algorithms.py::test_collision_dimensions_are_explainable PASSED [ 86%]
+backend/tests/test_phase8_algorithms.py::test_collision_removing_shared_graph_relations_lowers_score PASSED [ 87%]
+backend/tests/test_phase8_algorithms.py::test_bus_factor_sole_expert_risk_detected PASSED [ 87%]
+backend/tests/test_phase8_algorithms.py::test_bus_factor_redundant_expertise_lowers_dimension_risk PASSED [ 87%]
+backend/tests/test_phase8_algorithms.py::test_bus_factor_sole_approval_authority_detected PASSED [ 88%]
+backend/tests/test_phase8_algorithms.py::test_bus_factor_sole_operational_responsibility_detected PASSED [ 88%]
+backend/tests/test_phase8_algorithms.py::test_bus_factor_loss_simulation_does_not_mutate_snapshot PASSED [ 88%]
+backend/tests/test_phase8_algorithms.py::test_bus_factor_loss_simulation_creates_expected_expertise_gap PASSED [ 89%]
+backend/tests/test_phase8_algorithms.py::test_bus_factor_historical_coverage_respects_validity_interval PASSED [ 89%]
+backend/tests/test_phase8_algorithms.py::test_network_articulation_point_detected PASSED [ 89%]
+backend/tests/test_phase8_algorithms.py::test_network_redundant_path_removes_articulation_risk PASSED [ 90%]
+backend/tests/test_phase8_algorithms.py::test_network_bridge_edges_detected PASSED [ 90%]
+backend/tests/test_phase8_algorithms.py::test_network_extra_edge_removes_bridge_classification PASSED [ 90%]
+backend/tests/test_phase8_algorithms.py::test_network_centrality_is_deterministic PASSED [ 90%]
+backend/tests/test_phase8_algorithms.py::test_network_high_centrality_alone_is_not_overload PASSED [ 91%]
+backend/tests/test_phase8_algorithms.py::test_network_overload_requires_load_evidence_too PASSED [ 91%]
+backend/tests/test_phase8_algorithms.py::test_network_single_path_risk_matches_bridge_edges PASSED [ 91%]
+backend/tests/test_phase8_algorithms.py::test_network_projection_excludes_irrelevant_relationship_types PASSED [ 92%]
+backend/tests/test_phase8_api_integration.py::test_phase8_api_process_and_policy_drift SKIPPED [ 92%]
+backend/tests/test_phase8_api_integration.py::test_phase8_api_commitment_and_at_risk SKIPPED [ 92%]
+backend/tests/test_phase8_api_integration.py::test_phase8_api_collision_bus_factor_and_network SKIPPED [ 93%]
+backend/tests/test_phase8_api_integration.py::test_phase8_api_invalid_ids_and_parameters SKIPPED [ 93%]
+backend/tests/test_phase8_integration.py::test_phase8_inc001_process_reconstruction_recovers_explicit_trigger SKIPPED [ 93%]
+backend/tests/test_phase8_integration.py::test_phase8_before_edges_do_not_create_causal_edges SKIPPED [ 94%]
+backend/tests/test_phase8_integration.py::test_phase8_graph_necessity_trigger_edge SKIPPED [ 94%]
+backend/tests/test_phase8_integration.py::test_phase8_pol_db_04_drift_detects_skipped_compatibility_controls SKIPPED [ 94%]
+backend/tests/test_phase8_integration.py::test_phase8_policy_drift_process_window_accepts_pre_action_container_approval SKIPPED [ 95%]
+backend/tests/test_phase8_integration.py::test_phase8_graph_necessity_policy_requirement_edge SKIPPED [ 95%]
+backend/tests/test_phase8_integration.py::test_phase8_com017_breach_promisor_promisee_and_consequence SKIPPED [ 95%]
+backend/tests/test_phase8_integration.py::test_phase8_commitment_history_before_breach_remains_non_breached SKIPPED [ 95%]
+backend/tests/test_phase8_integration.py::test_phase8_com099_is_overdue_not_fabricated_breach SKIPPED [ 96%]
+backend/tests/test_phase8_integration.py::test_phase8_graph_necessity_commitment_owed_to SKIPPED [ 96%]
+backend/tests/test_phase8_integration.py::test_phase8_high_collision_pair_and_negative_case SKIPPED [ 96%]
+backend/tests/test_phase8_integration.py::test_phase8_graph_necessity_collision_shared_relations_lower_score SKIPPED [ 97%]
+backend/tests/test_phase8_integration.py::test_phase8_bus_factor_single_expert_fixture SKIPPED [ 97%]
+backend/tests/test_phase8_integration.py::test_phase8_bus_factor_actor_loss_is_non_mutating SKIPPED [ 97%]
+backend/tests/test_phase8_integration.py::test_phase8_graph_necessity_bus_factor_redundant_expert_reduces_concentration SKIPPED [ 98%]
+backend/tests/test_phase8_integration.py::test_phase8_bridge_fixture_detects_person_dev_as_articulation SKIPPED [ 98%]
+backend/tests/test_phase8_integration.py::test_phase8_graph_necessity_redundant_collaboration_path_removes_dev_articulation_for_fixture_subgraph SKIPPED [ 98%]
+backend/tests/test_phase8_integration.py::test_phase8_invalid_process_scope_returns_none SKIPPED [ 99%]
+backend/tests/test_query_safety.py::test_whitelist_rejects_arbitrary_label PASSED [ 99%]
+backend/tests/test_query_safety.py::test_whitelist_rejects_arbitrary_relationship PASSED [ 99%]
+backend/tests/test_query_safety.py::test_depth_is_bounded PASSED         [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/test_integration_graph.py:26: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:30: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:35: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:41: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:48: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:54: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:63: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:70: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:77: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:85: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:91: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:97: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:103: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:137: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:143: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_integration_graph.py:149: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:15: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:36: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:50: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:84: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:130: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:138: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:154: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:165: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:175: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:197: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:208: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:221: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase3_integration.py:239: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:21: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:33: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:42: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:50: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:59: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:82: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:91: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:99: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:108: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:119: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:127: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:142: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:156: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:169: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:182: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:198: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:213: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:228: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase4_integration.py:245: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:29: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:41: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:55: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:67: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:82: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:100: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:114: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:129: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:143: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:158: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:182: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:196: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:214: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:227: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:236: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:261: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:276: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase5_integration.py:292: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_api_integration.py:45: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_api_integration.py:134: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_api_integration.py:143: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:92: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:105: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:114: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:124: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:137: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:147: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:154: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:163: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:174: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:183: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:194: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:204: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:216: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:227: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:241: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:257: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:270: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:282: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:293: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:304: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:314: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:322: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:329: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:337: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:349: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:357: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:367: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:383: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:398: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:411: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:422: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:434: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:451: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:464: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:479: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:494: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:507: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:517: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:534: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:549: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:565: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:580: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase6_integration.py:604: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_api_integration.py:25: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_api_integration.py:47: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_api_integration.py:54: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_api_integration.py:63: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:57: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:72: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:78: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:90: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:99: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:106: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:128: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:138: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:151: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:169: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:178: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:191: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:199: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:229: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:246: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:257: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:269: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:283: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:304: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:316: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:328: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase7_integration.py:340: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_api_integration.py:17: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_api_integration.py:25: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_api_integration.py:33: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_api_integration.py:43: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:23: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:30: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:37: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:50: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:58: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:95: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:108: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:117: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:123: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:129: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:140: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:150: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:166: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:173: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:182: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:196: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:203: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+SKIPPED [1] backend/tests/test_phase8_integration.py:216: FalkorDB integration instance is unavailable at localhost:6379: FalkorDB Python client is not installed. Run: pip install -r requirements.txt
+======================= 161 passed, 160 skipped in 0.72s =======================

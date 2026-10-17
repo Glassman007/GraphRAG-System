@@ -1,0 +1,18 @@
+Phase 12 frontend source verification
+
+TypeScript parser: 5.8.3
+TS/TSX source + E2E files parsed: 64
+Syntactic diagnostics: 0
+Vitest it() cases declared: 134
+Playwright test() cases declared: 2
+Playwright story steps in primary test: 14
+
+Boundary audit:
+- Browser API modules use /api/v1 application boundary.
+- HTTP primitive is centralized in frontend/src/api/client.ts.
+- No frontend FalkorDB/Cypher/SQL/internal-Python-service access was found.
+
+Execution status:
+- npm package-dependent typecheck/Vitest/build were NOT executed in this sandbox because the npm registry is unreachable and node_modules is absent.
+- Playwright was NOT executed here because npm dependencies/browser and FalkorDB are unavailable.
+- These remain mandatory local acceptance gates.

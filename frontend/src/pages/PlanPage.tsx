@@ -1,0 +1,11 @@
+import { useMemo,useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../auth/AuthContext'
+import { getPlan } from '../api/plans'
+import { LoadingPanel,ErrorPanel } from '../components/AsyncState'
+import { GraphView } from '../components/GraphView'
+import { taskPlanToGraph } from '../graph/adapters'
+import { EntityDrawer } from '../components/EntityDrawer'
+import { JsonPanel } from '../components/JsonPanel'
+export function PlanPage(){const {planId=''}=useParams();const {config}=useAuth();const [selected,setSelected]=useState<any>();const q=useQuery({queryKey:['plan',planId],queryFn:({signal})=>getPlan(config,planId,signal)});const graph=useMemo(()=>taskPlanToGraph(q.data||{}),[q.data]);if(q.isLoading)return <LoadingPanel/>;if(q.error)return <ErrorPanel error={q.error}/>;return <section><h2>Plan {planId}</h2><div className="three-col"><JsonPanel title="Plan" value={q.data?.plan}/><div className="panel graph-panel"><h3>Task DAG</h3><GraphView graph={graph} layout="breadthfirst" onNode={setSelected}/></div><EntityDrawer value={selected} onClose={()=>setSelected(undefined)}/></div><JsonPanel title="Validation / ready tasks" value={{ready_tasks:q.data?.ready_tasks,validation:q.data?.validation}}/></section>}

@@ -1,0 +1,40 @@
+{
+  "records": [
+    {
+      "external_id": "metric-5xx",
+      "record_type": "metric",
+      "observed_at": "2026-10-16T14:08:14+05:30",
+      "metric": "pricing_api_5xx_rate",
+      "name": "Checkout 5xx rate increased",
+      "system": "Checkout",
+      "system_canonical_id": "SYS-CHECKOUT",
+      "value": 0.18,
+      "unit": "ratio",
+      "confidence": 0.99,
+      "incident_canonical_id": "INC-001",
+      "incident_name": "Pricing checkout errors"
+    },
+    {
+      "external_id": "metric-db-cpu",
+      "record_type": "metric",
+      "observed_at": "2026-10-16T14:08:30+05:30",
+      "metric": "pricing_db_cpu",
+      "name": "Pricing DB CPU increased",
+      "system": "Pricing Database",
+      "system_canonical_id": "SYS-PRICING-DB",
+      "value": 0.91,
+      "unit": "ratio",
+      "confidence": 0.99,
+      "artifacts": [
+        {
+          "name": "pricing-db.log",
+          "content": "2026-10-16T14:08:30+05:30 cpu=91% retries=high\n",
+          "mime_type": "text/plain",
+          "artifact_type": "LOG"
+        }
+      ],
+      "incident_canonical_id": "INC-001",
+      "incident_name": "Pricing checkout errors"
+    }
+  ]
+}

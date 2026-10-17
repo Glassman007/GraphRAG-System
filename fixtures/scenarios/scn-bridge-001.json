@@ -1,0 +1,88 @@
+{
+  "scenario_id": "SCN-BRIDGE-001",
+  "title": "Single Cross-Team Release Bridge",
+  "description": "Supports organizational bottleneck / bridge detection.",
+  "tenant_id": "northstar",
+  "nodes": [
+    {
+      "id": "TEAM-SECURITY",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-SECURITY",
+        "tenant_id": "northstar",
+        "name": "Security Engineering",
+        "status": "ACTIVE",
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TEAM-PLATFORM",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-PLATFORM",
+        "tenant_id": "northstar",
+        "name": "Platform Engineering",
+        "status": "ACTIVE",
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PERSON-DEV",
+      "label": "Person",
+      "properties": {
+        "id": "PERSON-DEV",
+        "tenant_id": "northstar",
+        "name": "Dev Malhotra",
+        "role": "Release Security Liaison",
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PROJ-RELEASE-GATE",
+      "label": "Project",
+      "properties": {
+        "id": "PROJ-RELEASE-GATE",
+        "tenant_id": "northstar",
+        "name": "Production Release Gate",
+        "status": "ACTIVE",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "PERSON-DEV",
+      "type": "MEMBER_OF",
+      "target": "TEAM-SECURITY",
+      "properties": {
+        "edge_id": "PERSON-DEV|MEMBER_OF|TEAM-SECURITY|2024-01-01T00:00:00+05:30",
+        "valid_from": "2024-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PERSON-DEV",
+      "type": "RESPONSIBLE_FOR",
+      "target": "PROJ-RELEASE-GATE",
+      "properties": {
+        "edge_id": "PERSON-DEV|RESPONSIBLE_FOR|PROJ-RELEASE-GATE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TEAM-PLATFORM",
+      "type": "DEPENDS_ON",
+      "target": "PROJ-RELEASE-GATE",
+      "properties": {
+        "edge_id": "TEAM-PLATFORM|DEPENDS_ON|PROJ-RELEASE-GATE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    }
+  ],
+  "ground_truth": {
+    "bridge_person": "PERSON-DEV",
+    "removal_effect": "Platform loses its only modeled path to Security release review."
+  }
+}

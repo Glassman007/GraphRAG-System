@@ -1,0 +1,5 @@
+{"records":[
+{"external_id":"U-NEHA-001","record_type":"user","observed_at":"2026-10-16T14:04:00+05:30","display_name":"Neha Verma","email":"neha.verma@northstar.example","user_id":"U-NEHA-001","team":"Pricing Platform"},
+{"external_id":"msg-capacity","record_type":"message","observed_at":"2026-10-16T14:08:00+05:30","channel":"incidents","author":{"display_name":"Arjun Mehta","email":"arjun@northstar.example","user_id":"U-ARJUN"},"text":"DB CPU looks saturated. I think capacity is the problem.","assertion":"Database capacity caused the incident","confidence":0.45,"about_incident":"Pricing checkout errors","about_canonical_id":"INC-001"},
+{"external_id":"msg-compat","record_type":"message","observed_at":"2026-10-16T14:12:00+05:30","channel":"incidents","author":{"display_name":"Riya Kapoor","email":"riya@northstar.example","user_id":"U-RIYA"},"text":"v4.1 writers are incompatible with MIG-203.","assertion":"MIG-203 is incompatible with active v4.1 writers","confidence":0.72,"about_system":"Pricing Database","about_canonical_id":"SYS-PRICING-DB"}
+]}

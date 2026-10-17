@@ -1,0 +1,4 @@
+{"records":[
+{"external_id":"jira-neha","record_type":"user","observed_at":"2026-10-16T13:48:00+05:30","display_name":"Neha Verma","email":"neha.verma@northstar.example","account_id":"neha.verma","team":"Pricing Platform"},
+{"external_id":"JIRA-4812","record_type":"issue","observed_at":"2026-10-16T13:55:00+05:30","key":"JIRA-4812","summary":"Preserve v4.1 compatibility during rollout","status":"IN_PROGRESS","priority":"HIGH","assignee":{"display_name":"Arjun Mehta","email":"arjun@northstar.example","account_id":"arjun","team":"Pricing Platform"},"team":"Pricing Platform","team_canonical_id":"TEAM-PRICING","system":"Pricing API","system_canonical_id":"SYS-PRICING-API","project":{"key":"PRICING","name":"Pricing Reliability"},"depends_on":{"key":"JIRA-4790","summary":"Prepare migration rollout","status":"DONE"}}
+]}

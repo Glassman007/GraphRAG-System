@@ -1,0 +1,53 @@
+{
+  "records": [
+    {
+      "external_id": "gh-user-neha",
+      "record_type": "user",
+      "observed_at": "2026-10-16T13:40:00+05:30",
+      "email": "neha.verma@northstar.example",
+      "display_name": "Neha Verma",
+      "login": "neha-verma"
+    },
+    {
+      "external_id": "repo-pricing",
+      "record_type": "repository",
+      "observed_at": "2026-10-16T13:45:00+05:30",
+      "name": "pricing-service",
+      "full_name": "northstar/pricing-service",
+      "system_name": "Pricing API",
+      "canonical_source_uri": "https://github.example/northstar/pricing-service"
+    },
+    {
+      "external_id": "pr-842",
+      "record_type": "pull_request",
+      "observed_at": "2026-10-16T14:03:00+05:30",
+      "title": "Add region_scope migration",
+      "number": 842,
+      "repository": "pricing-service",
+      "system_name": "Pricing API",
+      "system_canonical_id": "SYS-PRICING-API",
+      "author": {
+        "name": "Neha Verma",
+        "email": "neha.verma@northstar.example",
+        "login": "neha-verma"
+      },
+      "reviewers": [
+        {
+          "name": "Arjun Mehta",
+          "email": "arjun@northstar.example",
+          "login": "arjun"
+        }
+      ],
+      "migration_key": "MIG-203",
+      "migration_name": "discount_rules region_scope NOT NULL migration",
+      "migration_canonical_id": "MIG-203",
+      "database_system": "Pricing Database",
+      "database_canonical_id": "SYS-PRICING-DB",
+      "created_at": "2026-10-16T13:50:00+05:30",
+      "merged_at": "2026-10-16T14:03:00+05:30",
+      "changed_files": [
+        "db/migrations/203_region_scope.sql"
+      ]
+    }
+  ]
+}
