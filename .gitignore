@@ -171,3 +171,7 @@ docs/*_nonintegration*.txt
 # Generated acceptance artifacts
 phase*_acceptance_report_*.json
 phase*_browser_queries_*.cypher
+
+# Impeccable design skill: engine binary is downloaded on first run; local hook settings are per machine
+.claude/skills/impeccable/scripts/bin/
+.claude/settings.local.json
