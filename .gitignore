@@ -1,3 +1,8 @@
+# VERINEX / GraphHacks
+# Commit code, dependency manifests/lockfiles, migrations, synthetic seed data,
+# tests, Docker/Compose configuration, and safe *.example configuration files.
+# Do not commit live secrets, local databases, generated reports, or runtime state.
+
 # Python
 __pycache__/
 *.py[cod]
@@ -22,7 +27,7 @@ pip-wheel-metadata/
 *.egg
 MANIFEST
 
-# Python virtual environments
+# Python virtual environments (dependencies are reproducible via manifests)
 .venv/
 venv/
 env/
@@ -43,17 +48,76 @@ htmlcov/
 hypothesis/
 .pytest_tmp/
 
-# Environment variables / secrets
+# Environment files / developer-local secrets
+# Covers root, backend/, frontend/, scripts/, etc. (Git patterns match at any depth).
 .env
 .env.*
 !.env.example
-frontend/.env
-frontend/.env.*
-!frontend/.env.example
+!.env.*.example
+!.env.sample
+!.env.template
+*.env
+*.env.*
+!*.env.example
+!*.env.*.example
+!*.env.sample
+!*.env.template
+.envrc
+.direnv/
+.secrets/
+local-secrets/
+secrets/
+.graphhacks_credentials/
+.graphhacks_secrets/
+
+# Provider credentials (GROQ_API_KEY, OPENAI_API_KEY,
+# GRAPH_HACKS_AGENT_API_KEY, database passwords, tokens, etc.)
+# Store actual values in environment variables / ignored .env files.
+# The agent Python source files MUST remain tracked.
 *.pem
 *.key
+*.p8
 *.p12
 *.pfx
+*.jks
+*.keystore
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+credentials.json
+*.credentials.json
+secrets.json
+*.secrets.json
+config.local.json
+config.local.yaml
+config.local.yml
+settings.local.json
+settings.local.yaml
+settings.local.yml
+token.json
+tokens.json
+client_secret*.json
+service_account*.json
+service-account*.json
+firebase-adminsdk-*.json
+
+# Local cloud / package registry authentication
+.aws/
+.azure/
+.gcloud/
+.npmrc
+!.npmrc.example
+.pypirc
+.netrc
+.streamlit/secrets.toml
+
+# Local infra secrets and state (if used)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
 
 # Node / React / Vite
 node_modules/
@@ -82,10 +146,17 @@ test-results/
 .graphhacks_indexes/
 retrieval_indexes/
 artifacts/
+# This is project SOURCE CODE, not generated runtime output:
 !backend/app/ingestion/artifacts/
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal
 *.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
 
 # Runtime logs
 *.log
@@ -93,7 +164,7 @@ logs/
 *.pid
 *.pid.lock
 
-# Temporary files
+# Temporary files and local working copies
 tmp/
 temp/
 *.tmp
@@ -101,6 +172,11 @@ temp/
 *.swp
 *.swo
 *~
+*.bak
+*.orig
+*.rej
+# Agent runtime backups created during evidence/rate/dedup patches
+*.py.before-*
 .DS_Store
 Thumbs.db
 desktop.ini
@@ -115,47 +191,15 @@ desktop.ini
 # OS / Python notebook caches
 .ipynb_checkpoints/
 
-# Local acceptance / generated run artifacts
-phase9_acceptance_report_*.json
-phase9_browser_queries_*.cypher
-phase10_acceptance_report_*.json
-phase10_browser_queries_*.cypher
-phase11_api_acceptance_*.json
-phase11_api_examples_*.http
-phase11_browser_queries_*.cypher
-phase12_acceptance_*.json
-phase12_browser_queries_*.cypher
-
-# Local FalkorDB / Redis persistence if launched from repo
-dump.rdb
-appendonly.aof
-appendonlydir/
-
-# Package-manager caches
-.npm/
-.pnpm-store/
-.yarn/cache/
-.yarn/unplugged/
-
-# Keep lockfiles committed for reproducible installs
-# package-lock.json
-# pnpm-lock.yaml
-# yarn.lock
-
-# GraphHacks generated verification / acceptance artifacts
+# Generated verification / acceptance artifacts
 phase1_11_verification_*/
 phase6_8_acceptance_report_*.json
 phase6_8_browser_queries_*.cypher
 phase9_acceptance_artifacts_*/
-phase9_acceptance_report_*.json
-phase9_browser_queries_*.cypher
-phase10_acceptance_report_*.json
-phase10_browser_queries_*.cypher
+phase*_acceptance_report_*.json
+phase*_browser_queries_*.cypher
 phase11_api_acceptance_*.json
 phase11_api_examples_*.http
-phase11_browser_queries_*.cypher
-phase12_acceptance_*.json
-phase12_browser_queries_*.cypher
 
 # Generated test / verification output captured under docs
 docs/*_pytest_output.txt
@@ -168,13 +212,17 @@ docs/*_collect.txt
 docs/*_targeted.txt
 docs/*_nonintegration*.txt
 
-# Generated acceptance artifacts
-phase*_acceptance_report_*.json
-phase*_browser_queries_*.cypher
+# Local FalkorDB / Redis persistence (keep migration/seed scripts tracked)
+dump.rdb
+appendonly.aof
+appendonlydir/
 
-# Impeccable design skill: engine binary is downloaded on first run; local hook settings are per machine
+# Package-manager caches (do NOT ignore package lockfiles)
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+
+# Impeccable design skill: downloaded binary and machine-local settings
 .claude/skills/impeccable/scripts/bin/
 .claude/settings.local.json
-
-# Local credentials - never commit
-.graphhacks_credentials/

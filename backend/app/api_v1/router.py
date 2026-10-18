@@ -44,6 +44,10 @@ from backend.app.services.simulation_service import CounterfactualSimulationServ
 from backend.app.services.temporal_service import TemporalService
 from backend.app.services.work_planning_service import WorkPlanningService
 from backend.app.services.work_insights_service import task_dependency_analysis, task_insights, agent_memory
+from backend.app.agent_runtime.harness import AgentHarness, AgentSettings
+from backend.app.agent_runtime.provider import OpenAICompatibleProvider, ProviderError
+from backend.app.agent_runtime.store import GraphRunStore
+from backend.app.agent_runtime.tools import ToolRegistry
 from backend.app.services.phase4_graph import GraphSnapshot, has_label
 from backend.app.ingestion.source_control import SourceControlService
 
@@ -109,6 +113,42 @@ def _active_execution(coord: CoordinationService, task_id: str) -> str | None:
     items.sort(key=lambda e:str(e.get("started_at") or e.get("created_at") or ""),reverse=True)
     return str(items[0].get("id")) if items else None
 
+
+# -------------------- Step 5 / Component 1: Real bounded Agent Runtime --------------------
+@router.get("/agent-runtime/status", tags=["Agent Runtime"], summary="Describe the configured bounded tool-calling runtime")
+def agent_runtime_status(principal:Principal=Depends(require("READ_GRAPH"))):
+    import os
+    provider=(os.getenv('GRAPH_HACKS_AGENT_PROVIDER') or 'groq').strip().lower()
+    key={'groq':'GROQ_API_KEY','openai':'OPENAI_API_KEY','compatible':'GRAPH_HACKS_AGENT_API_KEY'}.get(provider)
+    return {'provider':provider,'configured':bool(key is not None and os.getenv(key)) or (provider=='compatible' and bool(os.getenv('GRAPH_HACKS_AGENT_BASE_URL'))),
+            'mode':'MODEL_TOOL_LOOP','business_tools':'READ_ONLY','requires_explicit_model_data_consent':True,
+            'supports_autonomous_multi_agent_coordination':False,'supports_external_action_execution':False}
+
+@router.post("/agent-runtime/runs", tags=["Agent Runtime"], summary="Start a bounded, graph-grounded independent investigation")
+def start_agent_runtime(request:Request, body:AgentSettings, principal:Principal=Depends(require("READ_GRAPH","READ_EVIDENCE","CREATE_INVESTIGATION"))):
+    _guard_rate(request,principal,limit=12)
+    if not body.allow_external_model:
+        raise ApiError(422,'CONSENT_REQUIRED','Explicit permission to transmit selected organizational context to the model is required.')
+    try:
+        provider=OpenAICompatibleProvider()
+    except ProviderError as exc:
+        raise ApiError(503,'AGENT_PROVIDER_UNAVAILABLE',str(exc)) from exc
+    client=client_for(principal)
+    tools=ToolRegistry(lambda:GraphSnapshot.load(client))
+    harness=AgentHarness(provider=provider,tools=tools,store=GraphRunStore(client),tenant=principal.tenant_id)
+    try:
+        return harness.run(body,subject=principal.subject).__dict__
+    except ValueError as exc:
+        raise ApiError(422,'AGENT_INPUT_INVALID',str(exc)) from exc
+
+@router.get("/agent-runtime/runs/{run_id}", tags=["Agent Runtime"], summary="Read tenant-scoped persisted run and complete execution trace")
+def get_agent_runtime(run_id:str,principal:Principal=Depends(require("READ_GRAPH","READ_EVIDENCE"))):
+    import re
+    if not re.fullmatch(r'ARUN-[0-9A-F]{32}',run_id):
+        raise ApiError(422,'INVALID_RUN_ID','Invalid agent runtime ID')
+    result=GraphRunStore(client_for(principal)).get(run_id)
+    if result is None:_not_found('AgentRun',run_id)
+    return result
 
 @router.get("/capabilities", tags=["System"], summary="List public capabilities")
 def capabilities():

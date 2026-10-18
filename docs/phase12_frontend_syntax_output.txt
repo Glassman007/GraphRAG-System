@@ -1,3 +1,0 @@
-TypeScript 5.8.3
-TS/TSX files parsed: 67
-Syntax errors: 0

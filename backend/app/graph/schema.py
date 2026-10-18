@@ -9,7 +9,7 @@ NODE_LABELS = {
     "Plan", "Task", "Agent", "Action", "Policy", "Commitment", "Event", "Tool",
     "DataSource", "SourceRecord", "WorkBranch", "Checkpoint", "Handoff",
     "Execution", "Finding", "Blocker", "Lock", "ActionAttempt", "CompactionRecord",
-    "Outcome", "ExpertiseEvidence",
+    "Outcome", "ExpertiseEvidence", "AgentRun", "AgentStep",
     "ExternalIdentity", "IngestionRun", "Artifact", "IngestionQuarantineRecord",
     "Chunk", "RetrievalExecution", "Investigation",
 }
@@ -27,7 +27,7 @@ RELATIONSHIP_TYPES = {
     "PROMOTED_TO", "HAS_OUTCOME", "CANDIDATE_EXPERT",
     "CAUSE", "MADE_BY", "SATISFIED_BY", "BREACHED_BY", "COLLABORATES_WITH",
     "INGESTED", "NORMALIZED_TO", "RESOLVES_TO", "REFERENCES",
-    "DOCUMENTED_BY", "HAS_ARTIFACT", "REQUESTED_BY", "FOR_TASK", "USED_SOURCE", "RETURNED", "HAS_RETRIEVAL",
+    "DOCUMENTED_BY", "HAS_AGENT_STEP", "HAS_ARTIFACT", "REQUESTED_BY", "FOR_TASK", "USED_SOURCE", "RETURNED", "HAS_RETRIEVAL",
 }
 
 
