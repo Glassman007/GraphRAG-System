@@ -1,0 +1,44 @@
+{
+  "scenario_id": "AST-CB-07",
+  "track": "COMPANY_BRAIN",
+  "title": "Duplicate cross-team initiatives",
+  "summary": "Find two teams automating the same billing issue.",
+  "entry_ids": [
+    "PROJ-AST-BILL-DUP1"
+  ],
+  "focus_ids": [
+    "PROJ-AST-BILL-DUP2",
+    "SYS-AST-BILLING"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "PROJ-AST-BILL-DUP1",
+        "current_status": "ACTIVE"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Which teams built overlapping credit note automation?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

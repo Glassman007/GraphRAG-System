@@ -1,0 +1,28 @@
+import { expect,test } from '@playwright/test'
+
+test('Phase 13 builds and explains a Company Brain from the source UI',async({page,request})=>{
+  await page.goto('/situations')
+  await expect(page.getByRole('heading',{name:'Build your Company Brain'})).toBeVisible()
+  await page.getByRole('link',{name:'Connect your first source'}).click()
+  await expect(page.getByRole('heading',{name:'Connect an organizational source'})).toBeVisible()
+  await page.getByRole('button',{name:/GitHub/}).click();await page.getByRole('button',{name:'Continue'}).click()
+  await page.getByLabel('Source name').fill('Northstar Engineering GitHub');await page.getByRole('button',{name:'Continue'}).click()
+  await page.getByRole('button',{name:'Continue'}).click()
+  await page.getByLabel(/organization|repositories/i).fill('pricing-service');await page.getByRole('button',{name:'Continue'}).click()
+  await expect(page.getByText('Repository',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Continue'}).click()
+  await page.getByRole('button',{name:'Test connection'}).click();await expect(page.getByText('PASS').first()).toBeVisible();await page.getByRole('button',{name:'Continue'}).click()
+  await page.getByRole('button',{name:'Preview ingestion'}).click();await expect(page.getByText('Preview made no canonical graph writes.')).toBeVisible();await page.getByRole('button',{name:'Continue'}).click()
+  await page.getByRole('button',{name:'Connect & sync'}).click();await expect(page).toHaveURL(/\/sources\/SRC-/)
+  const sourcePath=new URL(page.url()).pathname
+  expect(sourcePath).toMatch(/^\/sources\/SRC-/)
+  await expect(page.getByText('Successful',{exact:true})).toBeVisible()
+  await page.getByRole('button',{name:'records'}).click();await expect(page.getByText(/pricing-service|Pricing API/).first()).toBeVisible()
+  await page.goto('/sources/identity-review');await expect(page.getByText('Neha Verma',{exact:true})).toBeVisible();await page.getByLabel('Canonical entity ID').fill('PERSON-P13-CAND');await page.getByRole('button',{name:'Confirm match'}).click();await expect(page.getByText('No identities need review',{exact:true})).toBeVisible()
+  await page.goto('/entities/SYS-PRICING-API');await expect(page.getByRole('heading',{name:'Pricing API',exact:true})).toBeVisible();await expect(page.getByText('Technical ID: SYS-PRICING-API',{exact:true})).toBeVisible()
+  await page.getByLabel('Technical Mode').check();await expect(page.locator('details[open]').first()).toBeVisible();await page.getByLabel('Technical Mode').uncheck()
+  await page.getByRole('button',{name:'Why / provenance'}).click();await expect(page.getByRole('heading',{name:'How did GraphHacks learn this?'})).toBeVisible()
+  await page.goto('/knowledge');await expect(page.getByRole('heading',{name:'Knowledge'})).toBeVisible()
+  await page.goto('/company-brain?tab=bus-factor');await expect(page.getByRole('heading',{name:'Company Brain'})).toBeVisible()
+  await page.goto(sourcePath);await page.getByRole('button',{name:'Disable',exact:true}).click();await page.getByRole('button',{name:'Confirm',exact:true}).click();await expect(page.getByRole('button',{name:'Enable',exact:true})).toBeVisible();await page.getByRole('button',{name:'Enable',exact:true}).click();await page.getByRole('button',{name:'Sync now',exact:true}).click();await page.getByRole('button',{name:'sync history',exact:true}).click();await expect(page.locator('.row-link')).toHaveCount(2)
+  const sources=await request.get('/api/v1/sources',{headers:{Authorization:'Bearer test-admin-token','X-Tenant-ID':'northstar'}});expect(sources.ok()).toBeTruthy()
+})

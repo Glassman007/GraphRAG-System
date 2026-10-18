@@ -1,0 +1,92 @@
+{
+  "scenario_id": "SCN-COMMIT-001",
+  "title": "Overdue Data Export Commitment",
+  "description": "Supports commitment and obligation tracking.",
+  "tenant_id": "northstar",
+  "nodes": [
+    {
+      "id": "TEAM-DATA",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-DATA",
+        "tenant_id": "northstar",
+        "name": "Data Platform Team",
+        "status": "ACTIVE",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TEAM-FRAUD",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-FRAUD",
+        "tenant_id": "northstar",
+        "name": "Fraud Analytics Team",
+        "status": "ACTIVE",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "COM-099",
+      "label": "Commitment",
+      "properties": {
+        "id": "COM-099",
+        "tenant_id": "northstar",
+        "name": "Deliver chargeback export",
+        "statement": "Data Platform will deliver the chargeback export by 2026-10-15 18:00 IST.",
+        "status": "ACTIVE",
+        "created_at": "2026-10-14T09:00:00+05:30",
+        "due_at": "2026-10-15T18:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-CHARGEBACK-EXPORT",
+      "label": "System",
+      "properties": {
+        "id": "SYS-CHARGEBACK-EXPORT",
+        "tenant_id": "northstar",
+        "name": "Chargeback Export",
+        "system_type": "pipeline",
+        "status": "ACTIVE",
+        "created_at": "2026-10-01T00:00:00+05:30"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "COM-099",
+      "type": "PROMISED_BY",
+      "target": "TEAM-DATA",
+      "properties": {
+        "edge_id": "COM-099|PROMISED_BY|TEAM-DATA|2026-10-14T09:00:00+05:30",
+        "valid_from": "2026-10-14T09:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "COM-099",
+      "type": "OWED_TO",
+      "target": "TEAM-FRAUD",
+      "properties": {
+        "edge_id": "COM-099|OWED_TO|TEAM-FRAUD|2026-10-14T09:00:00+05:30",
+        "valid_from": "2026-10-14T09:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "COM-099",
+      "type": "COMMITTED_TO",
+      "target": "SYS-CHARGEBACK-EXPORT",
+      "properties": {
+        "edge_id": "COM-099|COMMITTED_TO|SYS-CHARGEBACK-EXPORT|2026-10-14T09:00:00+05:30",
+        "valid_from": "2026-10-14T09:00:00+05:30",
+        "confidence": 1.0
+      }
+    }
+  ],
+  "ground_truth": {
+    "at_time": "2026-10-16T01:00:00+05:30",
+    "is_overdue": true,
+    "satisfaction_event_exists": false
+  }
+}

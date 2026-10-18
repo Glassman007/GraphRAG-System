@@ -1,0 +1,79 @@
+/*
+ * GraphHacks design system: "Read the Rain".
+ * Source of truth: /DESIGN.md. These custom properties mirror its frontmatter tokens.
+ * Fonts are imported from JS (src/design/fonts.ts) so Vite can fingerprint and self-host them.
+ */
+
+/* Box-drawing / block / geometric marks come from installed monospace fonts:
+   neither bundled face carries U+2500-25FF. Only short marks use this range. */
+@font-face {
+  font-family: 'GH Glyph';
+  src: local('Cascadia Mono'), local('CascadiaMono-Regular'), local('Consolas'), local('Menlo-Regular'), local('Menlo'), local('DejaVu Sans Mono'), local('Liberation Mono');
+  unicode-range: U+2500-25FF;
+}
+
+:root {
+  /* Ground and surfaces */
+  --void: #030806;
+  --panel: #06110a;
+  --raised: #0b1c12;
+
+  /* Rules */
+  --rule-faint: #12301f;
+  --rule: #267246;
+  --rule-bright: #2fa35a;
+
+  /* Phosphor text ramp */
+  --text-muted: #3fbf6f;
+  --text: #b8f5c4;
+  --text-bright: #e8fff0;
+
+  /* Signal (Matrix green) */
+  --signal: #00ff41;
+  --signal-deep: #00c032;
+
+  /* Trace: FalkorDB violet. Only for what the graph traversed */
+  --trace: #9d93ff;
+  --trace-line: #7466ff;
+
+  /* Status */
+  --warn: #ffb000;
+  --crit: #ff5a4d;
+
+  /* Type */
+  --font-display: 'Martian Mono Variable', 'JetBrains Mono Variable', 'GH Glyph', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono Variable', 'GH Glyph', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --fs-display: clamp(2.75rem, 7.5vw, 6rem);
+  --fs-headline: 1.75rem;
+  --fs-title: 1rem;
+  --fs-body: 0.875rem;
+  --fs-label: 0.6875rem;
+  --fs-metric: 1.5rem;
+  --lh-body: 1.25rem; /* the 20px grid line */
+  --track-label: 0.14em;
+
+  /* Space: the 20px line is the vertical unit */
+  --sp-hair: 4px;
+  --sp-xs: 8px;
+  --sp-sm: 12px;
+  --sp-md: 20px;
+  --sp-lg: 40px;
+  --sp-xl: 80px;
+
+  /* Control sizes */
+  --control-h: 40px;
+  --row-h: 32px;
+
+  /* Emission (glow): only on display, active and focused items */
+  --glow-signal: 0 0 2px rgb(0 255 65 / 0.55), 0 0 10px rgb(0 255 65 / 0.25);
+  --glow-soft: 0 0 6px rgb(0 255 65 / 0.18);
+  --glow-trace: 0 0 2px rgb(157 147 255 / 0.6), 0 0 10px rgb(116 102 255 / 0.3);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-decode: 600ms;
+
+  color-scheme: dark;
+}

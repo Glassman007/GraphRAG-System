@@ -1,0 +1,84 @@
+{
+  "scenario_id": "SCN-ANOM-001",
+  "title": "Shadow Production Dependency",
+  "description": "Supports graph anomaly and motif-deviation detection.",
+  "tenant_id": "northstar",
+  "nodes": [
+    {
+      "id": "SYS-ANALYTICS-UI",
+      "label": "System",
+      "properties": {
+        "id": "SYS-ANALYTICS-UI",
+        "tenant_id": "northstar",
+        "name": "Analytics UI",
+        "system_type": "frontend",
+        "status": "ACTIVE",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-PROD-ORDERS-DB",
+      "label": "System",
+      "properties": {
+        "id": "SYS-PROD-ORDERS-DB",
+        "tenant_id": "northstar",
+        "name": "Production Orders Database",
+        "system_type": "database",
+        "status": "ACTIVE",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-ANALYTICS-API",
+      "label": "System",
+      "properties": {
+        "id": "SYS-ANALYTICS-API",
+        "tenant_id": "northstar",
+        "name": "Analytics API",
+        "system_type": "service",
+        "status": "ACTIVE",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "SYS-ANALYTICS-UI",
+      "type": "DEPENDS_ON",
+      "target": "SYS-ANALYTICS-API",
+      "properties": {
+        "edge_id": "SYS-ANALYTICS-UI|DEPENDS_ON|SYS-ANALYTICS-API|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SYS-ANALYTICS-API",
+      "type": "DEPENDS_ON",
+      "target": "SYS-PROD-ORDERS-DB",
+      "properties": {
+        "edge_id": "SYS-ANALYTICS-API|DEPENDS_ON|SYS-PROD-ORDERS-DB|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SYS-ANALYTICS-UI",
+      "type": "DEPENDS_ON",
+      "target": "SYS-PROD-ORDERS-DB",
+      "properties": {
+        "edge_id": "SYS-ANALYTICS-UI|DEPENDS_ON|SYS-PROD-ORDERS-DB|2026-10-10T00:00:00+05:30",
+        "valid_from": "2026-10-10T00:00:00+05:30",
+        "confidence": 0.95
+      }
+    }
+  ],
+  "ground_truth": {
+    "anomalous_edge": [
+      "SYS-ANALYTICS-UI",
+      "DEPENDS_ON",
+      "SYS-PROD-ORDERS-DB"
+    ],
+    "reason": "UI bypasses normal API mediation motif."
+  }
+}

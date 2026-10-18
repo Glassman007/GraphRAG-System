@@ -1,0 +1,870 @@
+{
+  "AST-CB-01": {
+    "paths": [
+      [
+        "SYS-AST-DISPATCH",
+        "SYS-AST-ROUTE-API",
+        "SYS-AST-ROUTE-DB"
+      ],
+      [
+        "SYS-AST-PICK",
+        "SYS-AST-ROUTE-API",
+        "SYS-AST-ROUTE-DB"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Dispatch and picking each have a directed two-hop DEPENDS_ON path to Route DB.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "SYS-AST-DISPATCH",
+        "type": "DEPENDS_ON",
+        "target": "SYS-AST-ROUTE-API"
+      }
+    ]
+  },
+  "AST-CB-02": {
+    "paths": [
+      [
+        "EVD-AST-0001",
+        "CLM-AST-ROUTE-SCHEMA"
+      ],
+      [
+        "EVD-AST-0005",
+        "CLM-AST-ROUTE-CPU"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "One evidence SUPPORTS schema claim, another REFUTES CPU hypothesis; do not leak final root cause.",
+    "expected_outcome": "Schema hypothesis has source-backed support while trace evidence specifically refutes CPU-first.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "EVD-AST-0005",
+        "type": "REFUTES",
+        "target": "CLM-AST-ROUTE-CPU"
+      }
+    ]
+  },
+  "AST-CB-03": {
+    "paths": [
+      [
+        "TEAM-LEGACY",
+        "SYS-AST-OLD-CARRIER"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [
+      [
+        "TEAM-CARRIER",
+        "OWNS",
+        "SYS-AST-OLD-CARRIER"
+      ]
+    ],
+    "temporal": [
+      {
+        "source": "TEAM-LEGACY",
+        "type": "OWNS",
+        "target": "SYS-AST-OLD-CARRIER",
+        "active_at": "2026-06-01T00:00:00+05:30",
+        "inactive_at": "2026-10-12T00:00:00+05:30"
+      }
+    ],
+    "reason": "",
+    "expected_outcome": "Legacy Integrations owned the adapter historically but that ownership expired without a current successor.",
+    "success_criteria": {
+      "required_paths": 1,
+      "required_properties": 0,
+      "absent_relationships": 1,
+      "temporal_assertions": 1,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "TEAM-LEGACY",
+        "type": "OWNS",
+        "target": "SYS-AST-OLD-CARRIER"
+      }
+    ]
+  },
+  "AST-CB-04": {
+    "paths": [
+      [
+        "TEAM-CORE",
+        "SYS-AST-ROUTE-API"
+      ],
+      [
+        "PERSON-AST-007",
+        "SYS-AST-ROUTE-API"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Core Services is the current owner and a separately recorded routing expert can be located.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "TEAM-CORE",
+        "type": "OWNS",
+        "target": "SYS-AST-ROUTE-API"
+      }
+    ]
+  },
+  "AST-CB-05": {
+    "paths": [
+      [
+        "DEC-AST-MAY-ROLLBACK",
+        "INC-AST-OLD-MIGRATION"
+      ],
+      [
+        "DEC-AST-MAY-ROLLBACK",
+        "OUT-AST-MAY"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "The May rollback decision was approved, based on an old incident, and affected two systems.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "DEC-AST-MAY-ROLLBACK",
+        "type": "AFFECTS",
+        "target": "SYS-AST-ROUTE-DB"
+      }
+    ]
+  },
+  "AST-CB-06": {
+    "paths": [
+      [
+        "POL-AST-NEW-SLA",
+        "POL-AST-OLD-SLA"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [
+      {
+        "source": "POL-AST-OLD-SLA",
+        "type": "GOVERNS",
+        "target": "SYS-AST-OLD-CARRIER",
+        "active_at": "2026-06-01T00:00:00+05:30",
+        "inactive_at": "2026-10-12T00:00:00+05:30"
+      }
+    ],
+    "reason": "",
+    "expected_outcome": "The new escalation policy supersedes the former version and historical governance is expired.",
+    "success_criteria": {
+      "required_paths": 1,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 1,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "POL-AST-NEW-SLA",
+        "type": "SUPERSEDES",
+        "target": "POL-AST-OLD-SLA"
+      }
+    ]
+  },
+  "AST-CB-07": {
+    "paths": [
+      [
+        "PROJ-AST-BILL-DUP1",
+        "PROJ-AST-BILL-DUP2"
+      ],
+      [
+        "PROJ-AST-BILL-DUP2",
+        "SYS-AST-BILLING"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Two credit-note projects have overlapping scope and both affect the Billing API.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "PROJ-AST-BILL-DUP1",
+        "type": "COLLABORATES_WITH",
+        "target": "PROJ-AST-BILL-DUP2"
+      }
+    ]
+  },
+  "AST-CB-08": {
+    "paths": [
+      [
+        "SYS-AST-ANALYTICS",
+        "SYS-AST-LEDGER"
+      ]
+    ],
+    "properties": [
+      {
+        "id": "SYS-AST-ANALYTICS",
+        "field": "name",
+        "equals": "Operations BI"
+      }
+    ],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "An uncatalogued, low-confidence cross-domain DEPENDS_ON edge points from Operations BI to Ledger.",
+    "success_criteria": {
+      "required_paths": 1,
+      "required_properties": 1,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "SYS-AST-ANALYTICS",
+        "type": "DEPENDS_ON",
+        "target": "SYS-AST-LEDGER"
+      }
+    ]
+  },
+  "AST-AA-01": {
+    "paths": [
+      [
+        "EVD-AST-0001",
+        "SRCREC-AST-0001",
+        "DS-AST-GITHUB"
+      ],
+      [
+        "EVD-AST-0005",
+        "CLM-AST-ROUTE-CPU"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Source commits and trace records back the route investigation with accountable provenance.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "EVD-AST-0001",
+        "type": "DERIVED_FROM",
+        "target": "SRCREC-AST-0001"
+      }
+    ]
+  },
+  "AST-AA-02": {
+    "paths": [
+      [
+        "SYS-AST-CARRIER-GW",
+        "SYS-AST-ROUTE-API",
+        "SYS-AST-ROUTE-DB"
+      ],
+      [
+        "SYS-AST-WMS",
+        "SYS-AST-PICK",
+        "SYS-AST-ROUTE-API",
+        "SYS-AST-ROUTE-DB"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Carrier and warehouse consumers each connect to Route DB through bounded DEPENDS_ON traversals.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "SYS-AST-CARRIER-GW",
+        "type": "DEPENDS_ON",
+        "target": "SYS-AST-ROUTE-API"
+      }
+    ]
+  },
+  "AST-AA-03": {
+    "paths": [
+      [
+        "POL-AST-ROLLBACK",
+        "ACT-AST-ROLLBACK"
+      ],
+      [
+        "TASK-AST-ROUTE-APPROVAL",
+        "TASK-AST-ROUTE-POLICY"
+      ]
+    ],
+    "properties": [
+      {
+        "id": "ACT-AST-ROLLBACK",
+        "field": "status",
+        "equals": "PROPOSED"
+      }
+    ],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Rollback is merely proposed, requires approval and is governed by SEV-1 rollback policy.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 1,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "POL-AST-ROLLBACK",
+        "type": "GOVERNS",
+        "target": "ACT-AST-ROLLBACK"
+      }
+    ]
+  },
+  "AST-AA-04": {
+    "paths": [
+      [
+        "INC-AST-PAYOUT-DRIFT",
+        "INC-AST-CARRIER-LAG"
+      ],
+      [
+        "EVD-AST-0013",
+        "CLM-AST-PAYOUT-EVENT"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Payout drift is correlated with carrier lag and DB snapshots support the event-delay hypothesis.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "EVD-AST-0013",
+        "type": "SUPPORTS",
+        "target": "CLM-AST-PAYOUT-EVENT"
+      }
+    ]
+  },
+  "AST-AA-05": {
+    "paths": [
+      [
+        "POL-AST-PRIVACY",
+        "SYS-AST-CUST-ETL"
+      ],
+      [
+        "EVD-AST-0018",
+        "CLM-AST-PRIVACY-EXEMPT"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Consent policy governs export; audit and policy evidence refute an exemption.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "EVD-AST-0018",
+        "type": "REFUTES",
+        "target": "CLM-AST-PRIVACY-EXEMPT"
+      }
+    ]
+  },
+  "AST-AA-06": {
+    "paths": [
+      [
+        "DEC-AST-OWNER-REVIEW",
+        "POL-AST-NEW-SLA"
+      ],
+      [
+        "EVD-AST-0015",
+        "CLM-AST-OWNER-RETIRED"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Owner-transfer decision remains proposed, traces to retired owner claim and current SLA policy.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "DEC-AST-OWNER-REVIEW",
+        "type": "BASED_ON",
+        "target": "POL-AST-NEW-SLA"
+      }
+    ]
+  },
+  "AST-AM-01": {
+    "paths": [
+      [
+        "HANDOFF-AST-MISSING",
+        "TASK-AST-HANDOFF"
+      ],
+      [
+        "HANDOFF-AST-MISSING",
+        "AGENT-AST-POLICY"
+      ]
+    ],
+    "properties": [
+      {
+        "id": "HANDOFF-AST-MISSING",
+        "field": "status",
+        "equals": "INVALID"
+      }
+    ],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Invalid handoff is linked to the waiting task and missing evidence_ids must be identified.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 1,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "HANDOFF-AST-MISSING",
+        "type": "HANDOFF_FOR",
+        "target": "TASK-AST-HANDOFF"
+      }
+    ]
+  },
+  "AST-AM-02": {
+    "paths": [
+      [
+        "EXEC-AST-ROUTE-PAUSED",
+        "CHECK-AST-ROUTE-1",
+        "EVD-AST-0001"
+      ],
+      [
+        "EXEC-AST-ROUTE-PAUSED",
+        "WB-AST-REVIEW"
+      ]
+    ],
+    "properties": [
+      {
+        "id": "EXEC-AST-ROUTE-PAUSED",
+        "field": "status",
+        "equals": "PAUSED"
+      }
+    ],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Paused execution retains a checkpoint based on the original Git and log evidence.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 1,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "EXEC-AST-ROUTE-PAUSED",
+        "type": "HAS_CHECKPOINT",
+        "target": "CHECK-AST-ROUTE-1"
+      }
+    ]
+  },
+  "AST-AM-03": {
+    "paths": [
+      [
+        "FIND-AST-SCHEMA",
+        "FIND-AST-CPU-MEMORY"
+      ],
+      [
+        "FIND-AST-SCHEMA",
+        "EVD-AST-0005"
+      ]
+    ],
+    "properties": [
+      {
+        "id": "FIND-AST-CPU-MEMORY",
+        "field": "memory_state",
+        "equals": "STALE"
+      }
+    ],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "New proposed schema finding contradicts stale CPU memory and links to trace evidence.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 1,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "FIND-AST-SCHEMA",
+        "type": "CONTRADICTS",
+        "target": "FIND-AST-CPU-MEMORY"
+      }
+    ]
+  },
+  "AST-AM-04": {
+    "paths": [
+      [
+        "TASK-AST-DEADLOCK-A",
+        "TASK-AST-DEADLOCK-B"
+      ],
+      [
+        "TASK-AST-DEADLOCK-B",
+        "TASK-AST-DEADLOCK-A"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Two blocked tasks form a genuine directed BLOCKED_BY cycle.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "TASK-AST-DEADLOCK-B",
+        "type": "BLOCKED_BY",
+        "target": "TASK-AST-DEADLOCK-A"
+      }
+    ]
+  },
+  "AST-AM-05": {
+    "paths": [
+      [
+        "ACT-AST-ROLLBACK",
+        "ATT-AST-RETRY-1"
+      ],
+      [
+        "LOCK-AST-ROLLBACK",
+        "SYS-AST-ROUTE-API"
+      ]
+    ],
+    "properties": [
+      {
+        "id": "ATT-AST-RETRY-1",
+        "field": "status",
+        "equals": "FAILED"
+      }
+    ],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Rollback attempt failed; governed action is still proposed and lock state needs checking.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 1,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "ACT-AST-ROLLBACK",
+        "type": "HAS_ATTEMPT",
+        "target": "ATT-AST-RETRY-1"
+      }
+    ]
+  },
+  "AST-AM-06": {
+    "paths": [
+      [
+        "EXEC-AST-ROUTE-PAUSED",
+        "CMP-AST-ROUTE",
+        "CHECK-AST-ROUTE-1"
+      ]
+    ],
+    "properties": [
+      {
+        "id": "CMP-AST-ROUTE",
+        "field": "status",
+        "equals": "PENDING_REVIEW"
+      }
+    ],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Memory compaction is pending, and its chain reaches a checkpoint preserving evidence references.",
+    "success_criteria": {
+      "required_paths": 1,
+      "required_properties": 1,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "CMP-AST-ROUTE",
+        "type": "BASED_ON",
+        "target": "CHECK-AST-ROUTE-1"
+      }
+    ]
+  },
+  "AST-AM-07": {
+    "paths": [
+      [
+        "HANDOFF-AST-VALID",
+        "EVD-AST-0003"
+      ]
+    ],
+    "properties": [
+      {
+        "id": "HANDOFF-AST-VALID",
+        "field": "status",
+        "equals": "VALID"
+      }
+    ],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Valid handoff retains an evidence reference while the other handoff lacks evidence_ids.",
+    "success_criteria": {
+      "required_paths": 1,
+      "required_properties": 1,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "HANDOFF-AST-VALID",
+        "type": "BASED_ON",
+        "target": "EVD-AST-0003"
+      }
+    ]
+  },
+  "AST-CB-09": {
+    "paths": [
+      [
+        "SRCREC-AST-IDENTITY",
+        "PERSON-AST-062"
+      ],
+      [
+        "SRCREC-AST-IDENTITY",
+        "PERSON-AST-028"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [
+      [
+        "SRCREC-AST-IDENTITY",
+        "RESOLVES_TO",
+        "PERSON-AST-062"
+      ],
+      [
+        "SRCREC-AST-IDENTITY",
+        "RESOLVES_TO",
+        "PERSON-AST-028"
+      ]
+    ],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "The HR record has two CANDIDATE_MATCH links and no RESOLVES_TO link.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 2,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "SRCREC-AST-IDENTITY",
+        "type": "CANDIDATE_MATCH",
+        "target": "PERSON-AST-062"
+      }
+    ]
+  },
+  "AST-AA-07": {
+    "paths": [
+      [
+        "Q-AST-ROLLBACK-PROOF",
+        "INC-AST-ROUTE-OUTAGE"
+      ],
+      [
+        "Q-AST-ROLLBACK-PROOF",
+        "TOOL-AST-POLICIES"
+      ]
+    ],
+    "properties": [],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "The approval verification question remains open and requires the policy lookup tool.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 0,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "Q-AST-ROLLBACK-PROOF",
+        "type": "REQUIRES",
+        "target": "TOOL-AST-POLICIES"
+      }
+    ]
+  },
+  "AST-AM-08": {
+    "paths": [
+      [
+        "EXEC-AST-FINANCE-FAILED",
+        "CHECK-AST-FINANCE-1",
+        "EVD-AST-0013"
+      ],
+      [
+        "EXEC-AST-FINANCE-RESUME",
+        "CHECK-AST-FINANCE-1"
+      ]
+    ],
+    "properties": [
+      {
+        "id": "EXEC-AST-FINANCE-FAILED",
+        "field": "status",
+        "equals": "FAILED"
+      }
+    ],
+    "absent_relationships": [],
+    "temporal": [],
+    "reason": "",
+    "expected_outcome": "Finance failed execution and paused resumed execution both reference the same saved checkpoint.",
+    "success_criteria": {
+      "required_paths": 2,
+      "required_properties": 1,
+      "absent_relationships": 0,
+      "temporal_assertions": 0,
+      "pass_condition": "all asserted checks pass; no forbidden operations",
+      "score_threshold": 1.0,
+      "required_typed_edges": 1
+    },
+    "required_typed_edges": [
+      {
+        "source": "EXEC-AST-FINANCE-RESUME",
+        "type": "HAS_CHECKPOINT",
+        "target": "CHECK-AST-FINANCE-1"
+      }
+    ]
+  }
+}

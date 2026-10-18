@@ -1,0 +1,47 @@
+{
+  "scenario_id": "AST-AM-05",
+  "track": "AGENT_MEMORY_COORDINATION",
+  "title": "Action retry and idempotency",
+  "summary": "Show why a simulated failed action cannot be retried blindly.",
+  "entry_ids": [
+    "ACT-AST-ROLLBACK"
+  ],
+  "focus_ids": [
+    "ATT-AST-RETRY-1",
+    "LOCK-AST-ROLLBACK"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "ACT-AST-ROLLBACK",
+        "current_status": "PROPOSED"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE",
+    "CLAIM_TASK",
+    "WRITE_FINDING",
+    "CHECKPOINT"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "What approval or lock conditions must be checked before retrying rollback?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

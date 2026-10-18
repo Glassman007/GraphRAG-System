@@ -1,0 +1,1539 @@
+{
+  "scenario_id": "ASTERIA-V1-CROSS",
+  "tenant_id": "asteria",
+  "nodes": [],
+  "edges": [
+    {
+      "source": "ACT-AST-CARRIER-RETRY",
+      "type": "HAS_ATTEMPT",
+      "target": "ATT-AST-CARRIER-1",
+      "properties": {
+        "edge_id": "ACT-AST-CARRIER-RETRY|HAS_ATTEMPT|ATT-AST-CARRIER-1|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "ACT-AST-RESTORE",
+      "type": "ABOUT",
+      "target": "SYS-AST-DISPATCH",
+      "properties": {
+        "edge_id": "ACT-AST-RESTORE|ABOUT|SYS-AST-DISPATCH|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "ACT-AST-ROLLBACK",
+      "type": "ABOUT",
+      "target": "SYS-AST-ROUTE-DB",
+      "properties": {
+        "edge_id": "ACT-AST-ROLLBACK|ABOUT|SYS-AST-ROUTE-DB|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "ACT-AST-ROLLBACK",
+      "type": "HAS_ATTEMPT",
+      "target": "ATT-AST-RETRY-1",
+      "properties": {
+        "edge_id": "ACT-AST-ROLLBACK|HAS_ATTEMPT|ATT-AST-RETRY-1|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "ACT-AST-VERIFY",
+      "type": "ABOUT",
+      "target": "SYS-AST-ROUTE-API",
+      "properties": {
+        "edge_id": "ACT-AST-VERIFY|ABOUT|SYS-AST-ROUTE-API|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-DEPENDENCY",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-DEPENDENCY|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-DEPENDENCY",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-OWNERSHIP",
+      "properties": {
+        "edge_id": "AGENT-AST-DEPENDENCY|REQUIRES|TOOL-AST-OWNERSHIP|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-EVIDENCE",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-EVIDENCE|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-EVIDENCE",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-LOGS",
+      "properties": {
+        "edge_id": "AGENT-AST-EVIDENCE|REQUIRES|TOOL-AST-LOGS|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-EXPERT",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-EXPERT|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-EXPERT",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-OWNERSHIP",
+      "properties": {
+        "edge_id": "AGENT-AST-EXPERT|REQUIRES|TOOL-AST-OWNERSHIP|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-FINANCE",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-FINANCE|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-HANDOFF",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-HANDOFF|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-INVESTIGATOR",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-INVESTIGATOR|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-INVESTIGATOR",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-TRACES",
+      "properties": {
+        "edge_id": "AGENT-AST-INVESTIGATOR|REQUIRES|TOOL-AST-TRACES|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-MEMORY",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-MEMORY|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-OPS",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-OPS|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-POLICY",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-POLICY|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-POLICY",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-POLICIES",
+      "properties": {
+        "edge_id": "AGENT-AST-POLICY|REQUIRES|TOOL-AST-POLICIES|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-POSTMORTEM",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-POSTMORTEM|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-POSTMORTEM",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-TICKETS",
+      "properties": {
+        "edge_id": "AGENT-AST-POSTMORTEM|REQUIRES|TOOL-AST-TICKETS|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-REMEDIATION",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-REMEDIATION|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-SECURITY",
+      "type": "PART_OF",
+      "target": "PROJ-AST-OPS-AI",
+      "properties": {
+        "edge_id": "AGENT-AST-SECURITY|PART_OF|PROJ-AST-OPS-AI|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-SECURITY",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-SECURITY",
+      "properties": {
+        "edge_id": "AGENT-AST-SECURITY|REQUIRES|TOOL-AST-SECURITY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "ATT-AST-RETRY-1",
+      "type": "ABOUT",
+      "target": "INC-AST-AGENT-RETRY",
+      "properties": {
+        "edge_id": "ATT-AST-RETRY-1|ABOUT|INC-AST-AGENT-RETRY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHECK-AST-FINANCE-1",
+      "type": "BASED_ON",
+      "target": "EVD-AST-0013",
+      "properties": {
+        "edge_id": "CHECK-AST-FINANCE-1|BASED_ON|EVD-AST-0013|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHECK-AST-POLICY-1",
+      "type": "BASED_ON",
+      "target": "POL-AST-ROLLBACK",
+      "properties": {
+        "edge_id": "CHECK-AST-POLICY-1|BASED_ON|POL-AST-ROLLBACK|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHECK-AST-ROUTE-1",
+      "type": "BASED_ON",
+      "target": "EVD-AST-0001",
+      "properties": {
+        "edge_id": "CHECK-AST-ROUTE-1|BASED_ON|EVD-AST-0001|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHECK-AST-ROUTE-1",
+      "type": "BASED_ON",
+      "target": "EVD-AST-0003",
+      "properties": {
+        "edge_id": "CHECK-AST-ROUTE-1|BASED_ON|EVD-AST-0003|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHG-AST-AUTH-ROTATE",
+      "type": "CHANGED",
+      "target": "SYS-AST-IAM",
+      "properties": {
+        "edge_id": "CHG-AST-AUTH-ROTATE|CHANGED|SYS-AST-IAM|2026-08-25T07:45:00+05:30",
+        "valid_from": "2026-08-25T07:45:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHG-AST-CARRIER-ADAPT",
+      "type": "CHANGED",
+      "target": "SYS-AST-CARRIER-GW",
+      "properties": {
+        "edge_id": "CHG-AST-CARRIER-ADAPT|CHANGED|SYS-AST-CARRIER-GW|2026-10-11T19:00:00+05:30",
+        "valid_from": "2026-10-11T19:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHG-AST-FIN-INVOICE",
+      "type": "CHANGED",
+      "target": "SYS-AST-LEDGER",
+      "properties": {
+        "edge_id": "CHG-AST-FIN-INVOICE|CHANGED|SYS-AST-LEDGER|2026-10-08T06:00:00+05:30",
+        "valid_from": "2026-10-08T06:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHG-AST-HIST-ROUTE",
+      "type": "CHANGED",
+      "target": "SYS-AST-ROUTE-DB",
+      "properties": {
+        "edge_id": "CHG-AST-HIST-ROUTE|CHANGED|SYS-AST-ROUTE-DB|2026-05-10T18:00:00+05:30",
+        "valid_from": "2026-05-10T18:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHG-AST-ML-ETA",
+      "type": "CHANGED",
+      "target": "SYS-AST-ETA",
+      "properties": {
+        "edge_id": "CHG-AST-ML-ETA|CHANGED|SYS-AST-ETA|2026-10-10T10:00:00+05:30",
+        "valid_from": "2026-10-10T10:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHG-AST-PARTNER-CRM",
+      "type": "CHANGED",
+      "target": "SYS-AST-CRM",
+      "properties": {
+        "edge_id": "CHG-AST-PARTNER-CRM|CHANGED|SYS-AST-CRM|2026-10-06T09:00:00+05:30",
+        "valid_from": "2026-10-06T09:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHG-AST-PRIVACY-PIPE",
+      "type": "CHANGED",
+      "target": "SYS-AST-CUST-ETL",
+      "properties": {
+        "edge_id": "CHG-AST-PRIVACY-PIPE|CHANGED|SYS-AST-CUST-ETL|2026-10-09T09:00:00+05:30",
+        "valid_from": "2026-10-09T09:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHG-AST-ROUTE-V3",
+      "type": "CHANGED",
+      "target": "SYS-AST-ROUTE-DB",
+      "properties": {
+        "edge_id": "CHG-AST-ROUTE-V3|CHANGED|SYS-AST-ROUTE-DB|2026-10-12T09:05:00+05:30",
+        "valid_from": "2026-10-12T09:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CHG-AST-WMS-PEAK",
+      "type": "CHANGED",
+      "target": "SYS-AST-WMS",
+      "properties": {
+        "edge_id": "CHG-AST-WMS-PEAK|CHANGED|SYS-AST-WMS|2026-10-10T12:00:00+05:30",
+        "valid_from": "2026-10-10T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-CARRIER-TIME",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-AST-003",
+      "properties": {
+        "edge_id": "CLM-AST-CARRIER-TIME|ASSERTED_BY|PERSON-AST-003|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-CARRIER-VENDOR",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-AST-016",
+      "properties": {
+        "edge_id": "CLM-AST-CARRIER-VENDOR|ASSERTED_BY|PERSON-AST-016|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-OWNER-RETIRED",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-AST-016",
+      "properties": {
+        "edge_id": "CLM-AST-OWNER-RETIRED|ASSERTED_BY|PERSON-AST-016|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PAYOUT-EVENT",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-AST-014",
+      "properties": {
+        "edge_id": "CLM-AST-PAYOUT-EVENT|ASSERTED_BY|PERSON-AST-014|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PAYOUT-FRAUD",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-AST-013",
+      "properties": {
+        "edge_id": "CLM-AST-PAYOUT-FRAUD|ASSERTED_BY|PERSON-AST-013|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PRIVACY-BLOCK",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-AST-019",
+      "properties": {
+        "edge_id": "CLM-AST-PRIVACY-BLOCK|ASSERTED_BY|PERSON-AST-019|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PRIVACY-EXEMPT",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-AST-009",
+      "properties": {
+        "edge_id": "CLM-AST-PRIVACY-EXEMPT|ASSERTED_BY|PERSON-AST-009|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-ROUTE-CPU",
+      "type": "ABOUT",
+      "target": "SYS-AST-ROUTE-DB",
+      "properties": {
+        "edge_id": "CLM-AST-ROUTE-CPU|ABOUT|SYS-AST-ROUTE-DB|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-ROUTE-CPU",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-AST-005",
+      "properties": {
+        "edge_id": "CLM-AST-ROUTE-CPU|ASSERTED_BY|PERSON-AST-005|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-ROUTE-SCHEMA",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-AST-007",
+      "properties": {
+        "edge_id": "CLM-AST-ROUTE-SCHEMA|ASSERTED_BY|PERSON-AST-007|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DEC-AST-MAY-ROLLBACK",
+      "type": "AFFECTS",
+      "target": "SYS-AST-ROUTE-API",
+      "properties": {
+        "edge_id": "DEC-AST-MAY-ROLLBACK|AFFECTS|SYS-AST-ROUTE-API|2026-05-12T12:00:00+05:30",
+        "valid_from": "2026-05-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DEC-AST-MAY-ROLLBACK",
+      "type": "AFFECTS",
+      "target": "SYS-AST-ROUTE-DB",
+      "properties": {
+        "edge_id": "DEC-AST-MAY-ROLLBACK|AFFECTS|SYS-AST-ROUTE-DB|2026-05-12T12:00:00+05:30",
+        "valid_from": "2026-05-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DEC-AST-MAY-ROLLBACK",
+      "type": "APPROVED_BY",
+      "target": "PERSON-AST-007",
+      "properties": {
+        "edge_id": "DEC-AST-MAY-ROLLBACK|APPROVED_BY|PERSON-AST-007|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DEC-AST-MAY-ROLLBACK",
+      "type": "HAS_OUTCOME",
+      "target": "OUT-AST-MAY",
+      "properties": {
+        "edge_id": "DEC-AST-MAY-ROLLBACK|HAS_OUTCOME|OUT-AST-MAY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DEC-AST-OWNER-REVIEW",
+      "type": "AFFECTS",
+      "target": "SYS-AST-CARRIER-GW",
+      "properties": {
+        "edge_id": "DEC-AST-OWNER-REVIEW|AFFECTS|SYS-AST-CARRIER-GW|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DEC-AST-OWNER-REVIEW",
+      "type": "AFFECTS",
+      "target": "SYS-AST-OLD-CARRIER",
+      "properties": {
+        "edge_id": "DEC-AST-OWNER-REVIEW|AFFECTS|SYS-AST-OLD-CARRIER|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DEC-AST-OWNER-REVIEW",
+      "type": "BASED_ON",
+      "target": "POL-AST-NEW-SLA",
+      "properties": {
+        "edge_id": "DEC-AST-OWNER-REVIEW|BASED_ON|POL-AST-NEW-SLA|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-AUTH-ROTATE",
+      "type": "CHANGED",
+      "target": "SYS-AST-IAM",
+      "properties": {
+        "edge_id": "DPL-AST-AUTH-ROTATE|CHANGED|SYS-AST-IAM|2026-08-25T07:45:00+05:30",
+        "valid_from": "2026-08-25T07:45:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-CARRIER-ADAPT",
+      "type": "CHANGED",
+      "target": "SYS-AST-CARRIER-GW",
+      "properties": {
+        "edge_id": "DPL-AST-CARRIER-ADAPT|CHANGED|SYS-AST-CARRIER-GW|2026-10-11T19:00:00+05:30",
+        "valid_from": "2026-10-11T19:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-FIN-INVOICE",
+      "type": "CHANGED",
+      "target": "SYS-AST-LEDGER",
+      "properties": {
+        "edge_id": "DPL-AST-FIN-INVOICE|CHANGED|SYS-AST-LEDGER|2026-10-08T06:00:00+05:30",
+        "valid_from": "2026-10-08T06:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-HIST-ROUTE",
+      "type": "CHANGED",
+      "target": "SYS-AST-ROUTE-DB",
+      "properties": {
+        "edge_id": "DPL-AST-HIST-ROUTE|CHANGED|SYS-AST-ROUTE-DB|2026-05-10T18:00:00+05:30",
+        "valid_from": "2026-05-10T18:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-ML-ETA",
+      "type": "CHANGED",
+      "target": "SYS-AST-ETA",
+      "properties": {
+        "edge_id": "DPL-AST-ML-ETA|CHANGED|SYS-AST-ETA|2026-10-10T10:00:00+05:30",
+        "valid_from": "2026-10-10T10:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-PARTNER-CRM",
+      "type": "CHANGED",
+      "target": "SYS-AST-CRM",
+      "properties": {
+        "edge_id": "DPL-AST-PARTNER-CRM|CHANGED|SYS-AST-CRM|2026-10-06T09:00:00+05:30",
+        "valid_from": "2026-10-06T09:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-PRIVACY-PIPE",
+      "type": "CHANGED",
+      "target": "SYS-AST-CUST-ETL",
+      "properties": {
+        "edge_id": "DPL-AST-PRIVACY-PIPE|CHANGED|SYS-AST-CUST-ETL|2026-10-09T09:00:00+05:30",
+        "valid_from": "2026-10-09T09:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-ROUTE-V3",
+      "type": "CHANGED",
+      "target": "SYS-AST-ROUTE-DB",
+      "properties": {
+        "edge_id": "DPL-AST-ROUTE-V3|CHANGED|SYS-AST-ROUTE-DB|2026-10-12T09:05:00+05:30",
+        "valid_from": "2026-10-12T09:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-WMS-PEAK",
+      "type": "CHANGED",
+      "target": "SYS-AST-WMS",
+      "properties": {
+        "edge_id": "DPL-AST-WMS-PEAK|CHANGED|SYS-AST-WMS|2026-10-10T12:00:00+05:30",
+        "valid_from": "2026-10-10T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0002",
+      "type": "ABOUT",
+      "target": "PROJ-AST-ROUTE2",
+      "properties": {
+        "edge_id": "EVD-AST-0002|ABOUT|PROJ-AST-ROUTE2|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0008",
+      "type": "ABOUT",
+      "target": "POL-AST-ROUTE",
+      "properties": {
+        "edge_id": "EVD-AST-0008|ABOUT|POL-AST-ROUTE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "FIND-AST-CPU-MEMORY",
+      "type": "ABOUT",
+      "target": "CLM-AST-ROUTE-CPU",
+      "properties": {
+        "edge_id": "FIND-AST-CPU-MEMORY|ABOUT|CLM-AST-ROUTE-CPU|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "FIND-AST-CPU-MEMORY",
+      "type": "BASED_ON",
+      "target": "EVD-AST-0004",
+      "properties": {
+        "edge_id": "FIND-AST-CPU-MEMORY|BASED_ON|EVD-AST-0004|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "FIND-AST-FINANCE-TEMP",
+      "type": "ABOUT",
+      "target": "CLM-AST-PAYOUT-EVENT",
+      "properties": {
+        "edge_id": "FIND-AST-FINANCE-TEMP|ABOUT|CLM-AST-PAYOUT-EVENT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "FIND-AST-FINANCE-TEMP",
+      "type": "BASED_ON",
+      "target": "EVD-AST-0013",
+      "properties": {
+        "edge_id": "FIND-AST-FINANCE-TEMP|BASED_ON|EVD-AST-0013|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "FIND-AST-SCHEMA",
+      "type": "ABOUT",
+      "target": "CLM-AST-ROUTE-SCHEMA",
+      "properties": {
+        "edge_id": "FIND-AST-SCHEMA|ABOUT|CLM-AST-ROUTE-SCHEMA|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "FIND-AST-SCHEMA",
+      "type": "BASED_ON",
+      "target": "EVD-AST-0005",
+      "properties": {
+        "edge_id": "FIND-AST-SCHEMA|BASED_ON|EVD-AST-0005|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "HANDOFF-AST-FINANCE",
+      "type": "BASED_ON",
+      "target": "EVD-AST-0013",
+      "properties": {
+        "edge_id": "HANDOFF-AST-FINANCE|BASED_ON|EVD-AST-0013|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "HANDOFF-AST-VALID",
+      "type": "BASED_ON",
+      "target": "EVD-AST-0003",
+      "properties": {
+        "edge_id": "HANDOFF-AST-VALID|BASED_ON|EVD-AST-0003|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-ACCESS-EXPIRED",
+      "type": "AFFECTS",
+      "target": "SYS-AST-IAM",
+      "properties": {
+        "edge_id": "INC-AST-ACCESS-EXPIRED|AFFECTS|SYS-AST-IAM|2026-08-25T08:00:00+05:30",
+        "valid_from": "2026-08-25T08:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-AGENT-RETRY",
+      "type": "AFFECTS",
+      "target": "SYS-AST-FALLBACK",
+      "properties": {
+        "edge_id": "INC-AST-AGENT-RETRY|AFFECTS|SYS-AST-FALLBACK|2026-10-12T11:30:00+05:30",
+        "valid_from": "2026-10-12T11:30:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-CARRIER-LAG",
+      "type": "AFFECTS",
+      "target": "SYS-AST-CARRIER-GW",
+      "properties": {
+        "edge_id": "INC-AST-CARRIER-LAG|AFFECTS|SYS-AST-CARRIER-GW|2026-10-12T09:42:00+05:30",
+        "valid_from": "2026-10-12T09:42:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-FORECAST-BIAS",
+      "type": "AFFECTS",
+      "target": "SYS-AST-FORECAST",
+      "properties": {
+        "edge_id": "INC-AST-FORECAST-BIAS|AFFECTS|SYS-AST-FORECAST|2026-10-12T11:00:00+05:30",
+        "valid_from": "2026-10-12T11:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-INVOICE-DUP",
+      "type": "AFFECTS",
+      "target": "SYS-AST-INVOICE",
+      "properties": {
+        "edge_id": "INC-AST-INVOICE-DUP|AFFECTS|SYS-AST-INVOICE|2026-10-09T15:00:00+05:30",
+        "valid_from": "2026-10-09T15:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-OLD-MIGRATION",
+      "type": "AFFECTS",
+      "target": "SYS-AST-ROUTE-DB",
+      "properties": {
+        "edge_id": "INC-AST-OLD-MIGRATION|AFFECTS|SYS-AST-ROUTE-DB|2026-05-11T06:00:00+05:30",
+        "valid_from": "2026-05-11T06:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-PARTNER-SLA",
+      "type": "AFFECTS",
+      "target": "SYS-AST-OLD-CARRIER",
+      "properties": {
+        "edge_id": "INC-AST-PARTNER-SLA|AFFECTS|SYS-AST-OLD-CARRIER|2026-10-12T10:18:00+05:30",
+        "valid_from": "2026-10-12T10:18:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-PAYOUT-DRIFT",
+      "type": "AFFECTS",
+      "target": "SYS-AST-PAYOUT",
+      "properties": {
+        "edge_id": "INC-AST-PAYOUT-DRIFT|AFFECTS|SYS-AST-PAYOUT|2026-10-12T10:05:00+05:30",
+        "valid_from": "2026-10-12T10:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-ROUTE-OUTAGE",
+      "type": "AFFECTS",
+      "target": "SYS-AST-ROUTE-API",
+      "properties": {
+        "edge_id": "INC-AST-ROUTE-OUTAGE|AFFECTS|SYS-AST-ROUTE-API|2026-10-12T09:15:00+05:30",
+        "valid_from": "2026-10-12T09:15:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-SECURITY-EXPORT",
+      "type": "AFFECTS",
+      "target": "SYS-AST-CUST-ETL",
+      "properties": {
+        "edge_id": "INC-AST-SECURITY-EXPORT|AFFECTS|SYS-AST-CUST-ETL|2026-10-10T13:00:00+05:30",
+        "valid_from": "2026-10-10T13:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-SLA-RECON",
+      "type": "AFFECTS",
+      "target": "SYS-AST-SLA",
+      "properties": {
+        "edge_id": "INC-AST-SLA-RECON|AFFECTS|SYS-AST-SLA|2026-10-12T11:25:00+05:30",
+        "valid_from": "2026-10-12T11:25:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-WAREHOUSE-QUEUE",
+      "type": "AFFECTS",
+      "target": "SYS-AST-WMS",
+      "properties": {
+        "edge_id": "INC-AST-WAREHOUSE-QUEUE|AFFECTS|SYS-AST-WMS|2026-10-12T09:47:00+05:30",
+        "valid_from": "2026-10-12T09:47:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "LOCK-AST-ROLLBACK",
+      "type": "LOCKS",
+      "target": "SYS-AST-ROUTE-API",
+      "properties": {
+        "edge_id": "LOCK-AST-ROLLBACK|LOCKS|SYS-AST-ROUTE-API|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-CARRIER",
+      "type": "ADDRESSES",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "PLAN-AST-CARRIER|ADDRESSES|INC-AST-CARRIER-LAG|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-CONSENT",
+      "type": "ADDRESSES",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "PLAN-AST-CONSENT|ADDRESSES|INC-AST-SECURITY-EXPORT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "ADDRESSES",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|ADDRESSES|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "POL-AST-ACTION",
+      "type": "GOVERNS",
+      "target": "ACT-AST-RESTORE",
+      "properties": {
+        "edge_id": "POL-AST-ACTION|GOVERNS|ACT-AST-RESTORE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "POL-AST-CARRIER",
+      "type": "GOVERNS",
+      "target": "ACT-AST-CARRIER-RETRY",
+      "properties": {
+        "edge_id": "POL-AST-CARRIER|GOVERNS|ACT-AST-CARRIER-RETRY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "POL-AST-ROLLBACK",
+      "type": "GOVERNS",
+      "target": "ACT-AST-ROLLBACK",
+      "properties": {
+        "edge_id": "POL-AST-ROLLBACK|GOVERNS|ACT-AST-ROLLBACK|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-AGENT-CHECKPOINT",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-SECURITY",
+      "properties": {
+        "edge_id": "Q-AST-AGENT-CHECKPOINT|REQUIRES|TOOL-AST-SECURITY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-CARRIER-RECEIPT",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-TICKETS",
+      "properties": {
+        "edge_id": "Q-AST-CARRIER-RECEIPT|REQUIRES|TOOL-AST-TICKETS|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-DATA-CONSENT",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-SECURITY",
+      "properties": {
+        "edge_id": "Q-AST-DATA-CONSENT|REQUIRES|TOOL-AST-SECURITY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-FINANCE-LEDGER",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-DB",
+      "properties": {
+        "edge_id": "Q-AST-FINANCE-LEDGER|REQUIRES|TOOL-AST-DB|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-FORECAST-RETRAIN",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-DB",
+      "properties": {
+        "edge_id": "Q-AST-FORECAST-RETRAIN|REQUIRES|TOOL-AST-DB|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-MIXED-VERSIONS",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-LOGS",
+      "properties": {
+        "edge_id": "Q-AST-MIXED-VERSIONS|REQUIRES|TOOL-AST-LOGS|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-OWNER-APPROVAL",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-OWNERSHIP",
+      "properties": {
+        "edge_id": "Q-AST-OWNER-APPROVAL|REQUIRES|TOOL-AST-OWNERSHIP|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-ROLLBACK-PROOF",
+      "type": "REQUIRES",
+      "target": "TOOL-AST-POLICIES",
+      "properties": {
+        "edge_id": "Q-AST-ROLLBACK-PROOF|REQUIRES|TOOL-AST-POLICIES|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0001",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-GITHUB",
+      "properties": {
+        "edge_id": "SRCREC-AST-0001|DERIVED_FROM|DS-AST-GITHUB|2026-10-12T09:07:00+05:30",
+        "valid_from": "2026-10-12T09:07:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0002",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-JIRA",
+      "properties": {
+        "edge_id": "SRCREC-AST-0002|DERIVED_FROM|DS-AST-JIRA|2026-10-12T09:09:00+05:30",
+        "valid_from": "2026-10-12T09:09:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0003",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-LOG",
+      "properties": {
+        "edge_id": "SRCREC-AST-0003|DERIVED_FROM|DS-AST-LOG|2026-10-12T09:15:20+05:30",
+        "valid_from": "2026-10-12T09:15:20+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0004",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-METRIC",
+      "properties": {
+        "edge_id": "SRCREC-AST-0004|DERIVED_FROM|DS-AST-METRIC|2026-10-12T09:20:00+05:30",
+        "valid_from": "2026-10-12T09:20:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0005",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-TRACE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0005|DERIVED_FROM|DS-AST-TRACE|2026-10-12T09:18:00+05:30",
+        "valid_from": "2026-10-12T09:18:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0006",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-SLACK",
+      "properties": {
+        "edge_id": "SRCREC-AST-0006|DERIVED_FROM|DS-AST-SLACK|2026-10-12T09:22:00+05:30",
+        "valid_from": "2026-10-12T09:22:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0007",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-SLACK",
+      "properties": {
+        "edge_id": "SRCREC-AST-0007|DERIVED_FROM|DS-AST-SLACK|2026-10-12T09:25:00+05:30",
+        "valid_from": "2026-10-12T09:25:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0008",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-POLICY",
+      "properties": {
+        "edge_id": "SRCREC-AST-0008|DERIVED_FROM|DS-AST-POLICY|2026-10-12T09:10:00+05:30",
+        "valid_from": "2026-10-12T09:10:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0009",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-POSTMORTEM",
+      "properties": {
+        "edge_id": "SRCREC-AST-0009|DERIVED_FROM|DS-AST-POSTMORTEM|2026-05-12T11:00:00+05:30",
+        "valid_from": "2026-05-12T11:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0010",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-METRIC",
+      "properties": {
+        "edge_id": "SRCREC-AST-0010|DERIVED_FROM|DS-AST-METRIC|2026-10-12T09:47:00+05:30",
+        "valid_from": "2026-10-12T09:47:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0011",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-SLACK",
+      "properties": {
+        "edge_id": "SRCREC-AST-0011|DERIVED_FROM|DS-AST-SLACK|2026-10-12T09:52:00+05:30",
+        "valid_from": "2026-10-12T09:52:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0012",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-LOG",
+      "properties": {
+        "edge_id": "SRCREC-AST-0012|DERIVED_FROM|DS-AST-LOG|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0013",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-DB",
+      "properties": {
+        "edge_id": "SRCREC-AST-0013|DERIVED_FROM|DS-AST-DB|2026-10-12T10:11:00+05:30",
+        "valid_from": "2026-10-12T10:11:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0014",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-AUDIT",
+      "properties": {
+        "edge_id": "SRCREC-AST-0014|DERIVED_FROM|DS-AST-AUDIT|2026-10-12T10:20:00+05:30",
+        "valid_from": "2026-10-12T10:20:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0015",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-HR",
+      "properties": {
+        "edge_id": "SRCREC-AST-0015|DERIVED_FROM|DS-AST-HR|2026-10-12T10:19:00+05:30",
+        "valid_from": "2026-10-12T10:19:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0016",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-JIRA",
+      "properties": {
+        "edge_id": "SRCREC-AST-0016|DERIVED_FROM|DS-AST-JIRA|2026-10-12T10:21:00+05:30",
+        "valid_from": "2026-10-12T10:21:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0017",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-AUDIT",
+      "properties": {
+        "edge_id": "SRCREC-AST-0017|DERIVED_FROM|DS-AST-AUDIT|2026-10-10T13:02:00+05:30",
+        "valid_from": "2026-10-10T13:02:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0018",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-POLICY",
+      "properties": {
+        "edge_id": "SRCREC-AST-0018|DERIVED_FROM|DS-AST-POLICY|2026-10-10T13:04:00+05:30",
+        "valid_from": "2026-10-10T13:04:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0019",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-METRIC",
+      "properties": {
+        "edge_id": "SRCREC-AST-0019|DERIVED_FROM|DS-AST-METRIC|2026-10-12T11:08:00+05:30",
+        "valid_from": "2026-10-12T11:08:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0020",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-JIRA",
+      "properties": {
+        "edge_id": "SRCREC-AST-0020|DERIVED_FROM|DS-AST-JIRA|2026-10-09T15:05:00+05:30",
+        "valid_from": "2026-10-09T15:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0021",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-AUDIT",
+      "properties": {
+        "edge_id": "SRCREC-AST-0021|DERIVED_FROM|DS-AST-AUDIT|2026-10-12T11:35:00+05:30",
+        "valid_from": "2026-10-12T11:35:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0022",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-CRM",
+      "properties": {
+        "edge_id": "SRCREC-AST-0022|DERIVED_FROM|DS-AST-CRM|2026-10-12T10:26:00+05:30",
+        "valid_from": "2026-10-12T10:26:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0023",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-AUDIT",
+      "properties": {
+        "edge_id": "SRCREC-AST-0023|DERIVED_FROM|DS-AST-AUDIT|2026-08-25T08:03:00+05:30",
+        "valid_from": "2026-08-25T08:03:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0024",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-METRIC",
+      "properties": {
+        "edge_id": "SRCREC-AST-0024|DERIVED_FROM|DS-AST-METRIC|2026-10-12T09:57:00+05:30",
+        "valid_from": "2026-10-12T09:57:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0025",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-DB",
+      "properties": {
+        "edge_id": "SRCREC-AST-0025|DERIVED_FROM|DS-AST-DB|2026-10-12T11:28:00+05:30",
+        "valid_from": "2026-10-12T11:28:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-IDENTITY",
+      "type": "CANDIDATE_MATCH",
+      "target": "PERSON-AST-028",
+      "properties": {
+        "edge_id": "SRCREC-AST-IDENTITY|CANDIDATE_MATCH|PERSON-AST-028|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 0.39,
+        "matching_basis": "team alias; unresolved"
+      }
+    },
+    {
+      "source": "SRCREC-AST-IDENTITY",
+      "type": "CANDIDATE_MATCH",
+      "target": "PERSON-AST-062",
+      "properties": {
+        "edge_id": "SRCREC-AST-IDENTITY|CANDIDATE_MATCH|PERSON-AST-062|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 0.53,
+        "matching_basis": "name/role; unresolved"
+      }
+    },
+    {
+      "source": "SRCREC-AST-IDENTITY",
+      "type": "DERIVED_FROM",
+      "target": "DS-AST-HR",
+      "properties": {
+        "edge_id": "SRCREC-AST-IDENTITY|DERIVED_FROM|DS-AST-HR|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-AGENT-RETRY",
+      "type": "ABOUT",
+      "target": "INC-AST-AGENT-RETRY",
+      "properties": {
+        "edge_id": "TASK-AST-AGENT-RETRY|ABOUT|INC-AST-AGENT-RETRY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ALERT-TRIAGE",
+      "type": "ABOUT",
+      "target": "INC-AST-SLA-RECON",
+      "properties": {
+        "edge_id": "TASK-AST-ALERT-TRIAGE|ABOUT|INC-AST-SLA-RECON|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-CARRIER-BACKLOG",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "TASK-AST-CARRIER-BACKLOG|ABOUT|INC-AST-CARRIER-LAG|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-CARRIER-CONFIRM",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "TASK-AST-CARRIER-CONFIRM|ABOUT|INC-AST-CARRIER-LAG|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-CONSENT-CHECK",
+      "type": "ABOUT",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "TASK-AST-CONSENT-CHECK|ABOUT|INC-AST-SECURITY-EXPORT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-CREDIT-DUP",
+      "type": "ABOUT",
+      "target": "INC-AST-INVOICE-DUP",
+      "properties": {
+        "edge_id": "TASK-AST-CREDIT-DUP|ABOUT|INC-AST-INVOICE-DUP|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-DEADLOCK-A",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "TASK-AST-DEADLOCK-A|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-DEADLOCK-B",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "TASK-AST-DEADLOCK-B|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ESCALATION",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "TASK-AST-ESCALATION|ABOUT|INC-AST-PARTNER-SLA|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-FINANCE-RECON",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "TASK-AST-FINANCE-RECON|ABOUT|INC-AST-PAYOUT-DRIFT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-FORECAST-DRIFT",
+      "type": "ABOUT",
+      "target": "INC-AST-FORECAST-BIAS",
+      "properties": {
+        "edge_id": "TASK-AST-FORECAST-DRIFT|ABOUT|INC-AST-FORECAST-BIAS|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-HANDOFF",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "TASK-AST-HANDOFF|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-HISTORY",
+      "type": "ABOUT",
+      "target": "INC-AST-OLD-MIGRATION",
+      "properties": {
+        "edge_id": "TASK-AST-HISTORY|ABOUT|INC-AST-OLD-MIGRATION|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-MEMORY-CHECK",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "TASK-AST-MEMORY-CHECK|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-OWNER-APPROVE",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "TASK-AST-OWNER-APPROVE|ABOUT|INC-AST-PARTNER-SLA|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-OWNER-TRACE",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "TASK-AST-OWNER-TRACE|ABOUT|INC-AST-PARTNER-SLA|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-PAYOUT-CONFIRM",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "TASK-AST-PAYOUT-CONFIRM|ABOUT|INC-AST-PAYOUT-DRIFT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-APPROVAL",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-APPROVAL|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-BLAST",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-BLAST|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-EVIDENCE",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-EVIDENCE|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-POLICY",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-POLICY|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-SCOPE",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-SCOPE|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-SNAPSHOT",
+      "type": "ABOUT",
+      "target": "INC-AST-ACCESS-EXPIRED",
+      "properties": {
+        "edge_id": "TASK-AST-SNAPSHOT|ABOUT|INC-AST-ACCESS-EXPIRED|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-WAREHOUSE-QUEUE",
+      "type": "ABOUT",
+      "target": "INC-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "TASK-AST-WAREHOUSE-QUEUE|ABOUT|INC-AST-WAREHOUSE-QUEUE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    }
+  ]
+}

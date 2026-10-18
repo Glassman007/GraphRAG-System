@@ -1,0 +1,2089 @@
+{
+  "scenario_id": "ASTERIA-V1-03_COORDINATION",
+  "title": "Asteria demo 03_coordination",
+  "description": "Synthetic, versioned organizational dataset; NOT a live connector.",
+  "tenant_id": "asteria",
+  "nodes": [
+    {
+      "id": "AGENT-AST-DEPENDENCY",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-DEPENDENCY",
+        "tenant_id": "asteria",
+        "name": "Dependency Analyst",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "DEPENDENCY_ANALYST",
+        "supported_task_types": "INVESTIGATE",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-EVIDENCE",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-EVIDENCE",
+        "tenant_id": "asteria",
+        "name": "Evidence Collector",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "INVESTIGATOR",
+        "supported_task_types": "ACQUIRE_EVIDENCE",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-EXPERT",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-EXPERT",
+        "tenant_id": "asteria",
+        "name": "Expert Locator",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "INVESTIGATOR",
+        "supported_task_types": "INVESTIGATE",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-FINANCE",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-FINANCE",
+        "tenant_id": "asteria",
+        "name": "Ledger Investigator",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "INVESTIGATOR",
+        "supported_task_types": "INVESTIGATE",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-HANDOFF",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-HANDOFF",
+        "tenant_id": "asteria",
+        "name": "Handoff Coordinator",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "VERIFIER",
+        "supported_task_types": "RESOLVE_CONFLICT",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-INVESTIGATOR",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-INVESTIGATOR",
+        "tenant_id": "asteria",
+        "name": "Incident Investigator",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "INVESTIGATOR",
+        "supported_task_types": "INVESTIGATE,ACQUIRE_EVIDENCE",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-MEMORY",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-MEMORY",
+        "tenant_id": "asteria",
+        "name": "Agent Memory Auditor",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "VERIFIER",
+        "supported_task_types": "VERIFY_CLAIM,VALIDATE_POLICY",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-OPS",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-OPS",
+        "tenant_id": "asteria",
+        "name": "Fulfilment Operations Analyst",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "DEPENDENCY_ANALYST",
+        "supported_task_types": "INVESTIGATE",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-POLICY",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-POLICY",
+        "tenant_id": "asteria",
+        "name": "Policy Verifier",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "VERIFIER",
+        "supported_task_types": "VERIFY_CLAIM,RESOLVE_CONFLICT,VALIDATE_POLICY",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-POSTMORTEM",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-POSTMORTEM",
+        "tenant_id": "asteria",
+        "name": "Knowledge Historian",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "INVESTIGATOR",
+        "supported_task_types": "INVESTIGATE",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-REMEDIATION",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-REMEDIATION",
+        "tenant_id": "asteria",
+        "name": "Recovery Planner",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "REMEDIATION_WORKER",
+        "supported_task_types": "PREPARE_ACTION,VALIDATE_OUTCOME",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "AGENT-AST-SECURITY",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-AST-SECURITY",
+        "tenant_id": "asteria",
+        "name": "Consent Investigator",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "ACTIVE",
+        "availability": "AVAILABLE",
+        "agent_type": "VERIFIER",
+        "supported_task_types": "VERIFY_CLAIM,VALIDATE_POLICY",
+        "permissions": "READ_GRAPH,READ_EVIDENCE,WRITE_FINDING,CHECKPOINT",
+        "capabilities": "GRAPH_TRAVERSAL,EVIDENCE_RETRIEVAL,COORDINATION",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "ATT-AST-CARRIER-1",
+      "label": "ActionAttempt",
+      "properties": {
+        "id": "ATT-AST-CARRIER-1",
+        "tenant_id": "asteria",
+        "name": "Carrier retry declined for missing consent",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "FAILED",
+        "fixture_only": true,
+        "failure_reason": "approval required",
+        "idempotency_key": "asteria:v1:carrier:retry",
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "ATT-AST-RETRY-1",
+      "label": "ActionAttempt",
+      "properties": {
+        "id": "ATT-AST-RETRY-1",
+        "tenant_id": "asteria",
+        "name": "Simulated uncertain action retry",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "FAILED",
+        "idempotency_key": "asteria:v1:rollback:route-incident",
+        "failure_reason": "missing approval; must not execute",
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "CHECK-AST-FINANCE-1",
+      "label": "Checkpoint",
+      "properties": {
+        "id": "CHECK-AST-FINANCE-1",
+        "tenant_id": "asteria",
+        "name": "Finance query checkpoint",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "SAVED",
+        "sequence_number": 1,
+        "memory_summary": "Saved carrier ledger sample; cannot infer fraud from data lag.",
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "CHECK-AST-POLICY-1",
+      "label": "Checkpoint",
+      "properties": {
+        "id": "CHECK-AST-POLICY-1",
+        "tenant_id": "asteria",
+        "name": "Policy verifier handoff checkpoint",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "SAVED",
+        "sequence_number": 1,
+        "memory_summary": "Policy version review not complete; no valid approval recorded.",
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "CHECK-AST-ROUTE-1",
+      "label": "Checkpoint",
+      "properties": {
+        "id": "CHECK-AST-ROUTE-1",
+        "tenant_id": "asteria",
+        "name": "Route evidence read checkpoint",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "SAVED",
+        "sequence_number": 1,
+        "memory_summary": "Read first 4 route evidence records; schema clue remains unverified.",
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "CMP-AST-ROUTE",
+      "label": "CompactionRecord",
+      "properties": {
+        "id": "CMP-AST-ROUTE",
+        "tenant_id": "asteria",
+        "name": "Agent memory compaction snapshot",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PENDING_REVIEW",
+        "summary": "Preserve evidence lineage; unresolved hypothesis must not become verified fact.",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "EXEC-AST-FINANCE-FAILED",
+      "label": "Execution",
+      "properties": {
+        "id": "EXEC-AST-FINANCE-FAILED",
+        "tenant_id": "asteria",
+        "name": "Finance investigation source timeout",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "FAILED",
+        "fixture_only": true,
+        "simulation_record": true,
+        "failure_reason": "carrier reconciliation query timed out",
+        "started_at": "2026-10-12T10:18:00+05:30"
+      }
+    },
+    {
+      "id": "EXEC-AST-FINANCE-RESUME",
+      "label": "Execution",
+      "properties": {
+        "id": "EXEC-AST-FINANCE-RESUME",
+        "tenant_id": "asteria",
+        "name": "Finance ledger investigation resumed",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PAUSED",
+        "fixture_only": true,
+        "simulation_record": true,
+        "resumed_from": "CHECK-AST-FINANCE-1",
+        "started_at": "2026-10-12T10:32:00+05:30"
+      }
+    },
+    {
+      "id": "EXEC-AST-POLICY-WAIT",
+      "label": "Execution",
+      "properties": {
+        "id": "EXEC-AST-POLICY-WAIT",
+        "tenant_id": "asteria",
+        "name": "Policy verifier awaits signoff",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "BLOCKED",
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "EXEC-AST-ROUTE-PAUSED",
+      "label": "Execution",
+      "properties": {
+        "id": "EXEC-AST-ROUTE-PAUSED",
+        "tenant_id": "asteria",
+        "name": "Route analyst interrupted run",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PAUSED",
+        "started_at": "2026-10-12T10:00:00+05:30",
+        "fixture_only": true,
+        "simulation_record": true,
+        "agent_id": "AGENT-AST-INVESTIGATOR"
+      }
+    },
+    {
+      "id": "FIND-AST-CPU-MEMORY",
+      "label": "Finding",
+      "properties": {
+        "id": "FIND-AST-CPU-MEMORY",
+        "tenant_id": "asteria",
+        "name": "Cached database CPU explanation",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PROPOSED",
+        "confidence": 0.42,
+        "summary": "Agent retained CPU hypothesis before newer trace evidence arrived.",
+        "fixture_only": true,
+        "memory_state": "STALE"
+      }
+    },
+    {
+      "id": "FIND-AST-FINANCE-TEMP",
+      "label": "Finding",
+      "properties": {
+        "id": "FIND-AST-FINANCE-TEMP",
+        "tenant_id": "asteria",
+        "name": "Payout delay vs fraud hypothesis",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PROPOSED",
+        "confidence": 0.64,
+        "summary": "Late confirmations appear plausible; approval needed before claiming causality.",
+        "fixture_only": true,
+        "memory_state": "PENDING_REVIEW"
+      }
+    },
+    {
+      "id": "FIND-AST-SCHEMA",
+      "label": "Finding",
+      "properties": {
+        "id": "FIND-AST-SCHEMA",
+        "tenant_id": "asteria",
+        "name": "New trace-based schema finding",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PROPOSED",
+        "confidence": 0.81,
+        "summary": "Trace indicates version incompatibility; still needs evidence validation.",
+        "fixture_only": true,
+        "memory_state": "PENDING_REVIEW"
+      }
+    },
+    {
+      "id": "HANDOFF-AST-FINANCE",
+      "label": "Handoff",
+      "properties": {
+        "id": "HANDOFF-AST-FINANCE",
+        "tenant_id": "asteria",
+        "name": "Carrier evidence to finance investigator",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "VALID",
+        "required_artifacts": "evidence_ids,conclusion,open_questions",
+        "provided_artifacts": "evidence_ids,conclusion,open_questions",
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "HANDOFF-AST-MISSING",
+      "label": "Handoff",
+      "properties": {
+        "id": "HANDOFF-AST-MISSING",
+        "tenant_id": "asteria",
+        "name": "Incomplete analyst to policy handoff",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "INVALID",
+        "required_artifacts": "evidence_ids,conclusion,open_questions",
+        "provided_artifacts": "conclusion,open_questions",
+        "reason": "evidence_ids missing",
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "HANDOFF-AST-VALID",
+      "label": "Handoff",
+      "properties": {
+        "id": "HANDOFF-AST-VALID",
+        "tenant_id": "asteria",
+        "name": "Validated agent recovery handoff",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "VALID",
+        "required_artifacts": "evidence_ids,conclusion,open_questions",
+        "provided_artifacts": "evidence_ids,conclusion,open_questions",
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "LOCK-AST-ROLLBACK",
+      "label": "Lock",
+      "properties": {
+        "id": "LOCK-AST-ROLLBACK",
+        "tenant_id": "asteria",
+        "name": "Route recovery action lock",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "HELD",
+        "resource_id": "SYS-AST-ROUTE-API",
+        "lease_until": "2026-10-12T13:00:00+05:30",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "OUT-AST-MAY",
+      "label": "Outcome",
+      "properties": {
+        "id": "OUT-AST-MAY",
+        "tenant_id": "asteria",
+        "name": "Historical migration rollback outcome",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OBSERVED",
+        "summary": "May migration rollback stabilized routing; not a guarantee for October.",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "PLAN-AST-CARRIER",
+      "label": "Plan",
+      "properties": {
+        "id": "PLAN-AST-CARRIER",
+        "tenant_id": "asteria",
+        "name": "Carrier label recovery plan",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DRAFT",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "PLAN-AST-CONSENT",
+      "label": "Plan",
+      "properties": {
+        "id": "PLAN-AST-CONSENT",
+        "tenant_id": "asteria",
+        "name": "Export consent review plan",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DRAFT",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "PLAN-AST-RECOVERY",
+      "label": "Plan",
+      "properties": {
+        "id": "PLAN-AST-RECOVERY",
+        "tenant_id": "asteria",
+        "name": "Cross-system route incident response",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DRAFT",
+        "plan_type": "INCIDENT_RECOVERY",
+        "priority": "P0",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "TASK-AST-AGENT-RETRY",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-AGENT-RETRY",
+        "tenant_id": "asteria",
+        "name": "Investigate uncertain action retry",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Investigate uncertain action retry"
+      }
+    },
+    {
+      "id": "TASK-AST-ALERT-TRIAGE",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-ALERT-TRIAGE",
+        "tenant_id": "asteria",
+        "name": "Review cross-business alerts",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Review cross-business alerts"
+      }
+    },
+    {
+      "id": "TASK-AST-CARRIER-BACKLOG",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-CARRIER-BACKLOG",
+        "tenant_id": "asteria",
+        "name": "Investigate carrier label queue",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Investigate carrier label queue"
+      }
+    },
+    {
+      "id": "TASK-AST-CARRIER-CONFIRM",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-CARRIER-CONFIRM",
+        "tenant_id": "asteria",
+        "name": "Find original carrier receipt",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "ACQUIRE_EVIDENCE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Find original carrier receipt"
+      }
+    },
+    {
+      "id": "TASK-AST-CONSENT-CHECK",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-CONSENT-CHECK",
+        "tenant_id": "asteria",
+        "name": "Verify customer export consent",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "VALIDATE_POLICY",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Verify customer export consent"
+      }
+    },
+    {
+      "id": "TASK-AST-CREDIT-DUP",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-CREDIT-DUP",
+        "tenant_id": "asteria",
+        "name": "Identify duplicate credit note projects",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Identify duplicate credit note projects"
+      }
+    },
+    {
+      "id": "TASK-AST-DEADLOCK-A",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-DEADLOCK-A",
+        "tenant_id": "asteria",
+        "name": "Wait for schema review",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "BLOCKED",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Wait for schema review"
+      }
+    },
+    {
+      "id": "TASK-AST-DEADLOCK-B",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-DEADLOCK-B",
+        "tenant_id": "asteria",
+        "name": "Wait for graph impact review",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "VALIDATE_POLICY",
+        "status": "BLOCKED",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Wait for graph impact review"
+      }
+    },
+    {
+      "id": "TASK-AST-ESCALATION",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-ESCALATION",
+        "tenant_id": "asteria",
+        "name": "Escalate customer facing outage",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "VALIDATE_POLICY",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Escalate customer facing outage"
+      }
+    },
+    {
+      "id": "TASK-AST-FINANCE-RECON",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-FINANCE-RECON",
+        "tenant_id": "asteria",
+        "name": "Explain payout drift",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Explain payout drift"
+      }
+    },
+    {
+      "id": "TASK-AST-FORECAST-DRIFT",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-FORECAST-DRIFT",
+        "tenant_id": "asteria",
+        "name": "Investigate shipment forecast bias",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Investigate shipment forecast bias"
+      }
+    },
+    {
+      "id": "TASK-AST-HANDOFF",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-HANDOFF",
+        "tenant_id": "asteria",
+        "name": "Validate incomplete analyst handoff",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "RESOLVE_CONFLICT",
+        "status": "BLOCKED",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Validate incomplete analyst handoff"
+      }
+    },
+    {
+      "id": "TASK-AST-HISTORY",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-HISTORY",
+        "tenant_id": "asteria",
+        "name": "Find similar historical migrations",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Find similar historical migrations"
+      }
+    },
+    {
+      "id": "TASK-AST-MEMORY-CHECK",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-MEMORY-CHECK",
+        "tenant_id": "asteria",
+        "name": "Audit promoted memory provenance",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "VERIFY_CLAIM",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Audit promoted memory provenance"
+      }
+    },
+    {
+      "id": "TASK-AST-OWNER-APPROVE",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-OWNER-APPROVE",
+        "tenant_id": "asteria",
+        "name": "Review owner transfer",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "VALIDATE_POLICY",
+        "status": "BLOCKED",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Review owner transfer"
+      }
+    },
+    {
+      "id": "TASK-AST-OWNER-TRACE",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-OWNER-TRACE",
+        "tenant_id": "asteria",
+        "name": "Find historical escalation ownership",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Find historical escalation ownership"
+      }
+    },
+    {
+      "id": "TASK-AST-PAYOUT-CONFIRM",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-PAYOUT-CONFIRM",
+        "tenant_id": "asteria",
+        "name": "Verify payout confirmations",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Verify payout confirmations"
+      }
+    },
+    {
+      "id": "TASK-AST-ROUTE-APPROVAL",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-ROUTE-APPROVAL",
+        "tenant_id": "asteria",
+        "name": "Prepare approved rollback proposal",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "PREPARE_ACTION",
+        "status": "BLOCKED",
+        "priority": "P0",
+        "fixture_only": true,
+        "description": "Prepare approved rollback proposal"
+      }
+    },
+    {
+      "id": "TASK-AST-ROUTE-BLAST",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-ROUTE-BLAST",
+        "tenant_id": "asteria",
+        "name": "Find affected downstream systems",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P0",
+        "fixture_only": true,
+        "description": "Find affected downstream systems"
+      }
+    },
+    {
+      "id": "TASK-AST-ROUTE-EVIDENCE",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-ROUTE-EVIDENCE",
+        "tenant_id": "asteria",
+        "name": "Collect code, logs and traces",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "ACQUIRE_EVIDENCE",
+        "status": "OPEN",
+        "priority": "P0",
+        "fixture_only": true,
+        "description": "Collect code, logs and traces"
+      }
+    },
+    {
+      "id": "TASK-AST-ROUTE-POLICY",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-ROUTE-POLICY",
+        "tenant_id": "asteria",
+        "name": "Validate compatibility and rollback policy",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "VALIDATE_POLICY",
+        "status": "OPEN",
+        "priority": "P0",
+        "fixture_only": true,
+        "description": "Validate compatibility and rollback policy"
+      }
+    },
+    {
+      "id": "TASK-AST-ROUTE-SCOPE",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-ROUTE-SCOPE",
+        "tenant_id": "asteria",
+        "name": "Investigate route edge failures",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P0",
+        "fixture_only": true,
+        "description": "Investigate route edge failures"
+      }
+    },
+    {
+      "id": "TASK-AST-SNAPSHOT",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-SNAPSHOT",
+        "tenant_id": "asteria",
+        "name": "Collect access audit snapshot",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "ACQUIRE_EVIDENCE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Collect access audit snapshot"
+      }
+    },
+    {
+      "id": "TASK-AST-WAREHOUSE-QUEUE",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-AST-WAREHOUSE-QUEUE",
+        "tenant_id": "asteria",
+        "name": "Investigate warehouse picking backlog",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "task_type": "INVESTIGATE",
+        "status": "OPEN",
+        "priority": "P1",
+        "fixture_only": true,
+        "description": "Investigate warehouse picking backlog"
+      }
+    },
+    {
+      "id": "WB-AST-FINANCE",
+      "label": "WorkBranch",
+      "properties": {
+        "id": "WB-AST-FINANCE",
+        "tenant_id": "asteria",
+        "name": "Finance scoped evidence branch",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PAUSED",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "WB-AST-REVIEW",
+      "label": "WorkBranch",
+      "properties": {
+        "id": "WB-AST-REVIEW",
+        "tenant_id": "asteria",
+        "name": "Analyst review branch",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PAUSED",
+        "branch_type": "EVIDENCE_REVIEW",
+        "fixture_only": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "AGENT-AST-DEPENDENCY",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-FORECAST-DRIFT",
+      "properties": {
+        "edge_id": "AGENT-AST-DEPENDENCY|CANDIDATE_FOR|TASK-AST-FORECAST-DRIFT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-DEPENDENCY",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-ROUTE-BLAST",
+      "properties": {
+        "edge_id": "AGENT-AST-DEPENDENCY|CANDIDATE_FOR|TASK-AST-ROUTE-BLAST|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-EVIDENCE",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-CARRIER-CONFIRM",
+      "properties": {
+        "edge_id": "AGENT-AST-EVIDENCE|CANDIDATE_FOR|TASK-AST-CARRIER-CONFIRM|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-EVIDENCE",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-ROUTE-EVIDENCE",
+      "properties": {
+        "edge_id": "AGENT-AST-EVIDENCE|CANDIDATE_FOR|TASK-AST-ROUTE-EVIDENCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-EVIDENCE",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-SNAPSHOT",
+      "properties": {
+        "edge_id": "AGENT-AST-EVIDENCE|CANDIDATE_FOR|TASK-AST-SNAPSHOT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-EXPERT",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-CREDIT-DUP",
+      "properties": {
+        "edge_id": "AGENT-AST-EXPERT|CANDIDATE_FOR|TASK-AST-CREDIT-DUP|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-EXPERT",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-OWNER-TRACE",
+      "properties": {
+        "edge_id": "AGENT-AST-EXPERT|CANDIDATE_FOR|TASK-AST-OWNER-TRACE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-FINANCE",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-FINANCE-RECON",
+      "properties": {
+        "edge_id": "AGENT-AST-FINANCE|CANDIDATE_FOR|TASK-AST-FINANCE-RECON|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-FINANCE",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-PAYOUT-CONFIRM",
+      "properties": {
+        "edge_id": "AGENT-AST-FINANCE|CANDIDATE_FOR|TASK-AST-PAYOUT-CONFIRM|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-HANDOFF",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-HANDOFF",
+      "properties": {
+        "edge_id": "AGENT-AST-HANDOFF|CANDIDATE_FOR|TASK-AST-HANDOFF|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-INVESTIGATOR",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-AGENT-RETRY",
+      "properties": {
+        "edge_id": "AGENT-AST-INVESTIGATOR|CANDIDATE_FOR|TASK-AST-AGENT-RETRY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-INVESTIGATOR",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-ALERT-TRIAGE",
+      "properties": {
+        "edge_id": "AGENT-AST-INVESTIGATOR|CANDIDATE_FOR|TASK-AST-ALERT-TRIAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-INVESTIGATOR",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-DEADLOCK-A",
+      "properties": {
+        "edge_id": "AGENT-AST-INVESTIGATOR|CANDIDATE_FOR|TASK-AST-DEADLOCK-A|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-INVESTIGATOR",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-ROUTE-SCOPE",
+      "properties": {
+        "edge_id": "AGENT-AST-INVESTIGATOR|CANDIDATE_FOR|TASK-AST-ROUTE-SCOPE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-MEMORY",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-MEMORY-CHECK",
+      "properties": {
+        "edge_id": "AGENT-AST-MEMORY|CANDIDATE_FOR|TASK-AST-MEMORY-CHECK|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-OPS",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-CARRIER-BACKLOG",
+      "properties": {
+        "edge_id": "AGENT-AST-OPS|CANDIDATE_FOR|TASK-AST-CARRIER-BACKLOG|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-OPS",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "AGENT-AST-OPS|CANDIDATE_FOR|TASK-AST-WAREHOUSE-QUEUE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-POLICY",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-DEADLOCK-B",
+      "properties": {
+        "edge_id": "AGENT-AST-POLICY|CANDIDATE_FOR|TASK-AST-DEADLOCK-B|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-POLICY",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-ESCALATION",
+      "properties": {
+        "edge_id": "AGENT-AST-POLICY|CANDIDATE_FOR|TASK-AST-ESCALATION|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-POLICY",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-OWNER-APPROVE",
+      "properties": {
+        "edge_id": "AGENT-AST-POLICY|CANDIDATE_FOR|TASK-AST-OWNER-APPROVE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-POLICY",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-ROUTE-POLICY",
+      "properties": {
+        "edge_id": "AGENT-AST-POLICY|CANDIDATE_FOR|TASK-AST-ROUTE-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-POSTMORTEM",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-HISTORY",
+      "properties": {
+        "edge_id": "AGENT-AST-POSTMORTEM|CANDIDATE_FOR|TASK-AST-HISTORY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-REMEDIATION",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-ROUTE-APPROVAL",
+      "properties": {
+        "edge_id": "AGENT-AST-REMEDIATION|CANDIDATE_FOR|TASK-AST-ROUTE-APPROVAL|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "AGENT-AST-SECURITY",
+      "type": "CANDIDATE_FOR",
+      "target": "TASK-AST-CONSENT-CHECK",
+      "properties": {
+        "edge_id": "AGENT-AST-SECURITY|CANDIDATE_FOR|TASK-AST-CONSENT-CHECK|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CMP-AST-ROUTE",
+      "type": "BASED_ON",
+      "target": "CHECK-AST-ROUTE-1",
+      "properties": {
+        "edge_id": "CMP-AST-ROUTE|BASED_ON|CHECK-AST-ROUTE-1|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-FINANCE-FAILED",
+      "type": "HAS_CHECKPOINT",
+      "target": "CHECK-AST-FINANCE-1",
+      "properties": {
+        "edge_id": "EXEC-AST-FINANCE-FAILED|HAS_CHECKPOINT|CHECK-AST-FINANCE-1|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-FINANCE-FAILED",
+      "type": "PERFORMED_BY",
+      "target": "AGENT-AST-FINANCE",
+      "properties": {
+        "edge_id": "EXEC-AST-FINANCE-FAILED|PERFORMED_BY|AGENT-AST-FINANCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-FINANCE-RESUME",
+      "type": "HAS_BRANCH",
+      "target": "WB-AST-FINANCE",
+      "properties": {
+        "edge_id": "EXEC-AST-FINANCE-RESUME|HAS_BRANCH|WB-AST-FINANCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-FINANCE-RESUME",
+      "type": "HAS_CHECKPOINT",
+      "target": "CHECK-AST-FINANCE-1",
+      "properties": {
+        "edge_id": "EXEC-AST-FINANCE-RESUME|HAS_CHECKPOINT|CHECK-AST-FINANCE-1|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-FINANCE-RESUME",
+      "type": "PERFORMED_BY",
+      "target": "AGENT-AST-FINANCE",
+      "properties": {
+        "edge_id": "EXEC-AST-FINANCE-RESUME|PERFORMED_BY|AGENT-AST-FINANCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-POLICY-WAIT",
+      "type": "HAS_CHECKPOINT",
+      "target": "CHECK-AST-POLICY-1",
+      "properties": {
+        "edge_id": "EXEC-AST-POLICY-WAIT|HAS_CHECKPOINT|CHECK-AST-POLICY-1|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-POLICY-WAIT",
+      "type": "PERFORMED_BY",
+      "target": "AGENT-AST-POLICY",
+      "properties": {
+        "edge_id": "EXEC-AST-POLICY-WAIT|PERFORMED_BY|AGENT-AST-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-ROUTE-PAUSED",
+      "type": "HAS_BRANCH",
+      "target": "WB-AST-REVIEW",
+      "properties": {
+        "edge_id": "EXEC-AST-ROUTE-PAUSED|HAS_BRANCH|WB-AST-REVIEW|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-ROUTE-PAUSED",
+      "type": "HAS_CHECKPOINT",
+      "target": "CHECK-AST-ROUTE-1",
+      "properties": {
+        "edge_id": "EXEC-AST-ROUTE-PAUSED|HAS_CHECKPOINT|CHECK-AST-ROUTE-1|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-ROUTE-PAUSED",
+      "type": "HAS_COMPACTION",
+      "target": "CMP-AST-ROUTE",
+      "properties": {
+        "edge_id": "EXEC-AST-ROUTE-PAUSED|HAS_COMPACTION|CMP-AST-ROUTE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EXEC-AST-ROUTE-PAUSED",
+      "type": "PERFORMED_BY",
+      "target": "AGENT-AST-INVESTIGATOR",
+      "properties": {
+        "edge_id": "EXEC-AST-ROUTE-PAUSED|PERFORMED_BY|AGENT-AST-INVESTIGATOR|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "FIND-AST-SCHEMA",
+      "type": "CONTRADICTS",
+      "target": "FIND-AST-CPU-MEMORY",
+      "properties": {
+        "edge_id": "FIND-AST-SCHEMA|CONTRADICTS|FIND-AST-CPU-MEMORY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "HANDOFF-AST-FINANCE",
+      "type": "HANDOFF_FOR",
+      "target": "TASK-AST-FINANCE-RECON",
+      "properties": {
+        "edge_id": "HANDOFF-AST-FINANCE|HANDOFF_FOR|TASK-AST-FINANCE-RECON|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "HANDOFF-AST-MISSING",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-POLICY",
+      "properties": {
+        "edge_id": "HANDOFF-AST-MISSING|ASSIGNED_TO|AGENT-AST-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "HANDOFF-AST-MISSING",
+      "type": "HANDOFF_FOR",
+      "target": "TASK-AST-HANDOFF",
+      "properties": {
+        "edge_id": "HANDOFF-AST-MISSING|HANDOFF_FOR|TASK-AST-HANDOFF|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "HANDOFF-AST-VALID",
+      "type": "BASED_ON",
+      "target": "CHECK-AST-POLICY-1",
+      "properties": {
+        "edge_id": "HANDOFF-AST-VALID|BASED_ON|CHECK-AST-POLICY-1|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "HANDOFF-AST-VALID",
+      "type": "HANDOFF_FOR",
+      "target": "TASK-AST-ROUTE-POLICY",
+      "properties": {
+        "edge_id": "HANDOFF-AST-VALID|HANDOFF_FOR|TASK-AST-ROUTE-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-CARRIER",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-CARRIER-BACKLOG",
+      "properties": {
+        "edge_id": "PLAN-AST-CARRIER|PLAN_HAS_TASK|TASK-AST-CARRIER-BACKLOG|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-CARRIER",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-CARRIER-CONFIRM",
+      "properties": {
+        "edge_id": "PLAN-AST-CARRIER|PLAN_HAS_TASK|TASK-AST-CARRIER-CONFIRM|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-CONSENT",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-CONSENT-CHECK",
+      "properties": {
+        "edge_id": "PLAN-AST-CONSENT|PLAN_HAS_TASK|TASK-AST-CONSENT-CHECK|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-AGENT-RETRY",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-AGENT-RETRY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-ALERT-TRIAGE",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-ALERT-TRIAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-CARRIER-BACKLOG",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-CARRIER-BACKLOG|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-CARRIER-CONFIRM",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-CARRIER-CONFIRM|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-CONSENT-CHECK",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-CONSENT-CHECK|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-CREDIT-DUP",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-CREDIT-DUP|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-DEADLOCK-A",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-DEADLOCK-A|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-DEADLOCK-B",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-DEADLOCK-B|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-ESCALATION",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-ESCALATION|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-FINANCE-RECON",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-FINANCE-RECON|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-FORECAST-DRIFT",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-FORECAST-DRIFT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-HANDOFF",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-HANDOFF|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-HISTORY",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-HISTORY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-MEMORY-CHECK",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-MEMORY-CHECK|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-OWNER-APPROVE",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-OWNER-APPROVE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-OWNER-TRACE",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-OWNER-TRACE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-PAYOUT-CONFIRM",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-PAYOUT-CONFIRM|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-ROUTE-APPROVAL",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-ROUTE-APPROVAL|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-ROUTE-BLAST",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-ROUTE-BLAST|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-ROUTE-EVIDENCE",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-ROUTE-EVIDENCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-ROUTE-POLICY",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-ROUTE-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-ROUTE-SCOPE",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-ROUTE-SCOPE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-SNAPSHOT",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-SNAPSHOT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PLAN-AST-RECOVERY",
+      "type": "PLAN_HAS_TASK",
+      "target": "TASK-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "PLAN-AST-RECOVERY|PLAN_HAS_TASK|TASK-AST-WAREHOUSE-QUEUE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-AGENT-RETRY",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-INVESTIGATOR",
+      "properties": {
+        "edge_id": "TASK-AST-AGENT-RETRY|ASSIGNED_TO|AGENT-AST-INVESTIGATOR|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ALERT-TRIAGE",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-INVESTIGATOR",
+      "properties": {
+        "edge_id": "TASK-AST-ALERT-TRIAGE|ASSIGNED_TO|AGENT-AST-INVESTIGATOR|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-CARRIER-BACKLOG",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-OPS",
+      "properties": {
+        "edge_id": "TASK-AST-CARRIER-BACKLOG|ASSIGNED_TO|AGENT-AST-OPS|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-CARRIER-CONFIRM",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-EVIDENCE",
+      "properties": {
+        "edge_id": "TASK-AST-CARRIER-CONFIRM|ASSIGNED_TO|AGENT-AST-EVIDENCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-CONSENT-CHECK",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-SECURITY",
+      "properties": {
+        "edge_id": "TASK-AST-CONSENT-CHECK|ASSIGNED_TO|AGENT-AST-SECURITY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-CREDIT-DUP",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-EXPERT",
+      "properties": {
+        "edge_id": "TASK-AST-CREDIT-DUP|ASSIGNED_TO|AGENT-AST-EXPERT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-DEADLOCK-A",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-INVESTIGATOR",
+      "properties": {
+        "edge_id": "TASK-AST-DEADLOCK-A|ASSIGNED_TO|AGENT-AST-INVESTIGATOR|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-DEADLOCK-A",
+      "type": "BLOCKED_BY",
+      "target": "TASK-AST-DEADLOCK-B",
+      "properties": {
+        "edge_id": "TASK-AST-DEADLOCK-A|BLOCKED_BY|TASK-AST-DEADLOCK-B|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-DEADLOCK-B",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-POLICY",
+      "properties": {
+        "edge_id": "TASK-AST-DEADLOCK-B|ASSIGNED_TO|AGENT-AST-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-DEADLOCK-B",
+      "type": "BLOCKED_BY",
+      "target": "TASK-AST-DEADLOCK-A",
+      "properties": {
+        "edge_id": "TASK-AST-DEADLOCK-B|BLOCKED_BY|TASK-AST-DEADLOCK-A|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ESCALATION",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-POLICY",
+      "properties": {
+        "edge_id": "TASK-AST-ESCALATION|ASSIGNED_TO|AGENT-AST-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-FINANCE-RECON",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-FINANCE",
+      "properties": {
+        "edge_id": "TASK-AST-FINANCE-RECON|ASSIGNED_TO|AGENT-AST-FINANCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-FINANCE-RECON",
+      "type": "HAS_EXECUTION",
+      "target": "EXEC-AST-FINANCE-FAILED",
+      "properties": {
+        "edge_id": "TASK-AST-FINANCE-RECON|HAS_EXECUTION|EXEC-AST-FINANCE-FAILED|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-FINANCE-RECON",
+      "type": "HAS_EXECUTION",
+      "target": "EXEC-AST-FINANCE-RESUME",
+      "properties": {
+        "edge_id": "TASK-AST-FINANCE-RECON|HAS_EXECUTION|EXEC-AST-FINANCE-RESUME|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-FORECAST-DRIFT",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-DEPENDENCY",
+      "properties": {
+        "edge_id": "TASK-AST-FORECAST-DRIFT|ASSIGNED_TO|AGENT-AST-DEPENDENCY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-HANDOFF",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-HANDOFF",
+      "properties": {
+        "edge_id": "TASK-AST-HANDOFF|ASSIGNED_TO|AGENT-AST-HANDOFF|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-HANDOFF",
+      "type": "BLOCKED_BY",
+      "target": "TASK-AST-ROUTE-SCOPE",
+      "properties": {
+        "edge_id": "TASK-AST-HANDOFF|BLOCKED_BY|TASK-AST-ROUTE-SCOPE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-HISTORY",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-POSTMORTEM",
+      "properties": {
+        "edge_id": "TASK-AST-HISTORY|ASSIGNED_TO|AGENT-AST-POSTMORTEM|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-MEMORY-CHECK",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-MEMORY",
+      "properties": {
+        "edge_id": "TASK-AST-MEMORY-CHECK|ASSIGNED_TO|AGENT-AST-MEMORY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-OWNER-APPROVE",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-POLICY",
+      "properties": {
+        "edge_id": "TASK-AST-OWNER-APPROVE|ASSIGNED_TO|AGENT-AST-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-OWNER-APPROVE",
+      "type": "BLOCKED_BY",
+      "target": "TASK-AST-OWNER-TRACE",
+      "properties": {
+        "edge_id": "TASK-AST-OWNER-APPROVE|BLOCKED_BY|TASK-AST-OWNER-TRACE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-OWNER-TRACE",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-EXPERT",
+      "properties": {
+        "edge_id": "TASK-AST-OWNER-TRACE|ASSIGNED_TO|AGENT-AST-EXPERT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-PAYOUT-CONFIRM",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-FINANCE",
+      "properties": {
+        "edge_id": "TASK-AST-PAYOUT-CONFIRM|ASSIGNED_TO|AGENT-AST-FINANCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-PAYOUT-CONFIRM",
+      "type": "BLOCKED_BY",
+      "target": "TASK-AST-CARRIER-CONFIRM",
+      "properties": {
+        "edge_id": "TASK-AST-PAYOUT-CONFIRM|BLOCKED_BY|TASK-AST-CARRIER-CONFIRM|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-APPROVAL",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-REMEDIATION",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-APPROVAL|ASSIGNED_TO|AGENT-AST-REMEDIATION|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-APPROVAL",
+      "type": "BLOCKED_BY",
+      "target": "TASK-AST-ROUTE-EVIDENCE",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-APPROVAL|BLOCKED_BY|TASK-AST-ROUTE-EVIDENCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-APPROVAL",
+      "type": "BLOCKED_BY",
+      "target": "TASK-AST-ROUTE-POLICY",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-APPROVAL|BLOCKED_BY|TASK-AST-ROUTE-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-BLAST",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-DEPENDENCY",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-BLAST|ASSIGNED_TO|AGENT-AST-DEPENDENCY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-EVIDENCE",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-EVIDENCE",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-EVIDENCE|ASSIGNED_TO|AGENT-AST-EVIDENCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-POLICY",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-POLICY",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-POLICY|ASSIGNED_TO|AGENT-AST-POLICY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-POLICY",
+      "type": "BLOCKED_BY",
+      "target": "TASK-AST-ROUTE-EVIDENCE",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-POLICY|BLOCKED_BY|TASK-AST-ROUTE-EVIDENCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-POLICY",
+      "type": "HAS_EXECUTION",
+      "target": "EXEC-AST-POLICY-WAIT",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-POLICY|HAS_EXECUTION|EXEC-AST-POLICY-WAIT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-SCOPE",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-INVESTIGATOR",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-SCOPE|ASSIGNED_TO|AGENT-AST-INVESTIGATOR|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-ROUTE-SCOPE",
+      "type": "HAS_EXECUTION",
+      "target": "EXEC-AST-ROUTE-PAUSED",
+      "properties": {
+        "edge_id": "TASK-AST-ROUTE-SCOPE|HAS_EXECUTION|EXEC-AST-ROUTE-PAUSED|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-SNAPSHOT",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-EVIDENCE",
+      "properties": {
+        "edge_id": "TASK-AST-SNAPSHOT|ASSIGNED_TO|AGENT-AST-EVIDENCE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-AST-WAREHOUSE-QUEUE",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-AST-OPS",
+      "properties": {
+        "edge_id": "TASK-AST-WAREHOUSE-QUEUE|ASSIGNED_TO|AGENT-AST-OPS|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "WB-AST-FINANCE",
+      "type": "CONTAINS",
+      "target": "FIND-AST-FINANCE-TEMP",
+      "properties": {
+        "edge_id": "WB-AST-FINANCE|CONTAINS|FIND-AST-FINANCE-TEMP|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "WB-AST-REVIEW",
+      "type": "CONTAINS",
+      "target": "FIND-AST-SCHEMA",
+      "properties": {
+        "edge_id": "WB-AST-REVIEW|CONTAINS|FIND-AST-SCHEMA|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    }
+  ]
+}

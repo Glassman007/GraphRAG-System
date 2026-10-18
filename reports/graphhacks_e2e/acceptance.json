@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "generated_at": "2026-10-18T12:11:28.058485+00:00",
+  "started_at": "2026-10-18T12:11:27.353697+00:00",
+  "mode": "offline",
+  "isolation_graph": "(no temporary graph)",
+  "protected_graphs_not_mutated": [
+    "asteria_company_brain_v1",
+    "company_brain"
+  ],
+  "summary": {
+    "PASS": 25
+  },
+  "scenario_results": {
+    "AST-AA-01": {
+      "track": "CONNECTED_AGENTS",
+      "title": "Connected outage investigation",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AA-02": {
+      "track": "CONNECTED_AGENTS",
+      "title": "Multi-system blast radius and downstream tasks",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AA-03": {
+      "track": "CONNECTED_AGENTS",
+      "title": "Evidence-backed governed rollback",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AA-04": {
+      "track": "CONNECTED_AGENTS",
+      "title": "Cross-department financial investigation",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AA-05": {
+      "track": "CONNECTED_AGENTS",
+      "title": "Policy-aware export review",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AA-06": {
+      "track": "CONNECTED_AGENTS",
+      "title": "Approval-blocked ownership recovery",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AA-07": {
+      "track": "CONNECTED_AGENTS",
+      "title": "Unknown approval question",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AM-01": {
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Agent handoff with missing evidence",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AM-02": {
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Pause, checkpoint and resume",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AM-03": {
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Stale memory vs new trace evidence",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AM-04": {
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Two-agent deadlock",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AM-05": {
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Action retry and idempotency",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AM-06": {
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Compaction with provenance",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AM-07": {
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Validated handoff",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-AM-08": {
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Finance checkpoint recovery",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-CB-01": {
+      "track": "COMPANY_BRAIN",
+      "title": "Hidden dependency blast radius",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-CB-02": {
+      "track": "COMPANY_BRAIN",
+      "title": "Conflicting outage claims",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-CB-03": {
+      "track": "COMPANY_BRAIN",
+      "title": "Time-aware ownership and retiring team",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-CB-04": {
+      "track": "COMPANY_BRAIN",
+      "title": "Expert discovery across teams",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-CB-05": {
+      "track": "COMPANY_BRAIN",
+      "title": "Historical decision genealogy",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-CB-06": {
+      "track": "COMPANY_BRAIN",
+      "title": "Policy version evolution",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-CB-07": {
+      "track": "COMPANY_BRAIN",
+      "title": "Duplicate cross-team initiatives",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-CB-08": {
+      "track": "COMPANY_BRAIN",
+      "title": "Unregistered sensitive dependency",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    },
+    "AST-CB-09": {
+      "track": "COMPANY_BRAIN",
+      "title": "Ambiguous identity reconciliation",
+      "status": "PASS_FIXTURE_ONLY",
+      "checked_assertions": 1
+    }
+  },
+  "checks": [
+    {
+      "name": "Fixture pack, catalog and acceptance-matrix consistency",
+      "layer": "offline",
+      "status": "PASS",
+      "detail": "24 versioned scenario contracts checked"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AA-01"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AA-02"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AA-03"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AA-04"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AA-05"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AA-06"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AA-07"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AM-01"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AM-02"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AM-03"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AM-04"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AM-05"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AM-06"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AM-07"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-AM-08"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-CB-01"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-CB-02"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-CB-03"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-CB-04"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-CB-05"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-CB-06"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-CB-07"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-CB-08"
+    },
+    {
+      "name": "Withheld structural contract",
+      "layer": "fixture",
+      "status": "PASS",
+      "detail": "Fixture graph only; not a live workflow result",
+      "scenario_id": "AST-CB-09"
+    }
+  ],
+  "notes": [],
+  "scope": "PASS applies only to the stated assertion. Offline fixtures, live reads, isolated work mutations and browser interactions are evaluated separately. No autonomous agents or production connectors are certified."
+}

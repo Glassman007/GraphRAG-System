@@ -1,0 +1,47 @@
+{
+  "scenario_id": "AST-AM-03",
+  "track": "AGENT_MEMORY_COORDINATION",
+  "title": "Stale memory vs new trace evidence",
+  "summary": "Flag old CPU hypothesis when newer trace evidence contradicts it.",
+  "entry_ids": [
+    "FIND-AST-CPU-MEMORY"
+  ],
+  "focus_ids": [
+    "FIND-AST-SCHEMA",
+    "EVD-AST-0005"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "FIND-AST-CPU-MEMORY",
+        "current_status": "PROPOSED"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE",
+    "CLAIM_TASK",
+    "WRITE_FINDING",
+    "CHECKPOINT"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Which agent memory is stale and why should it not be promoted?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

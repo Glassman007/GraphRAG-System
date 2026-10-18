@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "external_id": "browser-seed",
+      "record_type": "user",
+      "observed_at": "2026-10-16T10:00:00+05:30",
+      "display_name": "Browser Review Person",
+      "email": "browser.review@northstar.example",
+      "login": "browser-review"
+    },
+    {
+      "external_id": "browser-ambiguous",
+      "record_type": "user",
+      "observed_at": "2026-10-16T10:01:00+05:30",
+      "display_name": "Browser Review Person",
+      "login": "browser-review-alt"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/mnt/data/graphhacks_phase9/graphhacks_phase8_complete/backend/app/graph/client.py", line 21, in __init__
+    from falkordb import FalkorDB
+ModuleNotFoundError: No module named 'falkordb'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/mnt/data/graphhacks_phase9/graphhacks_phase8_complete/scripts/verify_phase9_ingestion.py", line 127, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/mnt/data/graphhacks_phase9/graphhacks_phase8_complete/scripts/verify_phase9_ingestion.py", line 44, in main
+    client = FalkorGraphClient(settings)
+  File "/mnt/data/graphhacks_phase9/graphhacks_phase8_complete/backend/app/graph/client.py", line 23, in __init__
+    raise RuntimeError("FalkorDB Python client is not installed. Run: pip install -r requirements.txt") from exc
+RuntimeError: FalkorDB Python client is not installed. Run: pip install -r requirements.txt

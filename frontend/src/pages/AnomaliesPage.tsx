@@ -1,0 +1,11 @@
+import { useMemo,useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../auth/AuthContext'
+import { getAnomalies } from '../api/anomalies'
+import { LoadingPanel,ErrorPanel,EmptyState } from '../components/AsyncState'
+import { DataTable } from '../components/DataTable'
+import { GraphView } from '../components/GraphView'
+import { anomalyToGraph } from '../graph/adapters'
+import { ReadableRecord } from '../components/ReadableRecord'
+import { StatusBadge } from '../components/StatusBadge'
+export function AnomaliesPage(){const {config}=useAuth();const [selected,setSelected]=useState<any>();const q=useQuery({queryKey:['anomalies'],queryFn:({signal})=>getAnomalies(config,signal)});const graph=useMemo(()=>anomalyToGraph(selected||{}),[selected]);if(q.isLoading)return <LoadingPanel/>;if(q.error)return <ErrorPanel error={q.error}/>;const rows=q.data?.anomalies||[];return <section><h2>Anomalies</h2><p>Deterministic backend motif/rule deviations. The browser does not infer anomalies.</p>{!rows.length?<EmptyState title="No anomalies detected"/>:<div className="split"><DataTable rows={rows} rowKey={(r:any,i)=>`${r.rule}-${i}`} columns={[{key:'rule',header:'Rule',render:(r:any)=><button className="link-button" onClick={()=>setSelected(r)}>{r.rule}</button>},{key:'kind',header:'Kind',render:(r:any)=>r.kind},{key:'severity',header:'Severity',render:(r:any)=><StatusBadge value={r.severity}/>},{key:'rationale',header:'Rationale',render:(r:any)=>r.rationale||r.missing||'—'}]}/><aside>{selected?<><div className="panel graph-panel"><h3>Abnormal vs expected motif</h3><GraphView graph={graph}/></div><ReadableRecord title="Anomaly detail" value={selected}/></>:<EmptyState title="Select an anomaly"/>}</aside></div>}</section>}

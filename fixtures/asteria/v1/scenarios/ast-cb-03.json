@@ -1,0 +1,45 @@
+{
+  "scenario_id": "AST-CB-03",
+  "track": "COMPANY_BRAIN",
+  "title": "Time-aware ownership and retiring team",
+  "summary": "Find the original owner of the orphaned carrier adapter.",
+  "entry_ids": [
+    "SYS-AST-OLD-CARRIER"
+  ],
+  "focus_ids": [
+    "TEAM-LEGACY",
+    "PERSON-AST-LEGACY"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "SYS-AST-OLD-CARRIER",
+        "current_status": "ORPHANED"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Who owned the retired carrier adapter in 2025?",
+    "Why is its current ownership unresolved?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

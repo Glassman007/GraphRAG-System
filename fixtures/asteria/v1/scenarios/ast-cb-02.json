@@ -1,0 +1,45 @@
+{
+  "scenario_id": "AST-CB-02",
+  "track": "COMPANY_BRAIN",
+  "title": "Conflicting outage claims",
+  "summary": "Investigate competing CPU and compatibility hypotheses.",
+  "entry_ids": [
+    "INC-AST-ROUTE-OUTAGE"
+  ],
+  "focus_ids": [
+    "CLM-AST-ROUTE-CPU",
+    "CLM-AST-ROUTE-SCHEMA"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "INC-AST-ROUTE-OUTAGE",
+        "current_status": "OPEN"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "What evidence supports each hypothesis?",
+    "Which claim has stronger evidence, and what remains unverified?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

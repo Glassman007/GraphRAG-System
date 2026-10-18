@@ -1,0 +1,44 @@
+{
+  "scenario_id": "AST-CB-06",
+  "track": "COMPANY_BRAIN",
+  "title": "Policy version evolution",
+  "summary": "Explain how a retired SLA policy differs from its replacement.",
+  "entry_ids": [
+    "POL-AST-NEW-SLA"
+  ],
+  "focus_ids": [
+    "POL-AST-OLD-SLA",
+    "INC-AST-PARTNER-SLA"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "POL-AST-NEW-SLA",
+        "current_status": "ACTIVE"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Which SLA policy is current and why is old escalation ownership a problem?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

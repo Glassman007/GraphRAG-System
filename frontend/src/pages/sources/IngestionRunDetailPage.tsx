@@ -1,0 +1,8 @@
+import { Link,useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../../auth/AuthContext'
+import { getRun } from '../../api/sources'
+import { ErrorPanel,LoadingPanel } from '../../components/AsyncState'
+import { TechnicalDetails } from '../../components/TechnicalDetails'
+import { presentRun } from '../../presentation'
+export function IngestionRunDetailPage(){const {runId=''}=useParams();const {config}=useAuth();const q=useQuery({queryKey:['ingestion-run',runId],queryFn:({signal})=>getRun(config,runId,signal)});if(q.isLoading)return <LoadingPanel/>;if(q.error)return <ErrorPanel error={q.error}/>;const r=q.data||{};const p=presentRun(r);const f=r.funnel||{};return <section><div className="page-header"><div><h2>{p.title}</h2><p>{p.subtitle}</p></div>{r.source_ref_id&&<Link to={`/sources/${r.source_ref_id}`}>Open source</Link>}</div><div className="funnel"><div><strong>{f.fetched??r.records_fetched??0}</strong><span>Fetched</span></div><span>↓</span><div><strong>{f.normalized??r.records_normalized??0}</strong><span>Normalized</span></div><span>↓</span><div><strong>{f.resolved??0}</strong><span>Identity resolved</span></div><span>↓</span><div><strong>{f.written??r.records_written??0}</strong><span>Written</span></div></div><div className="summary-grid"><div className="metric"><strong>{f.quarantined??r.records_quarantined??0}</strong><span>Identity review / quarantine</span></div><div className="metric"><strong>{f.failed??r.records_failed??0}</strong><span>Failed</span></div></div><TechnicalDetails><pre>{JSON.stringify(r,null,2)}</pre></TechnicalDetails></section>}

@@ -1,0 +1,47 @@
+{
+  "scenario_id": "AST-AM-08",
+  "track": "AGENT_MEMORY_COORDINATION",
+  "title": "Finance checkpoint recovery",
+  "summary": "Recover a failed investigation using source-linked checkpoint.",
+  "entry_ids": [
+    "EXEC-AST-FINANCE-FAILED"
+  ],
+  "focus_ids": [
+    "EXEC-AST-FINANCE-RESUME",
+    "CHECK-AST-FINANCE-1"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "EXEC-AST-FINANCE-FAILED",
+        "current_status": "FAILED"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE",
+    "CLAIM_TASK",
+    "WRITE_FINDING",
+    "CHECKPOINT"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Compare the failed run and resumed state; which evidence survives?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

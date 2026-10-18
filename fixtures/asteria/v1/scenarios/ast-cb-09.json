@@ -1,0 +1,44 @@
+{
+  "scenario_id": "AST-CB-09",
+  "track": "COMPANY_BRAIN",
+  "title": "Ambiguous identity reconciliation",
+  "summary": "Compare two contact candidates without merging the wrong person.",
+  "entry_ids": [
+    "SRCREC-AST-IDENTITY"
+  ],
+  "focus_ids": [
+    "PERSON-AST-062",
+    "PERSON-AST-028"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "SRCREC-AST-IDENTITY",
+        "current_status": "N/A"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Which people could be R. Menon and why is identity unresolved?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

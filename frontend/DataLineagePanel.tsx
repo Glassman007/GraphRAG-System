@@ -1,0 +1,5 @@
+import { Link } from 'react-router-dom'
+import type { Dict } from '../api/types'
+import { EmptyState } from './AsyncState'
+import { TechnicalDetails } from './TechnicalDetails'
+export function DataLineagePanel({value}:{value?:Dict}){const rows=value?.lineage||[];if(!rows.length)return <EmptyState title="No source lineage available" detail="This object may be native, derived, or missing an ingestion provenance link."/>;return <section className="panel"><h3>How did GraphHacks learn this?</h3>{rows.map((r:any,i:number)=><div className="lineage-story" key={`${r.source_record?.id||i}`}><strong>{r.source?.name||'External source'}</strong><span>→ imported in {r.ingestion_run?.id?<Link to={`/sources/runs/${r.ingestion_run.id}`}>{r.ingestion_run.id}</Link>:'an ingestion run'}</span><span>→ source record {r.source_record?.external_id||r.source_record?.id||'unknown'}</span><span>→ interpreted as this canonical object</span>{r.source?.id&&<Link to={`/sources/${r.source.id}`}>Open source</Link>}<TechnicalDetails><pre>{JSON.stringify(r,null,2)}</pre></TechnicalDetails></div>)}</section>}

@@ -1,0 +1,48 @@
+{
+  "scenario_id": "AST-AA-02",
+  "track": "CONNECTED_AGENTS",
+  "title": "Multi-system blast radius and downstream tasks",
+  "summary": "Assess carrier and warehouse effects of routing outage.",
+  "entry_ids": [
+    "SYS-AST-ROUTE-DB"
+  ],
+  "focus_ids": [
+    "INC-AST-WAREHOUSE-QUEUE",
+    "INC-AST-CARRIER-LAG",
+    "TASK-AST-ROUTE-BLAST"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "SYS-AST-ROUTE-DB",
+        "current_status": "ACTIVE"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE",
+    "CREATE_INVESTIGATION",
+    "CREATE_PLAN",
+    "PROPOSE_ACTION"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Find which fulfilment functions are exposed to Route DB failures."
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

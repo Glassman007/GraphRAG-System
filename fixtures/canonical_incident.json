@@ -1,0 +1,1851 @@
+{
+  "scenario_id": "SCN-CANON-INC001",
+  "title": "Checkout Failure After Pricing Schema Migration",
+  "description": "Canonical Northstar Commerce incident fixture derived from preferred_scenario.md.",
+  "tenant_id": "northstar",
+  "visible_to_future_agents": [
+    "organization graph",
+    "system dependencies",
+    "incident symptoms",
+    "initial evidence",
+    "policies",
+    "people and teams",
+    "initial conflicting claims"
+  ],
+  "withheld_from_future_agents": [
+    "final root cause",
+    "final remediation",
+    "which claim is correct",
+    "CPU-secondary explanation",
+    "missing compatibility-test result",
+    "all affected downstream systems",
+    "explicit historical incident match"
+  ],
+  "nodes": [
+    {
+      "id": "TEAM-PAYMENTS",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-PAYMENTS",
+        "tenant_id": "northstar",
+        "name": "Payments Team",
+        "status": "ACTIVE",
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TEAM-PRICING",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-PRICING",
+        "tenant_id": "northstar",
+        "name": "Pricing Platform Team",
+        "status": "ACTIVE",
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TEAM-SRE",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-SRE",
+        "tenant_id": "northstar",
+        "name": "SRE Team",
+        "status": "ACTIVE",
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TEAM-GROWTH",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-GROWTH",
+        "tenant_id": "northstar",
+        "name": "Growth Integrations Team",
+        "status": "DISSOLVED",
+        "created_at": "2024-01-01T00:00:00+05:30",
+        "valid_until": "2026-07-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TEAM-MOBILE",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-MOBILE",
+        "tenant_id": "northstar",
+        "name": "Mobile Team",
+        "status": "ACTIVE",
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PERSON-MAYA",
+      "label": "Person",
+      "properties": {
+        "id": "PERSON-MAYA",
+        "tenant_id": "northstar",
+        "name": "Maya Rao",
+        "role": "Payments Engineering Lead",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PERSON-ARJUN",
+      "label": "Person",
+      "properties": {
+        "id": "PERSON-ARJUN",
+        "tenant_id": "northstar",
+        "name": "Arjun Mehta",
+        "role": "Pricing Platform Lead",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PERSON-RIYA",
+      "label": "Person",
+      "properties": {
+        "id": "PERSON-RIYA",
+        "tenant_id": "northstar",
+        "name": "Riya Sen",
+        "role": "Senior Database Engineer",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PERSON-KABIR",
+      "label": "Person",
+      "properties": {
+        "id": "PERSON-KABIR",
+        "tenant_id": "northstar",
+        "name": "Kabir Shah",
+        "role": "SRE On-Call Engineer",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PERSON-NEHA",
+      "label": "Person",
+      "properties": {
+        "id": "PERSON-NEHA",
+        "tenant_id": "northstar",
+        "name": "Neha Verma",
+        "role": "Platform Engineer",
+        "created_at": "2025-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-CHECKOUT",
+      "label": "System",
+      "properties": {
+        "id": "SYS-CHECKOUT",
+        "tenant_id": "northstar",
+        "name": "Checkout Service",
+        "system_type": "service",
+        "status": "ACTIVE",
+        "created_at": "2024-02-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-PRICING-API",
+      "label": "System",
+      "properties": {
+        "id": "SYS-PRICING-API",
+        "tenant_id": "northstar",
+        "name": "Pricing API",
+        "system_type": "service",
+        "status": "ACTIVE",
+        "created_at": "2024-02-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-PRICING-DB",
+      "label": "System",
+      "properties": {
+        "id": "SYS-PRICING-DB",
+        "tenant_id": "northstar",
+        "name": "Pricing Database",
+        "system_type": "database",
+        "status": "ACTIVE",
+        "created_at": "2024-02-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-ORDER",
+      "label": "System",
+      "properties": {
+        "id": "SYS-ORDER",
+        "tenant_id": "northstar",
+        "name": "Order Service",
+        "system_type": "service",
+        "status": "ACTIVE",
+        "created_at": "2024-02-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-INVENTORY",
+      "label": "System",
+      "properties": {
+        "id": "SYS-INVENTORY",
+        "tenant_id": "northstar",
+        "name": "Inventory Gateway",
+        "system_type": "service",
+        "status": "ACTIVE",
+        "created_at": "2024-02-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-MOBILE-OFFERS",
+      "label": "System",
+      "properties": {
+        "id": "SYS-MOBILE-OFFERS",
+        "tenant_id": "northstar",
+        "name": "Mobile Offers Service",
+        "system_type": "service",
+        "status": "ACTIVE",
+        "created_at": "2024-02-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-PRICING-ANALYTICS",
+      "label": "System",
+      "properties": {
+        "id": "SYS-PRICING-ANALYTICS",
+        "tenant_id": "northstar",
+        "name": "Analytics Pricing Pipeline",
+        "system_type": "pipeline",
+        "status": "ACTIVE",
+        "created_at": "2024-02-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-LEGACY-PROMO",
+      "label": "System",
+      "properties": {
+        "id": "SYS-LEGACY-PROMO",
+        "tenant_id": "northstar",
+        "name": "Legacy Promotion Adapter",
+        "system_type": "service",
+        "status": "ACTIVE",
+        "created_at": "2024-02-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "SYS-INVENTORY-WORKER",
+      "label": "System",
+      "properties": {
+        "id": "SYS-INVENTORY-WORKER",
+        "tenant_id": "northstar",
+        "name": "Inventory Worker",
+        "system_type": "worker",
+        "status": "ACTIVE",
+        "created_at": "2024-02-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "DS-DEPLOY",
+      "label": "DataSource",
+      "properties": {
+        "id": "DS-DEPLOY",
+        "tenant_id": "northstar",
+        "name": "Deployment System",
+        "source_type": "deployment",
+        "authority_scope": "deployment records",
+        "authoritative": true,
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "DS-GIT",
+      "label": "DataSource",
+      "properties": {
+        "id": "DS-GIT",
+        "tenant_id": "northstar",
+        "name": "Git Repository",
+        "source_type": "code",
+        "authority_scope": "migration definitions",
+        "authoritative": true,
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "DS-LOG",
+      "label": "DataSource",
+      "properties": {
+        "id": "DS-LOG",
+        "tenant_id": "northstar",
+        "name": "Logging System",
+        "source_type": "logs",
+        "authority_scope": "application logs",
+        "authoritative": true,
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "DS-MON",
+      "label": "DataSource",
+      "properties": {
+        "id": "DS-MON",
+        "tenant_id": "northstar",
+        "name": "Monitoring System",
+        "source_type": "metrics",
+        "authority_scope": "runtime metrics",
+        "authoritative": true,
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "DS-TRACE",
+      "label": "DataSource",
+      "properties": {
+        "id": "DS-TRACE",
+        "tenant_id": "northstar",
+        "name": "Distributed Tracing System",
+        "source_type": "traces",
+        "authority_scope": "request traces",
+        "authoritative": true,
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "DS-CHAT",
+      "label": "DataSource",
+      "properties": {
+        "id": "DS-CHAT",
+        "tenant_id": "northstar",
+        "name": "Incident Chat",
+        "source_type": "chat",
+        "authority_scope": "human assertions",
+        "authoritative": false,
+        "created_at": "2024-01-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "DPL-882",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-882",
+        "tenant_id": "northstar",
+        "name": "Pricing v4.2 rollout",
+        "status": "IN_PROGRESS",
+        "deployed_at": "2026-10-16T14:03:00+05:30",
+        "created_at": "2026-10-16T13:55:00+05:30",
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "id": "MIG-203",
+      "label": "Change",
+      "properties": {
+        "id": "MIG-203",
+        "tenant_id": "northstar",
+        "name": "discount_rules region_scope NOT NULL migration",
+        "change_type": "schema_migration",
+        "status": "DEPLOYED",
+        "created_at": "2026-10-16T13:50:00+05:30",
+        "applied_at": "2026-10-16T14:03:00+05:30",
+        "source_ref_id": "DS-GIT"
+      }
+    },
+    {
+      "id": "INC-001",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-001",
+        "tenant_id": "northstar",
+        "title": "Checkout failures following Pricing Database migration",
+        "status": "OPEN",
+        "severity": "SEV-1",
+        "started_at": "2026-10-16T14:08:00+05:30",
+        "created_at": "2026-10-16T14:08:00+05:30"
+      }
+    },
+    {
+      "id": "INC-074",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-074",
+        "tenant_id": "northstar",
+        "title": "Inventory compatibility failure during schema migration",
+        "status": "RESOLVED",
+        "severity": "SEV-2",
+        "started_at": "2026-06-11T10:02:00+05:30",
+        "resolved_at": "2026-06-11T11:30:00+05:30",
+        "created_at": "2026-06-11T10:02:00+05:30"
+      }
+    },
+    {
+      "id": "MIG-074",
+      "label": "Change",
+      "properties": {
+        "id": "MIG-074",
+        "tenant_id": "northstar",
+        "name": "Inventory field representation migration",
+        "change_type": "schema_migration",
+        "status": "ROLLED_BACK",
+        "created_at": "2026-06-11T09:45:00+05:30",
+        "applied_at": "2026-06-11T09:58:00+05:30"
+      }
+    },
+    {
+      "id": "POL-DB-04",
+      "label": "Policy",
+      "properties": {
+        "id": "POL-DB-04",
+        "tenant_id": "northstar",
+        "name": "Production Database Compatibility Policy",
+        "status": "ACTIVE",
+        "version": "4",
+        "created_at": "2026-01-15T00:00:00+05:30",
+        "valid_from": "2026-01-15T00:00:00+05:30",
+        "authoritative": true
+      }
+    },
+    {
+      "id": "COM-017",
+      "label": "Commitment",
+      "properties": {
+        "id": "COM-017",
+        "tenant_id": "northstar",
+        "name": "Maintain Pricing API v4.1 compatibility during v4.2 rollout",
+        "statement": "Pricing API v4.1 compatibility will remain supported throughout the v4.2 rolling migration.",
+        "status": "ACTIVE",
+        "created_at": "2026-10-13T10:00:00+05:30",
+        "due_at": "2026-10-16T23:59:00+05:30"
+      }
+    },
+    {
+      "id": "ACT-COMPAT-TEST",
+      "label": "Action",
+      "properties": {
+        "id": "ACT-COMPAT-TEST",
+        "tenant_id": "northstar",
+        "name": "Run backward-compatibility test",
+        "action_type": "verification",
+        "status": "SKIPPED",
+        "created_at": "2026-10-16T13:00:00+05:30",
+        "idempotency_key": "compat-test:DPL-882"
+      }
+    },
+    {
+      "id": "ACT-DOWNSTREAM-VERIFY",
+      "label": "Action",
+      "properties": {
+        "id": "ACT-DOWNSTREAM-VERIFY",
+        "tenant_id": "northstar",
+        "name": "Verify downstream consumers",
+        "action_type": "verification",
+        "status": "NOT_RECORDED",
+        "created_at": "2026-10-16T13:00:00+05:30",
+        "idempotency_key": "downstream-verify:DPL-882"
+      }
+    },
+    {
+      "id": "E-001",
+      "label": "Evidence",
+      "properties": {
+        "id": "E-001",
+        "tenant_id": "northstar",
+        "name": "Deployment record",
+        "evidence_type": "deployment_record",
+        "observed_at": "2026-10-16T14:03:00+05:30",
+        "created_at": "2026-10-16T14:03:00+05:30",
+        "source_ref_id": "DS-DEPLOY",
+        "confidence": 1.0
+      }
+    },
+    {
+      "id": "E-002",
+      "label": "Evidence",
+      "properties": {
+        "id": "E-002",
+        "tenant_id": "northstar",
+        "name": "Migration definition: region_scope nullable=false",
+        "evidence_type": "code_definition",
+        "observed_at": "2026-10-16T14:03:00+05:30",
+        "created_at": "2026-10-16T14:03:00+05:30",
+        "source_ref_id": "DS-GIT",
+        "confidence": 1.0
+      }
+    },
+    {
+      "id": "E-003",
+      "label": "Evidence",
+      "properties": {
+        "id": "E-003",
+        "tenant_id": "northstar",
+        "name": "Pricing API v4.1 constraint violation logs",
+        "evidence_type": "log",
+        "observed_at": "2026-10-16T14:08:14+05:30",
+        "created_at": "2026-10-16T14:08:14+05:30",
+        "source_ref_id": "DS-LOG",
+        "confidence": 0.98
+      }
+    },
+    {
+      "id": "E-004",
+      "label": "Evidence",
+      "properties": {
+        "id": "E-004",
+        "tenant_id": "northstar",
+        "name": "Pricing Database CPU metrics",
+        "evidence_type": "metric",
+        "observed_at": "2026-10-16T14:12:00+05:30",
+        "created_at": "2026-10-16T14:12:00+05:30",
+        "source_ref_id": "DS-MON",
+        "confidence": 0.99
+      }
+    },
+    {
+      "id": "E-005",
+      "label": "Evidence",
+      "properties": {
+        "id": "E-005",
+        "tenant_id": "northstar",
+        "name": "Pricing API retry metrics",
+        "evidence_type": "metric",
+        "observed_at": "2026-10-16T14:08:30+05:30",
+        "created_at": "2026-10-16T14:08:30+05:30",
+        "source_ref_id": "DS-MON",
+        "confidence": 0.99
+      }
+    },
+    {
+      "id": "E-006",
+      "label": "Evidence",
+      "properties": {
+        "id": "E-006",
+        "tenant_id": "northstar",
+        "name": "Checkout traces split by Pricing API version",
+        "evidence_type": "trace",
+        "observed_at": "2026-10-16T14:09:00+05:30",
+        "created_at": "2026-10-16T14:09:00+05:30",
+        "source_ref_id": "DS-TRACE",
+        "confidence": 0.99
+      }
+    },
+    {
+      "id": "E-007",
+      "label": "Evidence",
+      "properties": {
+        "id": "E-007",
+        "tenant_id": "northstar",
+        "name": "Arjun initial incident message: database saturated",
+        "evidence_type": "human_message",
+        "observed_at": "2026-10-16T14:10:00+05:30",
+        "created_at": "2026-10-16T14:10:00+05:30",
+        "source_ref_id": "DS-CHAT",
+        "confidence": 0.7
+      }
+    },
+    {
+      "id": "E-008",
+      "label": "Evidence",
+      "properties": {
+        "id": "E-008",
+        "tenant_id": "northstar",
+        "name": "Riya initial hypothesis: mixed-version compatibility issue",
+        "evidence_type": "human_message",
+        "observed_at": "2026-10-16T14:11:00+05:30",
+        "created_at": "2026-10-16T14:11:00+05:30",
+        "source_ref_id": "DS-CHAT",
+        "confidence": 0.8
+      }
+    },
+    {
+      "id": "C-001",
+      "label": "Claim",
+      "properties": {
+        "id": "C-001",
+        "tenant_id": "northstar",
+        "statement": "Pricing Database saturation caused INC-001.",
+        "status": "OPEN",
+        "confidence": 0.55,
+        "created_at": "2026-10-16T14:10:00+05:30",
+        "assertion_kind": "human"
+      }
+    },
+    {
+      "id": "C-002",
+      "label": "Claim",
+      "properties": {
+        "id": "C-002",
+        "tenant_id": "northstar",
+        "statement": "MIG-203 broke compatibility with Pricing API v4.1.",
+        "status": "OPEN",
+        "confidence": 0.7,
+        "created_at": "2026-10-16T14:11:00+05:30",
+        "assertion_kind": "human"
+      }
+    },
+    {
+      "id": "Q-001",
+      "label": "Question",
+      "properties": {
+        "id": "Q-001",
+        "tenant_id": "northstar",
+        "text": "Was the required backward-compatibility test executed before DPL-882?",
+        "status": "OPEN",
+        "priority": "HIGH",
+        "created_at": "2026-10-16T14:12:00+05:30"
+      }
+    },
+    {
+      "id": "Q-002",
+      "label": "Question",
+      "properties": {
+        "id": "Q-002",
+        "tenant_id": "northstar",
+        "text": "Are consumers other than Checkout affected by the schema migration?",
+        "status": "OPEN",
+        "priority": "HIGH",
+        "created_at": "2026-10-16T14:12:00+05:30"
+      }
+    },
+    {
+      "id": "Q-003",
+      "label": "Question",
+      "properties": {
+        "id": "Q-003",
+        "tenant_id": "northstar",
+        "text": "Which Pricing API versions were active between 14:03 and 14:15?",
+        "status": "OPEN",
+        "priority": "HIGH",
+        "created_at": "2026-10-16T14:12:00+05:30"
+      }
+    },
+    {
+      "id": "Q-004",
+      "label": "Question",
+      "properties": {
+        "id": "Q-004",
+        "tenant_id": "northstar",
+        "text": "Does Legacy Promotion Adapter still have a valid organizational owner?",
+        "status": "OPEN",
+        "priority": "MEDIUM",
+        "created_at": "2026-10-16T14:12:00+05:30"
+      }
+    },
+    {
+      "id": "TASK-INVESTIGATE-INC001",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-INVESTIGATE-INC001",
+        "tenant_id": "northstar",
+        "name": "Investigate INC-001",
+        "status": "OPEN",
+        "priority": "P0",
+        "created_at": "2026-10-16T14:08:30+05:30"
+      }
+    },
+    {
+      "id": "TASK-VERIFY-COMPAT",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-VERIFY-COMPAT",
+        "tenant_id": "northstar",
+        "name": "Verify mixed-version schema compatibility",
+        "status": "OPEN",
+        "priority": "P0",
+        "created_at": "2026-10-16T14:12:00+05:30"
+      }
+    },
+    {
+      "id": "TASK-CHECK-CONSUMERS",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-CHECK-CONSUMERS",
+        "tenant_id": "northstar",
+        "name": "Check downstream consumers of Pricing Database/API",
+        "status": "OPEN",
+        "priority": "P1",
+        "created_at": "2026-10-16T14:12:00+05:30"
+      }
+    },
+    {
+      "id": "EVT-DPL-882",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-DPL-882",
+        "tenant_id": "northstar",
+        "event_type": "DEPLOYMENT_STARTED",
+        "occurred_at": "2026-10-16T14:03:00+05:30",
+        "created_at": "2026-10-16T14:03:00+05:30",
+        "summary": "Deployment DPL-882 started."
+      }
+    },
+    {
+      "id": "EVT-INC-001",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-INC-001",
+        "tenant_id": "northstar",
+        "event_type": "SITUATION_CREATED",
+        "occurred_at": "2026-10-16T14:08:00+05:30",
+        "created_at": "2026-10-16T14:08:00+05:30",
+        "summary": "INC-001 opened after checkout error spike."
+      }
+    },
+    {
+      "id": "EVT-ERRORS",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-ERRORS",
+        "tenant_id": "northstar",
+        "event_type": "EVIDENCE_FOUND",
+        "occurred_at": "2026-10-16T14:08:14+05:30",
+        "created_at": "2026-10-16T14:08:14+05:30",
+        "summary": "Pricing API v4.1 constraint errors begin."
+      }
+    },
+    {
+      "id": "EVT-RETRIES",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-RETRIES",
+        "tenant_id": "northstar",
+        "event_type": "EVIDENCE_FOUND",
+        "occurred_at": "2026-10-16T14:08:30+05:30",
+        "created_at": "2026-10-16T14:08:30+05:30",
+        "summary": "Pricing API retries rise sharply."
+      }
+    },
+    {
+      "id": "EVT-CPU91",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-CPU91",
+        "tenant_id": "northstar",
+        "event_type": "EVIDENCE_FOUND",
+        "occurred_at": "2026-10-16T14:12:00+05:30",
+        "created_at": "2026-10-16T14:12:00+05:30",
+        "summary": "Pricing Database CPU reaches 91%."
+      }
+    },
+    {
+      "id": "EVT-TASK-INV",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-TASK-INV",
+        "tenant_id": "northstar",
+        "event_type": "TASK_CREATED",
+        "occurred_at": "2026-10-16T14:08:30+05:30",
+        "created_at": "2026-10-16T14:08:30+05:30",
+        "summary": "Investigation task created."
+      }
+    },
+    {
+      "id": "EVT-TASK-COMPAT",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-TASK-COMPAT",
+        "tenant_id": "northstar",
+        "event_type": "TASK_CREATED",
+        "occurred_at": "2026-10-16T14:12:00+05:30",
+        "created_at": "2026-10-16T14:12:00+05:30",
+        "summary": "Compatibility verification task created."
+      }
+    },
+    {
+      "id": "E-H074-1",
+      "label": "Evidence",
+      "properties": {
+        "id": "E-H074-1",
+        "tenant_id": "northstar",
+        "name": "Inventory old-worker/new-schema incompatibility record",
+        "evidence_type": "postmortem",
+        "observed_at": "2026-06-11T11:00:00+05:30",
+        "created_at": "2026-06-11T11:00:00+05:30",
+        "confidence": 1.0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "PERSON-MAYA",
+      "type": "MEMBER_OF",
+      "target": "TEAM-PAYMENTS",
+      "properties": {
+        "edge_id": "PERSON-MAYA|MEMBER_OF|TEAM-PAYMENTS|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "PERSON-ARJUN",
+      "type": "MEMBER_OF",
+      "target": "TEAM-PRICING",
+      "properties": {
+        "edge_id": "PERSON-ARJUN|MEMBER_OF|TEAM-PRICING|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "PERSON-RIYA",
+      "type": "MEMBER_OF",
+      "target": "TEAM-PRICING",
+      "properties": {
+        "edge_id": "PERSON-RIYA|MEMBER_OF|TEAM-PRICING|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "PERSON-KABIR",
+      "type": "MEMBER_OF",
+      "target": "TEAM-SRE",
+      "properties": {
+        "edge_id": "PERSON-KABIR|MEMBER_OF|TEAM-SRE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "PERSON-NEHA",
+      "type": "MEMBER_OF",
+      "target": "TEAM-PRICING",
+      "properties": {
+        "edge_id": "PERSON-NEHA|MEMBER_OF|TEAM-PRICING|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "TEAM-PAYMENTS",
+      "type": "OWNS",
+      "target": "SYS-CHECKOUT",
+      "properties": {
+        "edge_id": "TEAM-PAYMENTS|OWNS|SYS-CHECKOUT|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "authoritative": true,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "TEAM-PAYMENTS",
+      "type": "OWNS",
+      "target": "SYS-ORDER",
+      "properties": {
+        "edge_id": "TEAM-PAYMENTS|OWNS|SYS-ORDER|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "authoritative": true,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "TEAM-PRICING",
+      "type": "OWNS",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "TEAM-PRICING|OWNS|SYS-PRICING-API|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "authoritative": true,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "TEAM-PRICING",
+      "type": "OWNS",
+      "target": "SYS-PRICING-DB",
+      "properties": {
+        "edge_id": "TEAM-PRICING|OWNS|SYS-PRICING-DB|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "authoritative": true,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "TEAM-MOBILE",
+      "type": "OWNS",
+      "target": "SYS-MOBILE-OFFERS",
+      "properties": {
+        "edge_id": "TEAM-MOBILE|OWNS|SYS-MOBILE-OFFERS|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "authoritative": true,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "TEAM-GROWTH",
+      "type": "OWNS",
+      "target": "SYS-LEGACY-PROMO",
+      "properties": {
+        "edge_id": "TEAM-GROWTH|OWNS|SYS-LEGACY-PROMO|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "valid_until": "2026-07-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "authoritative": true,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "PERSON-MAYA",
+      "type": "RESPONSIBLE_FOR",
+      "target": "SYS-CHECKOUT",
+      "properties": {
+        "edge_id": "PERSON-MAYA|RESPONSIBLE_FOR|SYS-CHECKOUT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PERSON-ARJUN",
+      "type": "RESPONSIBLE_FOR",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "PERSON-ARJUN|RESPONSIBLE_FOR|SYS-PRICING-API|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PERSON-RIYA",
+      "type": "EXPERT_IN",
+      "target": "SYS-PRICING-DB",
+      "properties": {
+        "edge_id": "PERSON-RIYA|EXPERT_IN|SYS-PRICING-DB|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 0.98
+      }
+    },
+    {
+      "source": "PERSON-RIYA",
+      "type": "EXPERT_IN",
+      "target": "MIG-074",
+      "properties": {
+        "edge_id": "PERSON-RIYA|EXPERT_IN|MIG-074|2026-06-11T00:00:00+05:30",
+        "valid_from": "2026-06-11T00:00:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "SYS-CHECKOUT",
+      "type": "DEPENDS_ON",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "SYS-CHECKOUT|DEPENDS_ON|SYS-PRICING-API|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "SYS-CHECKOUT",
+      "type": "DEPENDS_ON",
+      "target": "SYS-ORDER",
+      "properties": {
+        "edge_id": "SYS-CHECKOUT|DEPENDS_ON|SYS-ORDER|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "SYS-CHECKOUT",
+      "type": "DEPENDS_ON",
+      "target": "SYS-INVENTORY",
+      "properties": {
+        "edge_id": "SYS-CHECKOUT|DEPENDS_ON|SYS-INVENTORY|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "SYS-PRICING-API",
+      "type": "DEPENDS_ON",
+      "target": "SYS-PRICING-DB",
+      "properties": {
+        "edge_id": "SYS-PRICING-API|DEPENDS_ON|SYS-PRICING-DB|2024-02-01T00:00:00+05:30",
+        "valid_from": "2024-02-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "SYS-MOBILE-OFFERS",
+      "type": "DEPENDS_ON",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "SYS-MOBILE-OFFERS|DEPENDS_ON|SYS-PRICING-API|2024-03-01T00:00:00+05:30",
+        "valid_from": "2024-03-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "SYS-LEGACY-PROMO",
+      "type": "DEPENDS_ON",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "SYS-LEGACY-PROMO|DEPENDS_ON|SYS-PRICING-API|2024-03-01T00:00:00+05:30",
+        "valid_from": "2024-03-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "SYS-PRICING-ANALYTICS",
+      "type": "DEPENDS_ON",
+      "target": "SYS-PRICING-DB",
+      "properties": {
+        "edge_id": "SYS-PRICING-ANALYTICS|DEPENDS_ON|SYS-PRICING-DB|2024-03-01T00:00:00+05:30",
+        "valid_from": "2024-03-01T00:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "SYS-INVENTORY-WORKER",
+      "type": "DEPENDS_ON",
+      "target": "SYS-INVENTORY",
+      "properties": {
+        "edge_id": "SYS-INVENTORY-WORKER|DEPENDS_ON|SYS-INVENTORY|2024-03-01T00:00:00+05:30",
+        "valid_from": "2024-03-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-882",
+      "type": "CONTAINS",
+      "target": "MIG-203",
+      "properties": {
+        "edge_id": "DPL-882|CONTAINS|MIG-203|2026-10-16T14:03:00+05:30",
+        "valid_from": "2026-10-16T14:03:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "MIG-203",
+      "type": "CHANGED",
+      "target": "SYS-PRICING-DB",
+      "properties": {
+        "edge_id": "MIG-203|CHANGED|SYS-PRICING-DB|2026-10-16T14:03:00+05:30",
+        "valid_from": "2026-10-16T14:03:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-GIT"
+      }
+    },
+    {
+      "source": "MIG-203",
+      "type": "AFFECTS",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "MIG-203|AFFECTS|SYS-PRICING-API|2026-10-16T14:03:00+05:30",
+        "valid_from": "2026-10-16T14:03:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "DPL-882",
+      "type": "APPROVED_BY",
+      "target": "PERSON-ARJUN",
+      "properties": {
+        "edge_id": "DPL-882|APPROVED_BY|PERSON-ARJUN|2026-10-16T13:58:00+05:30",
+        "valid_from": "2026-10-16T13:58:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "PERSON-NEHA",
+      "type": "PRODUCED",
+      "target": "MIG-203",
+      "properties": {
+        "edge_id": "PERSON-NEHA|PRODUCED|MIG-203|2026-10-16T13:50:00+05:30",
+        "valid_from": "2026-10-16T13:50:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-GIT"
+      }
+    },
+    {
+      "source": "E-001",
+      "type": "DERIVED_FROM",
+      "target": "DS-DEPLOY",
+      "properties": {
+        "edge_id": "E-001|DERIVED_FROM|DS-DEPLOY|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-DEPLOY"
+      }
+    },
+    {
+      "source": "E-001",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "E-001|ABOUT|INC-001|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-002",
+      "type": "DERIVED_FROM",
+      "target": "DS-GIT",
+      "properties": {
+        "edge_id": "E-002|DERIVED_FROM|DS-GIT|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-GIT"
+      }
+    },
+    {
+      "source": "E-002",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "E-002|ABOUT|INC-001|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-003",
+      "type": "DERIVED_FROM",
+      "target": "DS-LOG",
+      "properties": {
+        "edge_id": "E-003|DERIVED_FROM|DS-LOG|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-LOG"
+      }
+    },
+    {
+      "source": "E-003",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "E-003|ABOUT|INC-001|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-004",
+      "type": "DERIVED_FROM",
+      "target": "DS-MON",
+      "properties": {
+        "edge_id": "E-004|DERIVED_FROM|DS-MON|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-MON"
+      }
+    },
+    {
+      "source": "E-004",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "E-004|ABOUT|INC-001|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-005",
+      "type": "DERIVED_FROM",
+      "target": "DS-MON",
+      "properties": {
+        "edge_id": "E-005|DERIVED_FROM|DS-MON|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-MON"
+      }
+    },
+    {
+      "source": "E-005",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "E-005|ABOUT|INC-001|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-006",
+      "type": "DERIVED_FROM",
+      "target": "DS-TRACE",
+      "properties": {
+        "edge_id": "E-006|DERIVED_FROM|DS-TRACE|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-TRACE"
+      }
+    },
+    {
+      "source": "E-006",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "E-006|ABOUT|INC-001|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-007",
+      "type": "DERIVED_FROM",
+      "target": "DS-CHAT",
+      "properties": {
+        "edge_id": "E-007|DERIVED_FROM|DS-CHAT|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "E-007",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "E-007|ABOUT|INC-001|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-008",
+      "type": "DERIVED_FROM",
+      "target": "DS-CHAT",
+      "properties": {
+        "edge_id": "E-008|DERIVED_FROM|DS-CHAT|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "DS-CHAT"
+      }
+    },
+    {
+      "source": "E-008",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "E-008|ABOUT|INC-001|2026-10-16T14:00:00+05:30",
+        "valid_from": "2026-10-16T14:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-001",
+      "type": "ABOUT",
+      "target": "DPL-882",
+      "properties": {
+        "edge_id": "E-001|ABOUT|DPL-882|2026-10-16T14:03:00+05:30",
+        "valid_from": "2026-10-16T14:03:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-002",
+      "type": "ABOUT",
+      "target": "MIG-203",
+      "properties": {
+        "edge_id": "E-002|ABOUT|MIG-203|2026-10-16T14:03:00+05:30",
+        "valid_from": "2026-10-16T14:03:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-003",
+      "type": "ABOUT",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "E-003|ABOUT|SYS-PRICING-API|2026-10-16T14:08:14+05:30",
+        "valid_from": "2026-10-16T14:08:14+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-004",
+      "type": "ABOUT",
+      "target": "SYS-PRICING-DB",
+      "properties": {
+        "edge_id": "E-004|ABOUT|SYS-PRICING-DB|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-005",
+      "type": "ABOUT",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "E-005|ABOUT|SYS-PRICING-API|2026-10-16T14:08:30+05:30",
+        "valid_from": "2026-10-16T14:08:30+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-006",
+      "type": "ABOUT",
+      "target": "SYS-CHECKOUT",
+      "properties": {
+        "edge_id": "E-006|ABOUT|SYS-CHECKOUT|2026-10-16T14:09:00+05:30",
+        "valid_from": "2026-10-16T14:09:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "C-001",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "C-001|ABOUT|INC-001|2026-10-16T14:10:00+05:30",
+        "valid_from": "2026-10-16T14:10:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "C-002",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "C-002|ABOUT|INC-001|2026-10-16T14:11:00+05:30",
+        "valid_from": "2026-10-16T14:11:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "C-001",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-ARJUN",
+      "properties": {
+        "edge_id": "C-001|ASSERTED_BY|PERSON-ARJUN|2026-10-16T14:10:00+05:30",
+        "valid_from": "2026-10-16T14:10:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "C-002",
+      "type": "ASSERTED_BY",
+      "target": "PERSON-RIYA",
+      "properties": {
+        "edge_id": "C-002|ASSERTED_BY|PERSON-RIYA|2026-10-16T14:11:00+05:30",
+        "valid_from": "2026-10-16T14:11:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-004",
+      "type": "SUPPORTS",
+      "target": "C-001",
+      "properties": {
+        "edge_id": "E-004|SUPPORTS|C-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 0.7
+      }
+    },
+    {
+      "source": "E-001",
+      "type": "SUPPORTS",
+      "target": "C-002",
+      "properties": {
+        "edge_id": "E-001|SUPPORTS|C-002|2026-10-16T14:11:00+05:30",
+        "valid_from": "2026-10-16T14:11:00+05:30",
+        "confidence": 0.7
+      }
+    },
+    {
+      "source": "E-002",
+      "type": "SUPPORTS",
+      "target": "C-002",
+      "properties": {
+        "edge_id": "E-002|SUPPORTS|C-002|2026-10-16T14:11:00+05:30",
+        "valid_from": "2026-10-16T14:11:00+05:30",
+        "confidence": 0.95
+      }
+    },
+    {
+      "source": "E-003",
+      "type": "SUPPORTS",
+      "target": "C-002",
+      "properties": {
+        "edge_id": "E-003|SUPPORTS|C-002|2026-10-16T14:11:00+05:30",
+        "valid_from": "2026-10-16T14:11:00+05:30",
+        "confidence": 0.98
+      }
+    },
+    {
+      "source": "E-006",
+      "type": "SUPPORTS",
+      "target": "C-002",
+      "properties": {
+        "edge_id": "E-006|SUPPORTS|C-002|2026-10-16T14:11:00+05:30",
+        "valid_from": "2026-10-16T14:11:00+05:30",
+        "confidence": 0.98
+      }
+    },
+    {
+      "source": "C-001",
+      "type": "CONTRADICTS",
+      "target": "C-002",
+      "properties": {
+        "edge_id": "C-001|CONTRADICTS|C-002|2026-10-16T14:11:00+05:30",
+        "valid_from": "2026-10-16T14:11:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-001",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "Q-001|ABOUT|INC-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-002",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "Q-002|ABOUT|INC-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-003",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "Q-003|ABOUT|INC-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-004",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "Q-004|ABOUT|INC-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-INVESTIGATE-INC001",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "TASK-INVESTIGATE-INC001|ABOUT|INC-001|2026-10-16T14:08:30+05:30",
+        "valid_from": "2026-10-16T14:08:30+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-VERIFY-COMPAT",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "TASK-VERIFY-COMPAT|ABOUT|INC-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-VERIFY-COMPAT",
+      "type": "REQUIRES",
+      "target": "Q-001",
+      "properties": {
+        "edge_id": "TASK-VERIFY-COMPAT|REQUIRES|Q-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-CHECK-CONSUMERS",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "TASK-CHECK-CONSUMERS|ABOUT|INC-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-CHECK-CONSUMERS",
+      "type": "REQUIRES",
+      "target": "Q-002",
+      "properties": {
+        "edge_id": "TASK-CHECK-CONSUMERS|REQUIRES|Q-002|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-VERIFY-COMPAT",
+      "type": "BLOCKED_BY",
+      "target": "Q-003",
+      "properties": {
+        "edge_id": "TASK-VERIFY-COMPAT|BLOCKED_BY|Q-003|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "POL-DB-04",
+      "type": "GOVERNS",
+      "target": "MIG-203",
+      "properties": {
+        "edge_id": "POL-DB-04|GOVERNS|MIG-203|2026-10-16T14:03:00+05:30",
+        "valid_from": "2026-10-16T14:03:00+05:30",
+        "confidence": 1.0,
+        "authoritative": true
+      }
+    },
+    {
+      "source": "POL-DB-04",
+      "type": "REQUIRES",
+      "target": "ACT-COMPAT-TEST",
+      "properties": {
+        "edge_id": "POL-DB-04|REQUIRES|ACT-COMPAT-TEST|2026-01-15T00:00:00+05:30",
+        "valid_from": "2026-01-15T00:00:00+05:30",
+        "confidence": 1.0,
+        "authoritative": true
+      }
+    },
+    {
+      "source": "POL-DB-04",
+      "type": "REQUIRES",
+      "target": "ACT-DOWNSTREAM-VERIFY",
+      "properties": {
+        "edge_id": "POL-DB-04|REQUIRES|ACT-DOWNSTREAM-VERIFY|2026-01-15T00:00:00+05:30",
+        "valid_from": "2026-01-15T00:00:00+05:30",
+        "confidence": 1.0,
+        "authoritative": true
+      }
+    },
+    {
+      "source": "COM-017",
+      "type": "PROMISED_BY",
+      "target": "TEAM-PRICING",
+      "properties": {
+        "edge_id": "COM-017|PROMISED_BY|TEAM-PRICING|2026-10-13T10:00:00+05:30",
+        "valid_from": "2026-10-13T10:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "COM-017",
+      "type": "OWED_TO",
+      "target": "TEAM-PAYMENTS",
+      "properties": {
+        "edge_id": "COM-017|OWED_TO|TEAM-PAYMENTS|2026-10-13T10:00:00+05:30",
+        "valid_from": "2026-10-13T10:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "COM-017",
+      "type": "COMMITTED_TO",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "COM-017|COMMITTED_TO|SYS-PRICING-API|2026-10-13T10:00:00+05:30",
+        "valid_from": "2026-10-13T10:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "COM-017",
+      "type": "COMMITTED_TO",
+      "target": "DPL-882",
+      "properties": {
+        "edge_id": "COM-017|COMMITTED_TO|DPL-882|2026-10-13T10:00:00+05:30",
+        "valid_from": "2026-10-13T10:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "MIG-074",
+      "type": "CHANGED",
+      "target": "SYS-INVENTORY",
+      "properties": {
+        "edge_id": "MIG-074|CHANGED|SYS-INVENTORY|2026-06-11T09:58:00+05:30",
+        "valid_from": "2026-06-11T09:58:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "MIG-074",
+      "type": "AFFECTS",
+      "target": "SYS-INVENTORY-WORKER",
+      "properties": {
+        "edge_id": "MIG-074|AFFECTS|SYS-INVENTORY-WORKER|2026-06-11T09:58:00+05:30",
+        "valid_from": "2026-06-11T09:58:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-H074-1",
+      "type": "ABOUT",
+      "target": "INC-074",
+      "properties": {
+        "edge_id": "E-H074-1|ABOUT|INC-074|2026-06-11T11:00:00+05:30",
+        "valid_from": "2026-06-11T11:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "E-H074-1",
+      "type": "ABOUT",
+      "target": "MIG-074",
+      "properties": {
+        "edge_id": "E-H074-1|ABOUT|MIG-074|2026-06-11T11:00:00+05:30",
+        "valid_from": "2026-06-11T11:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-DPL-882",
+      "type": "ABOUT",
+      "target": "DPL-882",
+      "properties": {
+        "edge_id": "EVT-DPL-882|ABOUT|DPL-882|2026-10-16T14:03:00+05:30",
+        "valid_from": "2026-10-16T14:03:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-DPL-882",
+      "type": "ABOUT",
+      "target": "MIG-203",
+      "properties": {
+        "edge_id": "EVT-DPL-882|ABOUT|MIG-203|2026-10-16T14:03:00+05:30",
+        "valid_from": "2026-10-16T14:03:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-INC-001",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "EVT-INC-001|ABOUT|INC-001|2026-10-16T14:08:00+05:30",
+        "valid_from": "2026-10-16T14:08:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-ERRORS",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "EVT-ERRORS|ABOUT|INC-001|2026-10-16T14:08:14+05:30",
+        "valid_from": "2026-10-16T14:08:14+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-ERRORS",
+      "type": "ABOUT",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "EVT-ERRORS|ABOUT|SYS-PRICING-API|2026-10-16T14:08:14+05:30",
+        "valid_from": "2026-10-16T14:08:14+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-ERRORS",
+      "type": "ABOUT",
+      "target": "E-003",
+      "properties": {
+        "edge_id": "EVT-ERRORS|ABOUT|E-003|2026-10-16T14:08:14+05:30",
+        "valid_from": "2026-10-16T14:08:14+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-RETRIES",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "EVT-RETRIES|ABOUT|INC-001|2026-10-16T14:08:30+05:30",
+        "valid_from": "2026-10-16T14:08:30+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-RETRIES",
+      "type": "ABOUT",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "EVT-RETRIES|ABOUT|SYS-PRICING-API|2026-10-16T14:08:30+05:30",
+        "valid_from": "2026-10-16T14:08:30+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-RETRIES",
+      "type": "ABOUT",
+      "target": "E-005",
+      "properties": {
+        "edge_id": "EVT-RETRIES|ABOUT|E-005|2026-10-16T14:08:30+05:30",
+        "valid_from": "2026-10-16T14:08:30+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-CPU91",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "EVT-CPU91|ABOUT|INC-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-CPU91",
+      "type": "ABOUT",
+      "target": "SYS-PRICING-DB",
+      "properties": {
+        "edge_id": "EVT-CPU91|ABOUT|SYS-PRICING-DB|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-CPU91",
+      "type": "ABOUT",
+      "target": "E-004",
+      "properties": {
+        "edge_id": "EVT-CPU91|ABOUT|E-004|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-TASK-INV",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "EVT-TASK-INV|ABOUT|INC-001|2026-10-16T14:08:30+05:30",
+        "valid_from": "2026-10-16T14:08:30+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-TASK-INV",
+      "type": "ABOUT",
+      "target": "TASK-INVESTIGATE-INC001",
+      "properties": {
+        "edge_id": "EVT-TASK-INV|ABOUT|TASK-INVESTIGATE-INC001|2026-10-16T14:08:30+05:30",
+        "valid_from": "2026-10-16T14:08:30+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-TASK-COMPAT",
+      "type": "ABOUT",
+      "target": "INC-001",
+      "properties": {
+        "edge_id": "EVT-TASK-COMPAT|ABOUT|INC-001|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-TASK-COMPAT",
+      "type": "ABOUT",
+      "target": "TASK-VERIFY-COMPAT",
+      "properties": {
+        "edge_id": "EVT-TASK-COMPAT|ABOUT|TASK-VERIFY-COMPAT|2026-10-16T14:12:00+05:30",
+        "valid_from": "2026-10-16T14:12:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-INC-001",
+      "type": "PERFORMED_BY",
+      "target": "PERSON-KABIR",
+      "properties": {
+        "edge_id": "EVT-INC-001|PERFORMED_BY|PERSON-KABIR|2026-10-16T14:08:00+05:30",
+        "valid_from": "2026-10-16T14:08:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-DPL-882",
+      "type": "BEFORE",
+      "target": "EVT-INC-001",
+      "properties": {
+        "edge_id": "EVT-DPL-882|BEFORE|EVT-INC-001|2026-10-16T14:03:00+05:30",
+        "valid_from": "2026-10-16T14:03:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-INC-001",
+      "type": "BEFORE",
+      "target": "EVT-ERRORS",
+      "properties": {
+        "edge_id": "EVT-INC-001|BEFORE|EVT-ERRORS|2026-10-16T14:08:00+05:30",
+        "valid_from": "2026-10-16T14:08:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-ERRORS",
+      "type": "BEFORE",
+      "target": "EVT-RETRIES",
+      "properties": {
+        "edge_id": "EVT-ERRORS|BEFORE|EVT-RETRIES|2026-10-16T14:08:14+05:30",
+        "valid_from": "2026-10-16T14:08:14+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-RETRIES",
+      "type": "BEFORE",
+      "target": "EVT-CPU91",
+      "properties": {
+        "edge_id": "EVT-RETRIES|BEFORE|EVT-CPU91|2026-10-16T14:08:30+05:30",
+        "valid_from": "2026-10-16T14:08:30+05:30",
+        "confidence": 1.0
+      }
+    }
+  ],
+  "ground_truth": {
+    "primary_root_cause": "Backward-incompatible schema migration during mixed-version rollout.",
+    "causal_chain": [
+      "MIG-203 made region_scope NOT NULL",
+      "Pricing API v4.1 still wrote NULL",
+      "database rejected v4.1 writes",
+      "v4.1 requests failed",
+      "Checkout requests routed to v4.1 failed",
+      "retry traffic increased",
+      "Pricing Database CPU rose"
+    ],
+    "contributing_failure": "Required compatibility testing was skipped.",
+    "secondary_consequence": "Retry storm caused database saturation; high CPU was not the initiating cause.",
+    "ownership_gap": "SYS-LEGACY-PROMO has no current owner after TEAM-GROWTH dissolved on 2026-07-01.",
+    "commitment_breach": "COM-017 is violated if v4.1 compatibility breaks during DPL-882.",
+    "policy_drift": "Actual path skipped compatibility testing and downstream verification.",
+    "structural_precedent": "INC-074 has the same old-consumer/new-schema incompatibility motif despite different vocabulary.",
+    "expected_potential_blast_radius": [
+      "SYS-CHECKOUT",
+      "SYS-MOBILE-OFFERS",
+      "SYS-LEGACY-PROMO",
+      "SYS-PRICING-ANALYTICS"
+    ],
+    "observed_impact_initially": [
+      "SYS-CHECKOUT"
+    ]
+  }
+}

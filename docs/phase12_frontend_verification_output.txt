@@ -1,0 +1,19 @@
+PHASE 12 FRONTEND VERIFICATION (SANDBOX)
+
+Environment:
+- npm registry DNS: unavailable
+- frontend/node_modules: absent
+
+Package-dependent commands could not be executed in this sandbox:
+- npm test          -> requires installed Vitest/React dependencies
+- npm run typecheck -> requires installed React/TanStack/Cytoscape/Vite type packages
+- npm run build     -> requires installed Vite/React dependencies
+- Playwright        -> requires installed @playwright/test + browser
+
+Dependency-independent verification:
+- TypeScript compiler available globally: 5.8.3
+- TS/TSX files parsed: 67
+- syntax errors: 0
+
+See docs/phase12_frontend_syntax_output.txt for the syntax check result.
+Run the package-dependent gates locally after `npm install`.

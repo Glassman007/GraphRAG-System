@@ -1,0 +1,81 @@
+{
+  "scenario_id": "SCN-BUS-001",
+  "title": "Single Expert for Ledger Export",
+  "description": "Supports organizational bus-factor analysis.",
+  "tenant_id": "northstar",
+  "nodes": [
+    {
+      "id": "SYS-LEDGER-EXPORT",
+      "label": "System",
+      "properties": {
+        "id": "SYS-LEDGER-EXPORT",
+        "tenant_id": "northstar",
+        "name": "Ledger Export Service",
+        "system_type": "service",
+        "status": "ACTIVE",
+        "criticality": "HIGH",
+        "created_at": "2024-06-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PERSON-ISHA",
+      "label": "Person",
+      "properties": {
+        "id": "PERSON-ISHA",
+        "tenant_id": "northstar",
+        "name": "Isha Kapoor",
+        "role": "Senior Engineer",
+        "created_at": "2024-06-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TEAM-FINOPS",
+      "label": "Team",
+      "properties": {
+        "id": "TEAM-FINOPS",
+        "tenant_id": "northstar",
+        "name": "FinOps Engineering",
+        "status": "ACTIVE",
+        "created_at": "2024-06-01T00:00:00+05:30"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "TEAM-FINOPS",
+      "type": "OWNS",
+      "target": "SYS-LEDGER-EXPORT",
+      "properties": {
+        "edge_id": "TEAM-FINOPS|OWNS|SYS-LEDGER-EXPORT|2024-06-01T00:00:00+05:30",
+        "valid_from": "2024-06-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PERSON-ISHA",
+      "type": "MEMBER_OF",
+      "target": "TEAM-FINOPS",
+      "properties": {
+        "edge_id": "PERSON-ISHA|MEMBER_OF|TEAM-FINOPS|2024-06-01T00:00:00+05:30",
+        "valid_from": "2024-06-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PERSON-ISHA",
+      "type": "EXPERT_IN",
+      "target": "SYS-LEDGER-EXPORT",
+      "properties": {
+        "edge_id": "PERSON-ISHA|EXPERT_IN|SYS-LEDGER-EXPORT|2024-06-01T00:00:00+05:30",
+        "valid_from": "2024-06-01T00:00:00+05:30",
+        "confidence": 0.99
+      }
+    }
+  ],
+  "ground_truth": {
+    "bus_factor": 1,
+    "critical_entity": "SYS-LEDGER-EXPORT",
+    "only_expert": "PERSON-ISHA",
+    "no_backup_expert": true
+  }
+}

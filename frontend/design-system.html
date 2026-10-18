@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GraphHacks · Design System</title>
+  <style>
+    body { margin: 0; background: var(--void); min-height: 100vh; }
+    .spec-wrap { width: min(1280px, 100% - 40px); margin-inline: auto; }
+    .spec-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-md); padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+    .spec-mark { font-family: var(--font-display); font-weight: 800; font-variation-settings: 'wdth' 75; font-size: 1.375rem; letter-spacing: 0.04em; color: var(--signal); text-shadow: var(--glow-signal); }
+    .spec-mark small { font: 600 var(--fs-label) var(--font-mono); letter-spacing: var(--track-label); color: var(--text-muted); text-shadow: none; margin-left: 10px; }
+    .spec-rain-ctl { display: flex; gap: var(--sp-xs); align-items: center; }
+
+    /* Landing register */
+    .hero { min-height: calc(100vh - 61px); display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: var(--sp-lg); align-items: center; padding: var(--sp-lg) 0; }
+    .hero__copy p { font-size: 1rem; line-height: 1.6rem; max-width: 46ch; color: var(--text); margin: var(--sp-md) 0 var(--sp-lg); }
+    .hero__actions { display: flex; gap: var(--sp-sm); flex-wrap: wrap; }
+    .answer { display: grid; gap: var(--sp-md); }
+    .answer__q { font-size: 0.9375rem; color: var(--text-bright); }
+    .answer__q b { color: var(--signal); font-weight: 600; }
+    .answer__a { font-size: 1.0625rem; line-height: 1.6rem; color: var(--text-bright); }
+    #hero-graph { height: 230px; background: var(--void); border: 1px solid var(--rule-faint); }
+    .facts { padding: var(--sp-sm) var(--sp-md); border-block: 1px solid var(--rule); background: var(--panel); row-gap: var(--sp-xs); }
+    .facts b { color: var(--text-bright); font-weight: 600; margin-right: 1ch; }
+    .facts .gh-trace b { color: var(--trace); }
+
+    /* Specimen sections */
+    .spec-section { padding: var(--sp-xl) 0 0; }
+    .spec-section > .gh-headline { margin-bottom: var(--sp-xs); }
+    .spec-section > p { color: var(--text-muted); margin: 0 0 var(--sp-lg); max-width: 72ch; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-lg) var(--sp-md); }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-lg) var(--sp-md); }
+    .stack { display: grid; gap: var(--sp-md); }
+    .row { display: flex; flex-wrap: wrap; gap: var(--sp-sm); align-items: center; }
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1px; background: var(--rule-faint); border: 1px solid var(--rule-faint); }
+    .swatch { background: var(--panel); }
+    .swatch__chip { height: 64px; border-bottom: 1px solid var(--rule-faint); }
+    .swatch__meta { padding: 8px 10px; display: grid; gap: 2px; font-size: 0.75rem; line-height: 1rem; }
+    .swatch__meta b { color: var(--text-bright); font-weight: 600; }
+    .type-row { display: grid; grid-template-columns: 160px 1fr; gap: var(--sp-md); align-items: baseline; padding: var(--sp-sm) 0; border-bottom: 1px solid var(--rule-faint); }
+    .shell { display: grid; grid-template-columns: 200px 1fr; border: 1px solid var(--rule); min-height: 420px; }
+    .rail { background: var(--panel); border-right: 1px solid var(--rule); padding: var(--sp-sm) 0; }
+    .rail a { display: block; padding: 6px var(--sp-md); font-size: var(--fs-label); font-weight: 600; letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-muted); text-decoration: none; }
+    .rail a:hover { color: var(--text-bright); background: var(--raised); }
+    .rail a[aria-current='page'] { background: var(--signal); color: var(--void); }
+    .rail a[aria-current='page']::before { content: '▸ ' / ''; font-family: 'GH Glyph', monospace; }
+    .work { padding: var(--sp-md); display: grid; gap: var(--sp-lg); align-content: start; background: transparent; }
+    .work__head { display: flex; justify-content: space-between; align-items: end; gap: var(--sp-md); flex-wrap: wrap; }
+    .empty-zone { min-height: 120px; display: grid; place-items: center; border: 1px dashed var(--rule-faint); color: var(--text-muted); }
+    #spec-graph { height: 360px; background: var(--void); }
+    footer { padding: var(--sp-xl) 0 var(--sp-lg); color: var(--text-muted); font-size: var(--fs-label); letter-spacing: 0.1em; text-transform: uppercase; }
+
+    @media (max-width: 960px) {
+      .hero, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .shell { grid-template-columns: 1fr; }
+      .rail { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rule); }
+    }
+  </style>
+</head>
+<body class="gh-root">
+  <canvas class="gh-rain" id="rain"></canvas>
+
+  <header class="spec-bar">
+    <div class="spec-mark">GRAPHHACKS<small>design system · read the rain</small></div>
+    <div class="gh-statusline">
+      <span class="gh-live">backend ready</span>
+      <span>test-admin · northstar</span>
+      <span>as_of <span class="gh-data" style="color:var(--text-bright)">2026-10-16 14:08 IST</span></span>
+    </div>
+    <div class="spec-rain-ctl" role="group" aria-label="Rain density">
+      <span class="gh-label">rain</span>
+      <button class="gh-tab" data-density="1" aria-selected="true">landing</button>
+      <button class="gh-tab" data-density="0.35" aria-selected="false">console</button>
+      <button class="gh-tab" data-density="0" aria-selected="false">off</button>
+    </div>
+  </header>
+
+  <main class="spec-wrap">
+    <!-- Landing register -->
+    <section class="hero" aria-labelledby="hero-h">
+      <div class="hero__copy">
+        <h1 class="gh-display" id="hero-h"><span data-decode>Every answer</span><br /><span data-decode>has a path.</span></h1>
+        <p>GraphHacks turns a company's incidents, systems, people and decisions into one FalkorDB graph, then shows the traversal behind every answer it gives.</p>
+        <div class="hero__actions">
+          <button class="gh-btn gh-btn--primary">Enter console</button>
+          <button class="gh-btn">Watch a trace</button>
+        </div>
+      </div>
+      <div class="gh-panel gh-panel--trace answer">
+        <h2 class="gh-panel__title">Graph answer</h2>
+        <div class="answer__q"><b>&gt;</b> Why did checkout fail during DPL-882?</div>
+        <div class="answer__a" data-decode>MIG-203 broke compatibility with Pricing API v4.1.</div>
+        <div class="row">
+          <span class="gh-badge gh-badge--trace"><span class="gh-badge__glyph">◆</span>traced · 4 hops</span>
+          <span class="gh-badge gh-badge--warn"><span class="gh-badge__glyph">▲</span>confidence 0.70</span>
+          <span class="gh-badge"><span class="gh-badge__glyph">●</span>E-004 · DS-MON</span>
+        </div>
+        <div id="hero-graph" role="img" aria-label="Traversal from INC-001 to claim C-002 through SYS-PRICING-API and SYS-PRICING-DB"></div>
+        <pre class="gh-code">MATCH p=(i:Incident {id:'INC-001'})-[*..4]-(c:Claim)
+WHERE c.status = 'OPEN' RETURN p ORDER BY c.confidence DESC</pre>
+        <span class="gh-label">specimen · synthetic northstar sample</span>
+      </div>
+    </section>
+    <div class="facts gh-statusline" aria-label="What every answer carries">
+      <span><b>as_of</b> every view time-travels</span>
+      <span class="gh-trace"><b>◆ trace</b> provenance on every answer</span>
+      <span><b>governed</b> confirmed, permission-aware actions</span>
+      <span><b>falkordb</b> the graph is the authority</span>
+    </div>
+
+    <!-- Palette -->
+    <section class="spec-section" aria-labelledby="pal-h">
+      <h2 class="gh-headline" id="pal-h">Palette</h2>
+      <p>Committed monochrome phosphor plus one meaning-bearing accent. Violet means the graph traversed it. Contrast is measured live against <code>panel</code>.</p>
+      <div class="swatches" id="swatches"></div>
+    </section>
+
+    <!-- Type -->
+    <section class="spec-section" aria-labelledby="type-h">
+      <h2 class="gh-headline" id="type-h">Type</h2>
+      <p>Martian Mono Variable (width axis) for display, headline and metric roles; JetBrains Mono Variable for everything on the grid.</p>
+      <div>
+        <div class="type-row"><span class="gh-label">display</span><span class="gh-display" style="font-size:3.5rem">Read the rain</span></div>
+        <div class="type-row"><span class="gh-label">headline</span><span class="gh-headline">Situations</span></div>
+        <div class="type-row"><span class="gh-label">title</span><span class="gh-title">Checkout failures following Pricing Database migration</span></div>
+        <div class="type-row"><span class="gh-label">body</span><span class="gh-prose">Resolution is calculated by the backend. Enter the canonical subject entity ID for this conflict set to see which claim wins and why.</span></div>
+        <div class="type-row"><span class="gh-label">data</span><span class="gh-data">INC-001 · 2026-10-16T14:08:00+05:30 · 0.70 · 214.3 ms</span></div>
+        <div class="type-row"><span class="gh-label">label</span><span class="gh-label">Blast radius · depth 3</span></div>
+        <div class="type-row"><span class="gh-label">metric</span><span class="gh-metric">1,000</span></div>
+      </div>
+    </section>
+
+    <!-- Console register -->
+    <section class="spec-section" aria-labelledby="con-h">
+      <h2 class="gh-headline" id="con-h">Console register</h2>
+      <p>Standard controls in the world's vocabulary. Panels are opaque; switch rain to <em>console</em> to see it yield to the work area.</p>
+      <div class="shell">
+        <nav class="rail" aria-label="Sections">
+          <a href="#" aria-current="page">Situations</a><a href="#">Investigations</a><a href="#">Work</a><a href="#">Knowledge</a><a href="#">Decisions</a><a href="#">Entities</a><a href="#">Simulations</a><a href="#">Company brain</a><a href="#">Anomalies</a>
+        </nav>
+        <div class="work">
+          <div class="work__head">
+            <h3 class="gh-headline">Situations</h3>
+            <div class="row">
+              <label class="gh-prompt" style="width:260px"><input class="gh-input" placeholder="Filter by status" aria-label="Filter by status" /></label>
+              <button class="gh-btn gh-btn--primary">Run investigation</button>
+            </div>
+          </div>
+          <div class="gh-panel" style="padding:0">
+            <h4 class="gh-panel__title">Open situations</h4>
+            <table class="gh-table">
+              <thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Severity</th><th>Started</th></tr></thead>
+              <tbody>
+                <tr aria-selected="true"><td class="gh-data">INC-001</td><td>Checkout failures following Pricing Database migration</td><td><span class="gh-badge gh-badge--ok"><span class="gh-badge__glyph">●</span>open</span></td><td><span class="gh-badge gh-badge--crit"><span class="gh-badge__glyph">■</span>sev-1</span></td><td class="gh-data">2026-10-16 14:08</td></tr>
+                <tr><td class="gh-data">INC-074</td><td>Inventory compatibility failure during schema migration</td><td><span class="gh-badge gh-badge--done"><span class="gh-badge__glyph">○</span>resolved</span></td><td><span class="gh-badge gh-badge--warn"><span class="gh-badge__glyph">▲</span>sev-2</span></td><td class="gh-data">2026-09-02 09:41</td></tr>
+                <tr><td class="gh-data">TASK-A</td><td>Verify consumer compatibility</td><td><span class="gh-badge gh-badge--warn"><span class="gh-badge__glyph">▲</span>blocked</span></td><td class="gh-muted">—</td><td class="gh-data">2026-10-16 14:20</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="empty-zone">No anomalies match this filter. The rain shows through here.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Components -->
+    <section class="spec-section" aria-labelledby="cmp-h">
+      <h2 class="gh-headline" id="cmp-h">Components</h2>
+      <p>Every state ships: hover, focus, disabled, governed, error, empty.</p>
+      <div class="grid-2">
+        <div class="gh-panel stack">
+          <h3 class="gh-panel__title">Buttons</h3>
+          <div class="row"><button class="gh-btn gh-btn--primary">Generate plan</button><button class="gh-btn">Resolve</button></div>
+          <div class="row"><button class="gh-btn gh-btn--governed">Invalidate evidence</button><button class="gh-btn" disabled>Claim task</button></div>
+          <span class="gh-muted">Disabled stays visible: the permission-aware UI depends on it.</span>
+        </div>
+        <div class="gh-panel stack">
+          <h3 class="gh-panel__title">Status badges</h3>
+          <div class="row">
+            <span class="gh-badge gh-badge--ok"><span class="gh-badge__glyph">●</span>open</span>
+            <span class="gh-badge gh-badge--warn"><span class="gh-badge__glyph">▲</span>blocked</span>
+            <span class="gh-badge gh-badge--crit"><span class="gh-badge__glyph">■</span>sev-1</span>
+            <span class="gh-badge gh-badge--trace"><span class="gh-badge__glyph">◆</span>traced</span>
+            <span class="gh-badge gh-badge--done"><span class="gh-badge__glyph">○</span>resolved</span>
+          </div>
+          <div class="gh-tabs" role="tablist">
+            <button class="gh-tab" role="tab" aria-selected="true">overview</button><button class="gh-tab" role="tab" aria-selected="false">relationships</button><button class="gh-tab" role="tab" aria-selected="false">provenance</button><button class="gh-tab" role="tab" aria-selected="false">blast-radius</button>
+          </div>
+        </div>
+        <div class="gh-panel stack">
+          <h3 class="gh-panel__title">Fields</h3>
+          <label class="gh-field"><span>Subject entity ID</span><input class="gh-input" value="INC-001" /></label>
+          <label class="gh-field"><span>Evidence query</span><span class="gh-prompt"><input class="gh-input" placeholder="region_scope cannot be null" /></span></label>
+          <label class="gh-field"><span>Replacement evidence ID</span><input class="gh-input" aria-invalid="true" value="E-999" /><span class="gh-field__error">E-999 does not exist. Check the ID under Knowledge → Evidence.</span></label>
+        </div>
+        <div class="gh-panel stack">
+          <h3 class="gh-panel__title">Meters, tree, trace</h3>
+          <div class="row"><span class="gh-label" style="width:9ch">bus factor</span><span class="gh-meter" style="--value:.2"></span><span class="gh-data">1 / 5</span></div>
+          <div class="row"><span class="gh-label" style="width:9ch">coverage</span><span class="gh-meter gh-meter--warn" style="--value:.65"></span><span class="gh-data">65%</span></div>
+          <ul class="gh-tree gh-tree--trace gh-trace">
+            <li>INC-001 <span class="gh-muted">AFFECTS</span> SYS-CHECKOUT</li>
+            <li>SYS-CHECKOUT <span class="gh-muted">DEPENDS_ON</span> SYS-PRICING-API</li>
+            <li>SYS-PRICING-API <span class="gh-muted">READS</span> SYS-PRICING-DB</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Graph -->
+    <section class="spec-section" aria-labelledby="graph-h">
+      <h2 class="gh-headline" id="graph-h">Graph view</h2>
+      <p>Shape encodes type, rings encode status, violet with flowing dashes marks the traced path only. Click a node to see selection and neighbor dimming.</p>
+      <div class="gh-panel" style="padding:0">
+        <h3 class="gh-panel__title">Context graph · INC-001</h3>
+        <div id="spec-graph" role="img" aria-label="Specimen context graph"></div>
+      </div>
+    </section>
+
+    <footer>GraphHacks · built on FalkorDB · specimen data is synthetic</footer>
+  </main>
+  <script type="module" src="/src/design/specimen.ts"></script>
+</body>
+</html>

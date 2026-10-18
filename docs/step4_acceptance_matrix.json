@@ -1,0 +1,366 @@
+{
+  "version": "1.0",
+  "scope": "Synthetic Asteria v1; no claims of live verification before execution",
+  "scenarios": [
+    {
+      "scenario_id": "AST-AA-01",
+      "track": "CONNECTED_AGENTS",
+      "title": "Connected outage investigation",
+      "starting_ids": [
+        "INC-AST-ROUTE-OUTAGE"
+      ],
+      "expected_observation": "Investigation evidence and plan/task state are visible, with approvals enforced on any proposed action.",
+      "pass_criteria": "Canonical root resolves; scenario graph passes fixture assertions; live investigation and approval flow are verified manually.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AA-02",
+      "track": "CONNECTED_AGENTS",
+      "title": "Multi-system blast radius and downstream tasks",
+      "starting_ids": [
+        "SYS-AST-ROUTE-DB"
+      ],
+      "expected_observation": "Investigation evidence and plan/task state are visible, with approvals enforced on any proposed action.",
+      "pass_criteria": "Canonical root resolves; scenario graph passes fixture assertions; live investigation and approval flow are verified manually.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AA-03",
+      "track": "CONNECTED_AGENTS",
+      "title": "Evidence-backed governed rollback",
+      "starting_ids": [
+        "ACT-AST-ROLLBACK"
+      ],
+      "expected_observation": "Investigation evidence and plan/task state are visible, with approvals enforced on any proposed action.",
+      "pass_criteria": "Canonical root resolves; scenario graph passes fixture assertions; live investigation and approval flow are verified manually.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AA-04",
+      "track": "CONNECTED_AGENTS",
+      "title": "Cross-department financial investigation",
+      "starting_ids": [
+        "INC-AST-PAYOUT-DRIFT"
+      ],
+      "expected_observation": "Investigation evidence and plan/task state are visible, with approvals enforced on any proposed action.",
+      "pass_criteria": "Canonical root resolves; scenario graph passes fixture assertions; live investigation and approval flow are verified manually.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AA-05",
+      "track": "CONNECTED_AGENTS",
+      "title": "Policy-aware export review",
+      "starting_ids": [
+        "INC-AST-SECURITY-EXPORT"
+      ],
+      "expected_observation": "Investigation evidence and plan/task state are visible, with approvals enforced on any proposed action.",
+      "pass_criteria": "Canonical root resolves; scenario graph passes fixture assertions; live investigation and approval flow are verified manually.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AA-06",
+      "track": "CONNECTED_AGENTS",
+      "title": "Approval-blocked ownership recovery",
+      "starting_ids": [
+        "DEC-AST-OWNER-REVIEW"
+      ],
+      "expected_observation": "Investigation evidence and plan/task state are visible, with approvals enforced on any proposed action.",
+      "pass_criteria": "Canonical root resolves; scenario graph passes fixture assertions; live investigation and approval flow are verified manually.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AA-07",
+      "track": "CONNECTED_AGENTS",
+      "title": "Unknown approval question",
+      "starting_ids": [
+        "Q-AST-ROLLBACK-PROOF"
+      ],
+      "expected_observation": "Investigation evidence and plan/task state are visible, with approvals enforced on any proposed action.",
+      "pass_criteria": "Canonical root resolves; scenario graph passes fixture assertions; live investigation and approval flow are verified manually.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AM-01",
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Agent handoff with missing evidence",
+      "starting_ids": [
+        "HANDOFF-AST-MISSING"
+      ],
+      "expected_observation": "Task blockers, recorded checkpoints, handoff or finding states are visible in Work.",
+      "pass_criteria": "Canonical root resolves; fixture task/coordination links pass; manually verify guarded transitions and trace.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AM-02",
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Pause, checkpoint and resume",
+      "starting_ids": [
+        "EXEC-AST-ROUTE-PAUSED"
+      ],
+      "expected_observation": "Task blockers, recorded checkpoints, handoff or finding states are visible in Work.",
+      "pass_criteria": "Canonical root resolves; fixture task/coordination links pass; manually verify guarded transitions and trace.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AM-03",
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Stale memory vs new trace evidence",
+      "starting_ids": [
+        "FIND-AST-CPU-MEMORY"
+      ],
+      "expected_observation": "Task blockers, recorded checkpoints, handoff or finding states are visible in Work.",
+      "pass_criteria": "Canonical root resolves; fixture task/coordination links pass; manually verify guarded transitions and trace.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AM-04",
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Two-agent deadlock",
+      "starting_ids": [
+        "TASK-AST-DEADLOCK-A"
+      ],
+      "expected_observation": "Task blockers, recorded checkpoints, handoff or finding states are visible in Work.",
+      "pass_criteria": "Canonical root resolves; fixture task/coordination links pass; manually verify guarded transitions and trace.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AM-05",
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Action retry and idempotency",
+      "starting_ids": [
+        "ACT-AST-ROLLBACK"
+      ],
+      "expected_observation": "Task blockers, recorded checkpoints, handoff or finding states are visible in Work.",
+      "pass_criteria": "Canonical root resolves; fixture task/coordination links pass; manually verify guarded transitions and trace.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AM-06",
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Compaction with provenance",
+      "starting_ids": [
+        "CMP-AST-ROUTE"
+      ],
+      "expected_observation": "Task blockers, recorded checkpoints, handoff or finding states are visible in Work.",
+      "pass_criteria": "Canonical root resolves; fixture task/coordination links pass; manually verify guarded transitions and trace.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AM-07",
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Validated handoff",
+      "starting_ids": [
+        "HANDOFF-AST-VALID"
+      ],
+      "expected_observation": "Task blockers, recorded checkpoints, handoff or finding states are visible in Work.",
+      "pass_criteria": "Canonical root resolves; fixture task/coordination links pass; manually verify guarded transitions and trace.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-AM-08",
+      "track": "AGENT_MEMORY_COORDINATION",
+      "title": "Finance checkpoint recovery",
+      "starting_ids": [
+        "EXEC-AST-FINANCE-FAILED"
+      ],
+      "expected_observation": "Task blockers, recorded checkpoints, handoff or finding states are visible in Work.",
+      "pass_criteria": "Canonical root resolves; fixture task/coordination links pass; manually verify guarded transitions and trace.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-CB-01",
+      "track": "COMPANY_BRAIN",
+      "title": "Hidden dependency blast radius",
+      "starting_ids": [
+        "SYS-AST-ROUTE-DB"
+      ],
+      "expected_observation": "Read-only record and graph neighbors expose connected facts and provenance; relevant history visible in Company Brain.",
+      "pass_criteria": "Canonical root resolves, graph relations load, fixture graph/temporal assertions pass.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-CB-02",
+      "track": "COMPANY_BRAIN",
+      "title": "Conflicting outage claims",
+      "starting_ids": [
+        "INC-AST-ROUTE-OUTAGE"
+      ],
+      "expected_observation": "Read-only record and graph neighbors expose connected facts and provenance; relevant history visible in Company Brain.",
+      "pass_criteria": "Canonical root resolves, graph relations load, fixture graph/temporal assertions pass.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-CB-03",
+      "track": "COMPANY_BRAIN",
+      "title": "Time-aware ownership and retiring team",
+      "starting_ids": [
+        "SYS-AST-OLD-CARRIER"
+      ],
+      "expected_observation": "Read-only record and graph neighbors expose connected facts and provenance; relevant history visible in Company Brain.",
+      "pass_criteria": "Canonical root resolves, graph relations load, fixture graph/temporal assertions pass.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-CB-04",
+      "track": "COMPANY_BRAIN",
+      "title": "Expert discovery across teams",
+      "starting_ids": [
+        "SYS-AST-ROUTE-API"
+      ],
+      "expected_observation": "Read-only record and graph neighbors expose connected facts and provenance; relevant history visible in Company Brain.",
+      "pass_criteria": "Canonical root resolves, graph relations load, fixture graph/temporal assertions pass.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-CB-05",
+      "track": "COMPANY_BRAIN",
+      "title": "Historical decision genealogy",
+      "starting_ids": [
+        "INC-AST-OLD-MIGRATION"
+      ],
+      "expected_observation": "Read-only record and graph neighbors expose connected facts and provenance; relevant history visible in Company Brain.",
+      "pass_criteria": "Canonical root resolves, graph relations load, fixture graph/temporal assertions pass.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-CB-06",
+      "track": "COMPANY_BRAIN",
+      "title": "Policy version evolution",
+      "starting_ids": [
+        "POL-AST-NEW-SLA"
+      ],
+      "expected_observation": "Read-only record and graph neighbors expose connected facts and provenance; relevant history visible in Company Brain.",
+      "pass_criteria": "Canonical root resolves, graph relations load, fixture graph/temporal assertions pass.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-CB-07",
+      "track": "COMPANY_BRAIN",
+      "title": "Duplicate cross-team initiatives",
+      "starting_ids": [
+        "PROJ-AST-BILL-DUP1"
+      ],
+      "expected_observation": "Read-only record and graph neighbors expose connected facts and provenance; relevant history visible in Company Brain.",
+      "pass_criteria": "Canonical root resolves, graph relations load, fixture graph/temporal assertions pass.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-CB-08",
+      "track": "COMPANY_BRAIN",
+      "title": "Unregistered sensitive dependency",
+      "starting_ids": [
+        "SYS-AST-ANALYTICS"
+      ],
+      "expected_observation": "Read-only record and graph neighbors expose connected facts and provenance; relevant history visible in Company Brain.",
+      "pass_criteria": "Canonical root resolves, graph relations load, fixture graph/temporal assertions pass.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    },
+    {
+      "scenario_id": "AST-CB-09",
+      "track": "COMPANY_BRAIN",
+      "title": "Ambiguous identity reconciliation",
+      "starting_ids": [
+        "SRCREC-AST-IDENTITY"
+      ],
+      "expected_observation": "Read-only record and graph neighbors expose connected facts and provenance; relevant history visible in Company Brain.",
+      "pass_criteria": "Canonical root resolves, graph relations load, fixture graph/temporal assertions pass.",
+      "offline_test": "python scripts/verify_step4_demo.py",
+      "live_test": "python scripts/verify_step4_demo.py --live",
+      "live_verification": "NOT_TESTED",
+      "evaluation_truth": "WITHHELD",
+      "fixture_pack": "asteria-v1"
+    }
+  ]
+}

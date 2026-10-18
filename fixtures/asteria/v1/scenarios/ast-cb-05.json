@@ -1,0 +1,44 @@
+{
+  "scenario_id": "AST-CB-05",
+  "track": "COMPANY_BRAIN",
+  "title": "Historical decision genealogy",
+  "summary": "Connect May incident to a real past rollback decision.",
+  "entry_ids": [
+    "INC-AST-OLD-MIGRATION"
+  ],
+  "focus_ids": [
+    "DEC-AST-MAY-ROLLBACK",
+    "OUT-AST-MAY"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "INC-AST-OLD-MIGRATION",
+        "current_status": "RESOLVED"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "What was decided after the May migration, and what evidence was used?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

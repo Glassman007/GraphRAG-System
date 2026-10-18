@@ -1,0 +1,47 @@
+{
+  "scenario_id": "AST-AM-06",
+  "track": "AGENT_MEMORY_COORDINATION",
+  "title": "Compaction with provenance",
+  "summary": "Preserve source citations across agent memory compaction.",
+  "entry_ids": [
+    "CMP-AST-ROUTE"
+  ],
+  "focus_ids": [
+    "CHECK-AST-ROUTE-1",
+    "EVD-AST-0001"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "CMP-AST-ROUTE",
+        "current_status": "PENDING_REVIEW"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE",
+    "CLAIM_TASK",
+    "WRITE_FINDING",
+    "CHECKPOINT"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Explain why memory compaction must retain links to original evidence."
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

@@ -1,0 +1,2 @@
+PHASE 10 ACCEPTANCE: CANNOT RUN
+RuntimeError: FalkorDB Python client is not installed. Run: pip install -r requirements.txt

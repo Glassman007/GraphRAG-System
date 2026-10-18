@@ -1,0 +1,47 @@
+{
+  "scenario_id": "AST-AM-07",
+  "track": "AGENT_MEMORY_COORDINATION",
+  "title": "Validated handoff",
+  "summary": "Contrast valid and invalid agent handoff contracts.",
+  "entry_ids": [
+    "HANDOFF-AST-VALID"
+  ],
+  "focus_ids": [
+    "HANDOFF-AST-MISSING",
+    "EVD-AST-0003"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "HANDOFF-AST-VALID",
+        "current_status": "VALID"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE",
+    "CLAIM_TASK",
+    "WRITE_FINDING",
+    "CHECKPOINT"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Compare validated and incomplete handoffs with evidence references."
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

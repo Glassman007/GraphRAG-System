@@ -1,0 +1,44 @@
+{
+  "scenario_id": "AST-CB-04",
+  "track": "COMPANY_BRAIN",
+  "title": "Expert discovery across teams",
+  "summary": "Find qualified routing expertise after staff departure.",
+  "entry_ids": [
+    "SYS-AST-ROUTE-API"
+  ],
+  "focus_ids": [
+    "PERSON-AST-001",
+    "PERSON-AST-005"
+  ],
+  "starting_state": {
+    "fixture_version": "asteria-v1",
+    "snapshot_as_of": "2026-10-12T12:45:00+05:30",
+    "entries": [
+      {
+        "id": "SYS-AST-ROUTE-API",
+        "current_status": "ACTIVE"
+      }
+    ]
+  },
+  "permitted_operations": [
+    "READ_GRAPH",
+    "READ_EVIDENCE"
+  ],
+  "forbidden_operations": [
+    "BYPASS_POLICY_APPROVAL",
+    "EXPOSE_GOLD_ANSWERS",
+    "UNBOUNDED_DATABASE_MUTATION"
+  ],
+  "test_prompts": [
+    "Who can help Route API and which teams know adjacent systems?"
+  ],
+  "visible_to_agents": [
+    "graph facts",
+    "source records",
+    "provenance"
+  ],
+  "withheld_from_agents": [
+    "golden answer",
+    "evaluator assertions"
+  ]
+}

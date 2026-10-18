@@ -1,0 +1,3700 @@
+{
+  "scenario_id": "ASTERIA-V1-02_OPERATIONS",
+  "title": "Asteria demo 02_operations",
+  "description": "Synthetic, versioned organizational dataset; NOT a live connector.",
+  "tenant_id": "asteria",
+  "nodes": [
+    {
+      "id": "ACT-AST-CARRIER-RETRY",
+      "label": "Action",
+      "properties": {
+        "id": "ACT-AST-CARRIER-RETRY",
+        "tenant_id": "asteria",
+        "name": "Retry queued carrier labels",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PROPOSED",
+        "action_type": "verification",
+        "approval_required": true,
+        "idempotency_key": "asteria:v1:carrier:retry",
+        "fixture_only": true
+      }
+    },
+    {
+      "id": "ACT-AST-RESTORE",
+      "label": "Action",
+      "properties": {
+        "id": "ACT-AST-RESTORE",
+        "tenant_id": "asteria",
+        "name": "Restore dispatch scheduling",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PROPOSED",
+        "action_type": "recovery",
+        "idempotency_key": "asteria:v1:restore:route-incident",
+        "approval_required": true,
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "ACT-AST-ROLLBACK",
+      "label": "Action",
+      "properties": {
+        "id": "ACT-AST-ROLLBACK",
+        "tenant_id": "asteria",
+        "name": "Propose route schema rollback",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PROPOSED",
+        "action_type": "rollback",
+        "idempotency_key": "asteria:v1:rollback:route-incident",
+        "approval_required": true,
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "ACT-AST-VERIFY",
+      "label": "Action",
+      "properties": {
+        "id": "ACT-AST-VERIFY",
+        "tenant_id": "asteria",
+        "name": "Verify edge client compatibility",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PROPOSED",
+        "action_type": "verification",
+        "idempotency_key": "asteria:v1:verify:route-incident",
+        "approval_required": false,
+        "fixture_only": true,
+        "simulation_record": true
+      }
+    },
+    {
+      "id": "CHG-AST-AUTH-ROTATE",
+      "label": "Change",
+      "properties": {
+        "id": "CHG-AST-AUTH-ROTATE",
+        "tenant_id": "asteria",
+        "name": "Service Credential Rotation change",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPLIED",
+        "change_type": "SOFTWARE_RELEASE"
+      }
+    },
+    {
+      "id": "CHG-AST-CARRIER-ADAPT",
+      "label": "Change",
+      "properties": {
+        "id": "CHG-AST-CARRIER-ADAPT",
+        "tenant_id": "asteria",
+        "name": "Carrier Event Translator v2 change",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPLIED",
+        "change_type": "SOFTWARE_RELEASE"
+      }
+    },
+    {
+      "id": "CHG-AST-FIN-INVOICE",
+      "label": "Change",
+      "properties": {
+        "id": "CHG-AST-FIN-INVOICE",
+        "tenant_id": "asteria",
+        "name": "Ledger Validation v5 change",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPLIED",
+        "change_type": "SOFTWARE_RELEASE"
+      }
+    },
+    {
+      "id": "CHG-AST-HIST-ROUTE",
+      "label": "Change",
+      "properties": {
+        "id": "CHG-AST-HIST-ROUTE",
+        "tenant_id": "asteria",
+        "name": "Historical Route Schema v2 change",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPLIED",
+        "change_type": "SCHEMA_MIGRATION"
+      }
+    },
+    {
+      "id": "CHG-AST-ML-ETA",
+      "label": "Change",
+      "properties": {
+        "id": "CHG-AST-ML-ETA",
+        "tenant_id": "asteria",
+        "name": "ETA Model Release v8 change",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPLIED",
+        "change_type": "SOFTWARE_RELEASE"
+      }
+    },
+    {
+      "id": "CHG-AST-PARTNER-CRM",
+      "label": "Change",
+      "properties": {
+        "id": "CHG-AST-PARTNER-CRM",
+        "tenant_id": "asteria",
+        "name": "CRM Export Refactor change",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPLIED",
+        "change_type": "SOFTWARE_RELEASE"
+      }
+    },
+    {
+      "id": "CHG-AST-PRIVACY-PIPE",
+      "label": "Change",
+      "properties": {
+        "id": "CHG-AST-PRIVACY-PIPE",
+        "tenant_id": "asteria",
+        "name": "Customer Export Pipeline v4 change",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPLIED",
+        "change_type": "SOFTWARE_RELEASE"
+      }
+    },
+    {
+      "id": "CHG-AST-ROUTE-V3",
+      "label": "Change",
+      "properties": {
+        "id": "CHG-AST-ROUTE-V3",
+        "tenant_id": "asteria",
+        "name": "Route Schema v3 Release change",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPLIED",
+        "change_type": "SCHEMA_MIGRATION"
+      }
+    },
+    {
+      "id": "CHG-AST-WMS-PEAK",
+      "label": "Change",
+      "properties": {
+        "id": "CHG-AST-WMS-PEAK",
+        "tenant_id": "asteria",
+        "name": "Peak Capacity Optimizations change",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPLIED",
+        "change_type": "SOFTWARE_RELEASE"
+      }
+    },
+    {
+      "id": "CLM-AST-AGENT-PENDING",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-AGENT-PENDING",
+        "tenant_id": "asteria",
+        "name": "Initial operational hypothesis for AGENT-RETRY: further evidence required.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Initial operational hypothesis for AGENT-RETRY: further evidence required.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.35
+      }
+    },
+    {
+      "id": "CLM-AST-CARRIER-TIME",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-CARRIER-TIME",
+        "tenant_id": "asteria",
+        "name": "Carrier gateway retry queue is delaying labels.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Carrier gateway retry queue is delaying labels.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.55
+      }
+    },
+    {
+      "id": "CLM-AST-CARRIER-VENDOR",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-CARRIER-VENDOR",
+        "tenant_id": "asteria",
+        "name": "External carrier outage is the sole reason for label delay.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "External carrier outage is the sole reason for label delay.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.35
+      }
+    },
+    {
+      "id": "CLM-AST-FORECAST-PENDING",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-FORECAST-PENDING",
+        "tenant_id": "asteria",
+        "name": "Initial operational hypothesis for FORECAST-BIAS: further evidence required.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Initial operational hypothesis for FORECAST-BIAS: further evidence required.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.35
+      }
+    },
+    {
+      "id": "CLM-AST-INVOICE-PENDING",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-INVOICE-PENDING",
+        "tenant_id": "asteria",
+        "name": "Initial operational hypothesis for INVOICE-DUP: further evidence required.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Initial operational hypothesis for INVOICE-DUP: further evidence required.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.35
+      }
+    },
+    {
+      "id": "CLM-AST-OWNER-RETIRED",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-OWNER-RETIRED",
+        "tenant_id": "asteria",
+        "name": "Escalation used a retired team with no current ownership.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Escalation used a retired team with no current ownership.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.55
+      }
+    },
+    {
+      "id": "CLM-AST-PAYOUT-EVENT",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-PAYOUT-EVENT",
+        "tenant_id": "asteria",
+        "name": "Late shipment confirmations create payout reconciliation drift.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Late shipment confirmations create payout reconciliation drift.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.55
+      }
+    },
+    {
+      "id": "CLM-AST-PAYOUT-FRAUD",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-PAYOUT-FRAUD",
+        "tenant_id": "asteria",
+        "name": "Payout drift is caused by fraudulent settlements.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Payout drift is caused by fraudulent settlements.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.35
+      }
+    },
+    {
+      "id": "CLM-AST-PRIVACY-BLOCK",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-PRIVACY-BLOCK",
+        "tenant_id": "asteria",
+        "name": "Consent approval is required for the customer export.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Consent approval is required for the customer export.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.65
+      }
+    },
+    {
+      "id": "CLM-AST-PRIVACY-EXEMPT",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-PRIVACY-EXEMPT",
+        "tenant_id": "asteria",
+        "name": "Batch exports are exempt from consent checks.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Batch exports are exempt from consent checks.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.42
+      }
+    },
+    {
+      "id": "CLM-AST-ROUTE-CPU",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-ROUTE-CPU",
+        "tenant_id": "asteria",
+        "name": "Routing database CPU saturation was the initial trigger.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Routing database CPU saturation was the initial trigger.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.49
+      }
+    },
+    {
+      "id": "CLM-AST-ROUTE-PENDING",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-ROUTE-PENDING",
+        "tenant_id": "asteria",
+        "name": "Initial operational hypothesis for ROUTE-OUTAGE: further evidence required.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Initial operational hypothesis for ROUTE-OUTAGE: further evidence required.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.35
+      }
+    },
+    {
+      "id": "CLM-AST-ROUTE-SCHEMA",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-ROUTE-SCHEMA",
+        "tenant_id": "asteria",
+        "name": "Route schema v3 rejects regional edge clients still on v2.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Route schema v3 rejects regional edge clients still on v2.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.61
+      }
+    },
+    {
+      "id": "CLM-AST-WAREHOUSE-PENDING",
+      "label": "Claim",
+      "properties": {
+        "id": "CLM-AST-WAREHOUSE-PENDING",
+        "tenant_id": "asteria",
+        "name": "Initial operational hypothesis for WAREHOUSE-QUEUE: further evidence required.",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "statement": "Initial operational hypothesis for WAREHOUSE-QUEUE: further evidence required.",
+        "assertion_kind": "human_or_agent_hypothesis",
+        "confidence": 0.35
+      }
+    },
+    {
+      "id": "DEC-AST-MAY-ROLLBACK",
+      "label": "Decision",
+      "properties": {
+        "id": "DEC-AST-MAY-ROLLBACK",
+        "tenant_id": "asteria",
+        "name": "May routing rollback approval",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "APPROVED",
+        "statement": "Rollback historical v2 route schema migration.",
+        "decision_type": "incident_remediation",
+        "rationale_summary": "Compatibility evidence from May incident."
+      }
+    },
+    {
+      "id": "DEC-AST-OWNER-REVIEW",
+      "label": "Decision",
+      "properties": {
+        "id": "DEC-AST-OWNER-REVIEW",
+        "tenant_id": "asteria",
+        "name": "Require reviewed ownership transfer",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "PROPOSED",
+        "statement": "Hold carrier policy escalation until a new accountable owner is approved.",
+        "decision_type": "ownership_governance",
+        "approval_required": true
+      }
+    },
+    {
+      "id": "DPL-AST-AUTH-ROTATE",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-AST-AUTH-ROTATE",
+        "tenant_id": "asteria",
+        "name": "Service Credential Rotation",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DEPLOYED",
+        "deployed_at": "2026-08-25T07:45:00+05:30"
+      }
+    },
+    {
+      "id": "DPL-AST-CARRIER-ADAPT",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-AST-CARRIER-ADAPT",
+        "tenant_id": "asteria",
+        "name": "Carrier Event Translator v2",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DEPLOYED",
+        "deployed_at": "2026-10-11T19:00:00+05:30"
+      }
+    },
+    {
+      "id": "DPL-AST-FIN-INVOICE",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-AST-FIN-INVOICE",
+        "tenant_id": "asteria",
+        "name": "Ledger Validation v5",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DEPLOYED",
+        "deployed_at": "2026-10-08T06:00:00+05:30"
+      }
+    },
+    {
+      "id": "DPL-AST-HIST-ROUTE",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-AST-HIST-ROUTE",
+        "tenant_id": "asteria",
+        "name": "Historical Route Schema v2",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DEPLOYED",
+        "deployed_at": "2026-05-10T18:00:00+05:30"
+      }
+    },
+    {
+      "id": "DPL-AST-ML-ETA",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-AST-ML-ETA",
+        "tenant_id": "asteria",
+        "name": "ETA Model Release v8",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DEPLOYED",
+        "deployed_at": "2026-10-10T10:00:00+05:30"
+      }
+    },
+    {
+      "id": "DPL-AST-PARTNER-CRM",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-AST-PARTNER-CRM",
+        "tenant_id": "asteria",
+        "name": "CRM Export Refactor",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DEPLOYED",
+        "deployed_at": "2026-10-06T09:00:00+05:30"
+      }
+    },
+    {
+      "id": "DPL-AST-PRIVACY-PIPE",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-AST-PRIVACY-PIPE",
+        "tenant_id": "asteria",
+        "name": "Customer Export Pipeline v4",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DEPLOYED",
+        "deployed_at": "2026-10-09T09:00:00+05:30"
+      }
+    },
+    {
+      "id": "DPL-AST-ROUTE-V3",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-AST-ROUTE-V3",
+        "tenant_id": "asteria",
+        "name": "Route Schema v3 Release",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DEPLOYED",
+        "deployed_at": "2026-10-12T09:05:00+05:30"
+      }
+    },
+    {
+      "id": "DPL-AST-WMS-PEAK",
+      "label": "Deployment",
+      "properties": {
+        "id": "DPL-AST-WMS-PEAK",
+        "tenant_id": "asteria",
+        "name": "Peak Capacity Optimizations",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "DEPLOYED",
+        "deployed_at": "2026-10-10T12:00:00+05:30"
+      }
+    },
+    {
+      "id": "EVD-AST-0001",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0001",
+        "tenant_id": "asteria",
+        "name": "Git commit 8f4c10 route_schema_v3",
+        "created_at": "2026-10-12T09:07:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "git_commit",
+        "observed_at": "2026-10-12T09:07:00+05:30",
+        "content": "commit 8f4c10: removed nullable carrier_zone_code for v3; v2 edge clients still write NULL.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0001",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0002",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0002",
+        "tenant_id": "asteria",
+        "name": "Jira AST-4821 compatibility task",
+        "created_at": "2026-10-12T09:09:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "jira_ticket",
+        "observed_at": "2026-10-12T09:09:00+05:30",
+        "content": "AST-4821: mixed v2/v3 edge compatibility checklist marked blocked before rollout.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0002",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0003",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0003",
+        "tenant_id": "asteria",
+        "name": "Route API 422 logs",
+        "created_at": "2026-10-12T09:15:20+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "application_log",
+        "observed_at": "2026-10-12T09:15:20+05:30",
+        "content": "09:15:20 422 SchemaError carrier_zone_code expected string; v2 edge workers still active.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0003",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0004",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0004",
+        "tenant_id": "asteria",
+        "name": "Routing DB CPU plot",
+        "created_at": "2026-10-12T09:20:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "metric_snapshot",
+        "observed_at": "2026-10-12T09:20:00+05:30",
+        "content": "CPU rose from 37% to 93% at 09:20, five minutes after 422 spike.",
+        "confidence": 0.63,
+        "source_ref_id": "SRCREC-AST-0004",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0005",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0005",
+        "tenant_id": "asteria",
+        "name": "Route edge distributed trace",
+        "created_at": "2026-10-12T09:18:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "trace",
+        "observed_at": "2026-10-12T09:18:00+05:30",
+        "content": "v2 region-edge -> route API -> schema v3 failure -> retry -> CPU increase.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0005",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0006",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0006",
+        "tenant_id": "asteria",
+        "name": "SRE on-call Slack assertion",
+        "created_at": "2026-10-12T09:22:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "slack_message",
+        "observed_at": "2026-10-12T09:22:00+05:30",
+        "content": "On-call: CPU is pegged, suspect connection pool; investigation unconfirmed.",
+        "confidence": 0.51,
+        "source_ref_id": "SRCREC-AST-0006",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0007",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0007",
+        "tenant_id": "asteria",
+        "name": "Platform Slack review",
+        "created_at": "2026-10-12T09:25:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "slack_message",
+        "observed_at": "2026-10-12T09:25:00+05:30",
+        "content": "Platform: the edge clients are still on v2; v3 change was deployed before compatibility test.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0007",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0008",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0008",
+        "tenant_id": "asteria",
+        "name": "Route migration policy excerpt",
+        "created_at": "2026-10-12T09:10:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "policy_document",
+        "observed_at": "2026-10-12T09:10:00+05:30",
+        "content": "POL-AST-ROUTE: schema changes must be backward compatible until fleet version > 99%.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0008",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0009",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0009",
+        "tenant_id": "asteria",
+        "name": "Historical route postmortem",
+        "created_at": "2026-05-12T11:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "postmortem",
+        "observed_at": "2026-05-12T11:00:00+05:30",
+        "content": "May incident: version drift during schema rollout. Historical match requires investigation.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0009",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0010",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0010",
+        "tenant_id": "asteria",
+        "name": "Carrier retry backlog metric",
+        "created_at": "2026-10-12T09:47:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "metric_snapshot",
+        "observed_at": "2026-10-12T09:47:00+05:30",
+        "content": "Carrier gateway retry backlog reached 18000 while route API returned 422.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0010",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0011",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0011",
+        "tenant_id": "asteria",
+        "name": "Carrier incident partner update",
+        "created_at": "2026-10-12T09:52:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "slack_message",
+        "observed_at": "2026-10-12T09:52:00+05:30",
+        "content": "Partner account update: no upstream carrier outage confirmed; requests wait inside gateway.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0011",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0012",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0012",
+        "tenant_id": "asteria",
+        "name": "Warehouse handheld errors",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "application_log",
+        "observed_at": "2026-10-12T09:55:00+05:30",
+        "content": "Warehouse handheld devices cannot reserve dispatch slots while route orchestration is unavailable.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0012",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0013",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0013",
+        "tenant_id": "asteria",
+        "name": "Carrier confirmation sample",
+        "created_at": "2026-10-12T10:11:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "database_snapshot",
+        "observed_at": "2026-10-12T10:11:00+05:30",
+        "content": "Late confirmations reached payout ledger 90 minutes behind booking timestamp.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0013",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0014",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0014",
+        "tenant_id": "asteria",
+        "name": "Fraud alert sample",
+        "created_at": "2026-10-12T10:20:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "audit_log",
+        "observed_at": "2026-10-12T10:20:00+05:30",
+        "content": "No increase in payout fraud flags during the confirmation lag window.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0014",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0015",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0015",
+        "tenant_id": "asteria",
+        "name": "Old escalation roster",
+        "created_at": "2026-10-12T10:19:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "hr_record",
+        "observed_at": "2026-10-12T10:19:00+05:30",
+        "content": "Legacy Integrations team retired July 2026; current carrier escalation approver missing.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0015",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0016",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0016",
+        "tenant_id": "asteria",
+        "name": "Legacy carrier escalation ticket",
+        "created_at": "2026-10-12T10:21:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "jira_ticket",
+        "observed_at": "2026-10-12T10:21:00+05:30",
+        "content": "AST-3611: unresolved replacement owner for retired adapter.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0016",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0017",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0017",
+        "tenant_id": "asteria",
+        "name": "Consent registry audit",
+        "created_at": "2026-10-10T13:02:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "audit_log",
+        "observed_at": "2026-10-10T13:02:00+05:30",
+        "content": "Customer export job was triggered without current partner consent grant.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0017",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0018",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0018",
+        "tenant_id": "asteria",
+        "name": "Privacy policy excerpt",
+        "created_at": "2026-10-10T13:04:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "policy_document",
+        "observed_at": "2026-10-10T13:04:00+05:30",
+        "content": "POL-AST-PRIVACY requires consent verification before customer export for analytics.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0018",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0019",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0019",
+        "tenant_id": "asteria",
+        "name": "Forecast bias dashboard",
+        "created_at": "2026-10-12T11:08:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "metric_snapshot",
+        "observed_at": "2026-10-12T11:08:00+05:30",
+        "content": "Forecast v3 deviation rose after missing shipment confirmations impacted training aggregate.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0019",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0020",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0020",
+        "tenant_id": "asteria",
+        "name": "Duplicate billing issue",
+        "created_at": "2026-10-09T15:05:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "jira_ticket",
+        "observed_at": "2026-10-09T15:05:00+05:30",
+        "content": "AST-5011: two teams delivered independent credit-note automation with overlapping acceptance.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0020",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0021",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0021",
+        "tenant_id": "asteria",
+        "name": "Agent action retry ledger",
+        "created_at": "2026-10-12T11:35:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "audit_log",
+        "observed_at": "2026-10-12T11:35:00+05:30",
+        "content": "Retry attempt on route fallback after uncertain completion; lock owner missing.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0021",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0022",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0022",
+        "tenant_id": "asteria",
+        "name": "Partner CRM export comparison",
+        "created_at": "2026-10-12T10:26:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "crm_record",
+        "observed_at": "2026-10-12T10:26:00+05:30",
+        "content": "Partner status reflected old SLA owner after team retirement.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0022",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0023",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0023",
+        "tenant_id": "asteria",
+        "name": "Route DB access key event",
+        "created_at": "2026-08-25T08:03:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "audit_log",
+        "observed_at": "2026-08-25T08:03:00+05:30",
+        "content": "Service credential change not propagated to weekend on-call roster.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0023",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0024",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0024",
+        "tenant_id": "asteria",
+        "name": "Dispatch queue backlog",
+        "created_at": "2026-10-12T09:57:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "metric_snapshot",
+        "observed_at": "2026-10-12T09:57:00+05:30",
+        "content": "Picking backlog increased 5600 jobs; dependent scheduling service returns timeout.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0024",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVD-AST-0025",
+      "label": "Evidence",
+      "properties": {
+        "id": "EVD-AST-0025",
+        "tenant_id": "asteria",
+        "name": "SLA warehouse audit",
+        "created_at": "2026-10-12T11:28:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "evidence_type": "database_snapshot",
+        "observed_at": "2026-10-12T11:28:00+05:30",
+        "content": "Fulfilled shipments absent from tracking feed; dashboard is stale.",
+        "confidence": 0.9,
+        "source_ref_id": "SRCREC-AST-0025",
+        "classification": "SYNTHETIC",
+        "provenance_status": "SIMULATED"
+      }
+    },
+    {
+      "id": "EVT-AST-AGENT-FAILED",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-AST-AGENT-FAILED",
+        "tenant_id": "asteria",
+        "name": "Agent action failed and awaits manual review",
+        "created_at": "2026-10-12T11:35:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "event_type": "ACTION_FAILED",
+        "summary": "Agent action failed and awaits manual review",
+        "occurred_at": "2026-10-12T11:35:00+05:30"
+      }
+    },
+    {
+      "id": "EVT-AST-CARRIER",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-AST-CARRIER",
+        "tenant_id": "asteria",
+        "name": "Carrier label backlog declared",
+        "created_at": "2026-10-12T09:42:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "event_type": "SITUATION_OPENED",
+        "summary": "Carrier label backlog declared",
+        "occurred_at": "2026-10-12T09:42:00+05:30"
+      }
+    },
+    {
+      "id": "EVT-AST-CPU",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-AST-CPU",
+        "tenant_id": "asteria",
+        "name": "Route DB CPU spike after retry loop",
+        "created_at": "2026-10-12T09:20:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "event_type": "METRIC_ALARM",
+        "summary": "Route DB CPU spike after retry loop",
+        "occurred_at": "2026-10-12T09:20:00+05:30"
+      }
+    },
+    {
+      "id": "EVT-AST-DEPLOY",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-AST-DEPLOY",
+        "tenant_id": "asteria",
+        "name": "Routing schema v3 rollout started",
+        "created_at": "2026-10-12T09:05:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "event_type": "DEPLOYMENT_STARTED",
+        "summary": "Routing schema v3 rollout started",
+        "occurred_at": "2026-10-12T09:05:00+05:30"
+      }
+    },
+    {
+      "id": "EVT-AST-EXPORT",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-AST-EXPORT",
+        "tenant_id": "asteria",
+        "name": "Consent gate missing on customer data export",
+        "created_at": "2026-10-10T13:02:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "event_type": "UNAPPROVED_EXPORT",
+        "summary": "Consent gate missing on customer data export",
+        "occurred_at": "2026-10-10T13:02:00+05:30"
+      }
+    },
+    {
+      "id": "EVT-AST-FIRST-422",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-AST-FIRST-422",
+        "tenant_id": "asteria",
+        "name": "First 422 edge schema errors",
+        "created_at": "2026-10-12T09:15:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "event_type": "APPLICATION_ERROR",
+        "summary": "First 422 edge schema errors",
+        "occurred_at": "2026-10-12T09:15:00+05:30"
+      }
+    },
+    {
+      "id": "EVT-AST-OWNER",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-AST-OWNER",
+        "tenant_id": "asteria",
+        "name": "Retired escalation owner found",
+        "created_at": "2026-10-12T10:18:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "event_type": "OWNERSHIP_GAP",
+        "summary": "Retired escalation owner found",
+        "occurred_at": "2026-10-12T10:18:00+05:30"
+      }
+    },
+    {
+      "id": "EVT-AST-PAYOUT",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-AST-PAYOUT",
+        "tenant_id": "asteria",
+        "name": "Finance reconciliation mismatch surfaced",
+        "created_at": "2026-10-12T10:05:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "event_type": "SITUATION_OPENED",
+        "summary": "Finance reconciliation mismatch surfaced",
+        "occurred_at": "2026-10-12T10:05:00+05:30"
+      }
+    },
+    {
+      "id": "EVT-AST-WAREHOUSE",
+      "label": "Event",
+      "properties": {
+        "id": "EVT-AST-WAREHOUSE",
+        "tenant_id": "asteria",
+        "name": "Picking queue stopped",
+        "created_at": "2026-10-12T09:47:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "event_type": "SITUATION_OPENED",
+        "summary": "Picking queue stopped",
+        "occurred_at": "2026-10-12T09:47:00+05:30"
+      }
+    },
+    {
+      "id": "INC-AST-ACCESS-EXPIRED",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-ACCESS-EXPIRED",
+        "tenant_id": "asteria",
+        "name": "Service key rotated without on-call access update",
+        "created_at": "2026-08-25T08:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Service key rotated without on-call access update",
+        "status": "RESOLVED",
+        "severity": "SEV-2",
+        "occurred_at": "2026-08-25T08:00:00+05:30",
+        "description": "Service key rotated without on-call access update. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-AGENT-RETRY",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-AGENT-RETRY",
+        "tenant_id": "asteria",
+        "name": "Incident agent repeats failed action after retry",
+        "created_at": "2026-10-12T11:30:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Incident agent repeats failed action after retry",
+        "status": "OPEN",
+        "severity": "SEV-3",
+        "occurred_at": "2026-10-12T11:30:00+05:30",
+        "description": "Incident agent repeats failed action after retry. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-CARRIER-LAG",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-CARRIER-LAG",
+        "tenant_id": "asteria",
+        "name": "Carrier labels generated hours late",
+        "created_at": "2026-10-12T09:42:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Carrier labels generated hours late",
+        "status": "OPEN",
+        "severity": "SEV-2",
+        "occurred_at": "2026-10-12T09:42:00+05:30",
+        "description": "Carrier labels generated hours late. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-FORECAST-BIAS",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-FORECAST-BIAS",
+        "tenant_id": "asteria",
+        "name": "Demand forecast drifts after routing outage",
+        "created_at": "2026-10-12T11:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Demand forecast drifts after routing outage",
+        "status": "OPEN",
+        "severity": "SEV-3",
+        "occurred_at": "2026-10-12T11:00:00+05:30",
+        "description": "Demand forecast drifts after routing outage. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-INVOICE-DUP",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-INVOICE-DUP",
+        "tenant_id": "asteria",
+        "name": "Duplicate carrier invoice reconciliation",
+        "created_at": "2026-10-09T15:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Duplicate carrier invoice reconciliation",
+        "status": "OPEN",
+        "severity": "SEV-2",
+        "occurred_at": "2026-10-09T15:00:00+05:30",
+        "description": "Duplicate carrier invoice reconciliation. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-OLD-MIGRATION",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-OLD-MIGRATION",
+        "tenant_id": "asteria",
+        "name": "Historical route schema incompatibility",
+        "created_at": "2026-05-11T06:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Historical route schema incompatibility",
+        "status": "RESOLVED",
+        "severity": "SEV-2",
+        "occurred_at": "2026-05-11T06:00:00+05:30",
+        "description": "Historical route schema incompatibility. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-PARTNER-SLA",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-PARTNER-SLA",
+        "tenant_id": "asteria",
+        "name": "Partner SLA escalation routes to retired owner",
+        "created_at": "2026-10-12T10:18:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Partner SLA escalation routes to retired owner",
+        "status": "OPEN",
+        "severity": "SEV-3",
+        "occurred_at": "2026-10-12T10:18:00+05:30",
+        "description": "Partner SLA escalation routes to retired owner. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-PAYOUT-DRIFT",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-PAYOUT-DRIFT",
+        "tenant_id": "asteria",
+        "name": "Carrier payouts disagree with confirmed shipments",
+        "created_at": "2026-10-12T10:05:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Carrier payouts disagree with confirmed shipments",
+        "status": "OPEN",
+        "severity": "SEV-2",
+        "occurred_at": "2026-10-12T10:05:00+05:30",
+        "description": "Carrier payouts disagree with confirmed shipments. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-ROUTE-OUTAGE",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-ROUTE-OUTAGE",
+        "tenant_id": "asteria",
+        "name": "Route planning failures after schema deployment",
+        "created_at": "2026-10-12T09:15:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Route planning failures after schema deployment",
+        "status": "OPEN",
+        "severity": "SEV-1",
+        "occurred_at": "2026-10-12T09:15:00+05:30",
+        "description": "Route planning failures after schema deployment. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-SECURITY-EXPORT",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-SECURITY-EXPORT",
+        "tenant_id": "asteria",
+        "name": "Unreviewed customer export reaches analytics",
+        "created_at": "2026-10-10T13:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Unreviewed customer export reaches analytics",
+        "status": "OPEN",
+        "severity": "SEV-2",
+        "occurred_at": "2026-10-10T13:00:00+05:30",
+        "description": "Unreviewed customer export reaches analytics. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-SLA-RECON",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-SLA-RECON",
+        "tenant_id": "asteria",
+        "name": "Regional SLA dashboard misstates deliveries",
+        "created_at": "2026-10-12T11:25:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Regional SLA dashboard misstates deliveries",
+        "status": "OPEN",
+        "severity": "SEV-3",
+        "occurred_at": "2026-10-12T11:25:00+05:30",
+        "description": "Regional SLA dashboard misstates deliveries. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "INC-AST-WAREHOUSE-QUEUE",
+      "label": "Incident",
+      "properties": {
+        "id": "INC-AST-WAREHOUSE-QUEUE",
+        "tenant_id": "asteria",
+        "name": "Warehouse picking queues stall",
+        "created_at": "2026-10-12T09:47:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "title": "Warehouse picking queues stall",
+        "status": "OPEN",
+        "severity": "SEV-2",
+        "occurred_at": "2026-10-12T09:47:00+05:30",
+        "description": "Warehouse picking queues stall. Simulated Asteria operations incident, investigate using connected graph evidence."
+      }
+    },
+    {
+      "id": "Q-AST-AGENT-CHECKPOINT",
+      "label": "Question",
+      "properties": {
+        "id": "Q-AST-AGENT-CHECKPOINT",
+        "tenant_id": "asteria",
+        "name": "Can interrupted agent execution be resumed safely from this checkpoint?",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "question": "Can interrupted agent execution be resumed safely from this checkpoint?",
+        "knowledge_gap": true
+      }
+    },
+    {
+      "id": "Q-AST-CARRIER-RECEIPT",
+      "label": "Question",
+      "properties": {
+        "id": "Q-AST-CARRIER-RECEIPT",
+        "tenant_id": "asteria",
+        "name": "Do upstream carriers acknowledge the queued labels?",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "question": "Do upstream carriers acknowledge the queued labels?",
+        "knowledge_gap": true
+      }
+    },
+    {
+      "id": "Q-AST-DATA-CONSENT",
+      "label": "Question",
+      "properties": {
+        "id": "Q-AST-DATA-CONSENT",
+        "tenant_id": "asteria",
+        "name": "Is there a valid consent record for all exported partners?",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "question": "Is there a valid consent record for all exported partners?",
+        "knowledge_gap": true
+      }
+    },
+    {
+      "id": "Q-AST-FINANCE-LEDGER",
+      "label": "Question",
+      "properties": {
+        "id": "Q-AST-FINANCE-LEDGER",
+        "tenant_id": "asteria",
+        "name": "Which payout totals differ between tracking and ledger?",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "question": "Which payout totals differ between tracking and ledger?",
+        "knowledge_gap": true
+      }
+    },
+    {
+      "id": "Q-AST-FORECAST-RETRAIN",
+      "label": "Question",
+      "properties": {
+        "id": "Q-AST-FORECAST-RETRAIN",
+        "tenant_id": "asteria",
+        "name": "Did the model retrain with incomplete shipment labels?",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "question": "Did the model retrain with incomplete shipment labels?",
+        "knowledge_gap": true
+      }
+    },
+    {
+      "id": "Q-AST-MIXED-VERSIONS",
+      "label": "Question",
+      "properties": {
+        "id": "Q-AST-MIXED-VERSIONS",
+        "tenant_id": "asteria",
+        "name": "Which regional clients still emit schema v2?",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "question": "Which regional clients still emit schema v2?",
+        "knowledge_gap": true
+      }
+    },
+    {
+      "id": "Q-AST-OWNER-APPROVAL",
+      "label": "Question",
+      "properties": {
+        "id": "Q-AST-OWNER-APPROVAL",
+        "tenant_id": "asteria",
+        "name": "Who has legal authority to approve replacement carrier owner?",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "question": "Who has legal authority to approve replacement carrier owner?",
+        "knowledge_gap": true
+      }
+    },
+    {
+      "id": "Q-AST-ROLLBACK-PROOF",
+      "label": "Question",
+      "properties": {
+        "id": "Q-AST-ROLLBACK-PROOF",
+        "tenant_id": "asteria",
+        "name": "Has route rollback received a human policy approval?",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "status": "OPEN",
+        "question": "Has route rollback received a human policy approval?",
+        "knowledge_gap": true
+      }
+    },
+    {
+      "id": "SRCREC-AST-0001",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0001",
+        "tenant_id": "asteria",
+        "name": "Git commit 8f4c10 route_schema_v3",
+        "created_at": "2026-10-12T09:07:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "GITHUB",
+        "source_key": "asteria-v1/github/0001",
+        "source_entity_id": "SYN-GITHUB-0001",
+        "content": "commit 8f4c10: removed nullable carrier_zone_code for v3; v2 edge clients still write NULL.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0001"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0002",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0002",
+        "tenant_id": "asteria",
+        "name": "Jira AST-4821 compatibility task",
+        "created_at": "2026-10-12T09:09:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "JIRA",
+        "source_key": "asteria-v1/jira/0002",
+        "source_entity_id": "SYN-JIRA-0002",
+        "content": "AST-4821: mixed v2/v3 edge compatibility checklist marked blocked before rollout.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0002"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0003",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0003",
+        "tenant_id": "asteria",
+        "name": "Route API 422 logs",
+        "created_at": "2026-10-12T09:15:20+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "LOG",
+        "source_key": "asteria-v1/log/0003",
+        "source_entity_id": "SYN-LOG-0003",
+        "content": "09:15:20 422 SchemaError carrier_zone_code expected string; v2 edge workers still active.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0003"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0004",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0004",
+        "tenant_id": "asteria",
+        "name": "Routing DB CPU plot",
+        "created_at": "2026-10-12T09:20:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "METRIC",
+        "source_key": "asteria-v1/metric/0004",
+        "source_entity_id": "SYN-METRIC-0004",
+        "content": "CPU rose from 37% to 93% at 09:20, five minutes after 422 spike.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0004"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0005",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0005",
+        "tenant_id": "asteria",
+        "name": "Route edge distributed trace",
+        "created_at": "2026-10-12T09:18:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "TRACE",
+        "source_key": "asteria-v1/trace/0005",
+        "source_entity_id": "SYN-TRACE-0005",
+        "content": "v2 region-edge -> route API -> schema v3 failure -> retry -> CPU increase.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0005"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0006",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0006",
+        "tenant_id": "asteria",
+        "name": "SRE on-call Slack assertion",
+        "created_at": "2026-10-12T09:22:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "SLACK",
+        "source_key": "asteria-v1/slack/0006",
+        "source_entity_id": "SYN-SLACK-0006",
+        "content": "On-call: CPU is pegged, suspect connection pool; investigation unconfirmed.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0006"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0007",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0007",
+        "tenant_id": "asteria",
+        "name": "Platform Slack review",
+        "created_at": "2026-10-12T09:25:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "SLACK",
+        "source_key": "asteria-v1/slack/0007",
+        "source_entity_id": "SYN-SLACK-0007",
+        "content": "Platform: the edge clients are still on v2; v3 change was deployed before compatibility test.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0007"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0008",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0008",
+        "tenant_id": "asteria",
+        "name": "Route migration policy excerpt",
+        "created_at": "2026-10-12T09:10:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "POLICY",
+        "source_key": "asteria-v1/policy/0008",
+        "source_entity_id": "SYN-POLICY-0008",
+        "content": "POL-AST-ROUTE: schema changes must be backward compatible until fleet version > 99%.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0008"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0009",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0009",
+        "tenant_id": "asteria",
+        "name": "Historical route postmortem",
+        "created_at": "2026-05-12T11:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "POSTMORTEM",
+        "source_key": "asteria-v1/postmortem/0009",
+        "source_entity_id": "SYN-POSTMORTEM-0009",
+        "content": "May incident: version drift during schema rollout. Historical match requires investigation.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0009"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0010",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0010",
+        "tenant_id": "asteria",
+        "name": "Carrier retry backlog metric",
+        "created_at": "2026-10-12T09:47:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "METRIC",
+        "source_key": "asteria-v1/metric/0010",
+        "source_entity_id": "SYN-METRIC-0010",
+        "content": "Carrier gateway retry backlog reached 18000 while route API returned 422.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0010"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0011",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0011",
+        "tenant_id": "asteria",
+        "name": "Carrier incident partner update",
+        "created_at": "2026-10-12T09:52:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "SLACK",
+        "source_key": "asteria-v1/slack/0011",
+        "source_entity_id": "SYN-SLACK-0011",
+        "content": "Partner account update: no upstream carrier outage confirmed; requests wait inside gateway.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0011"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0012",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0012",
+        "tenant_id": "asteria",
+        "name": "Warehouse handheld errors",
+        "created_at": "2026-10-12T09:55:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "LOG",
+        "source_key": "asteria-v1/log/0012",
+        "source_entity_id": "SYN-LOG-0012",
+        "content": "Warehouse handheld devices cannot reserve dispatch slots while route orchestration is unavailable.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0012"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0013",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0013",
+        "tenant_id": "asteria",
+        "name": "Carrier confirmation sample",
+        "created_at": "2026-10-12T10:11:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "DB",
+        "source_key": "asteria-v1/db/0013",
+        "source_entity_id": "SYN-DB-0013",
+        "content": "Late confirmations reached payout ledger 90 minutes behind booking timestamp.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0013"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0014",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0014",
+        "tenant_id": "asteria",
+        "name": "Fraud alert sample",
+        "created_at": "2026-10-12T10:20:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "AUDIT",
+        "source_key": "asteria-v1/audit/0014",
+        "source_entity_id": "SYN-AUDIT-0014",
+        "content": "No increase in payout fraud flags during the confirmation lag window.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0014"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0015",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0015",
+        "tenant_id": "asteria",
+        "name": "Old escalation roster",
+        "created_at": "2026-10-12T10:19:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "HR",
+        "source_key": "asteria-v1/hr/0015",
+        "source_entity_id": "SYN-HR-0015",
+        "content": "Legacy Integrations team retired July 2026; current carrier escalation approver missing.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0015"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0016",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0016",
+        "tenant_id": "asteria",
+        "name": "Legacy carrier escalation ticket",
+        "created_at": "2026-10-12T10:21:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "JIRA",
+        "source_key": "asteria-v1/jira/0016",
+        "source_entity_id": "SYN-JIRA-0016",
+        "content": "AST-3611: unresolved replacement owner for retired adapter.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0016"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0017",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0017",
+        "tenant_id": "asteria",
+        "name": "Consent registry audit",
+        "created_at": "2026-10-10T13:02:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "AUDIT",
+        "source_key": "asteria-v1/audit/0017",
+        "source_entity_id": "SYN-AUDIT-0017",
+        "content": "Customer export job was triggered without current partner consent grant.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0017"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0018",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0018",
+        "tenant_id": "asteria",
+        "name": "Privacy policy excerpt",
+        "created_at": "2026-10-10T13:04:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "POLICY",
+        "source_key": "asteria-v1/policy/0018",
+        "source_entity_id": "SYN-POLICY-0018",
+        "content": "POL-AST-PRIVACY requires consent verification before customer export for analytics.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0018"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0019",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0019",
+        "tenant_id": "asteria",
+        "name": "Forecast bias dashboard",
+        "created_at": "2026-10-12T11:08:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "METRIC",
+        "source_key": "asteria-v1/metric/0019",
+        "source_entity_id": "SYN-METRIC-0019",
+        "content": "Forecast v3 deviation rose after missing shipment confirmations impacted training aggregate.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0019"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0020",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0020",
+        "tenant_id": "asteria",
+        "name": "Duplicate billing issue",
+        "created_at": "2026-10-09T15:05:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "JIRA",
+        "source_key": "asteria-v1/jira/0020",
+        "source_entity_id": "SYN-JIRA-0020",
+        "content": "AST-5011: two teams delivered independent credit-note automation with overlapping acceptance.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0020"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0021",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0021",
+        "tenant_id": "asteria",
+        "name": "Agent action retry ledger",
+        "created_at": "2026-10-12T11:35:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "AUDIT",
+        "source_key": "asteria-v1/audit/0021",
+        "source_entity_id": "SYN-AUDIT-0021",
+        "content": "Retry attempt on route fallback after uncertain completion; lock owner missing.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0021"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0022",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0022",
+        "tenant_id": "asteria",
+        "name": "Partner CRM export comparison",
+        "created_at": "2026-10-12T10:26:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "CRM",
+        "source_key": "asteria-v1/crm/0022",
+        "source_entity_id": "SYN-CRM-0022",
+        "content": "Partner status reflected old SLA owner after team retirement.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0022"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0023",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0023",
+        "tenant_id": "asteria",
+        "name": "Route DB access key event",
+        "created_at": "2026-08-25T08:03:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "AUDIT",
+        "source_key": "asteria-v1/audit/0023",
+        "source_entity_id": "SYN-AUDIT-0023",
+        "content": "Service credential change not propagated to weekend on-call roster.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0023"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0024",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0024",
+        "tenant_id": "asteria",
+        "name": "Dispatch queue backlog",
+        "created_at": "2026-10-12T09:57:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "METRIC",
+        "source_key": "asteria-v1/metric/0024",
+        "source_entity_id": "SYN-METRIC-0024",
+        "content": "Picking backlog increased 5600 jobs; dependent scheduling service returns timeout.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0024"
+      }
+    },
+    {
+      "id": "SRCREC-AST-0025",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-0025",
+        "tenant_id": "asteria",
+        "name": "SLA warehouse audit",
+        "created_at": "2026-10-12T11:28:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "DB",
+        "source_key": "asteria-v1/db/0025",
+        "source_entity_id": "SYN-DB-0025",
+        "content": "Fulfilled shipments absent from tracking feed; dashboard is stale.",
+        "fixture_only": true,
+        "ingestion_status": "SIMULATED",
+        "checksum": "fixture-0025"
+      }
+    },
+    {
+      "id": "SRCREC-AST-IDENTITY",
+      "label": "SourceRecord",
+      "properties": {
+        "id": "SRCREC-AST-IDENTITY",
+        "tenant_id": "asteria",
+        "name": "Unresolved partner contact: R. Menon",
+        "created_at": "2025-01-01T00:00:00+05:30",
+        "fixture_pack": "asteria-v1",
+        "synthetic": true,
+        "source_type": "HR",
+        "source_key": "asteria-v1/hr/contact-r-menon",
+        "source_entity_id": "SYN-HR-CONTACT-022",
+        "content": "R. Menon listed as integration approver; both Ritika Menon and Mira Sachdeva have overlapping records.",
+        "fixture_only": true,
+        "ingestion_status": "QUARANTINED",
+        "checksum": "fixture-id-022"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "ACT-AST-CARRIER-RETRY",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "ACT-AST-CARRIER-RETRY|ABOUT|INC-AST-CARRIER-LAG|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "ACT-AST-RESTORE",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "ACT-AST-RESTORE|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "ACT-AST-ROLLBACK",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "ACT-AST-ROLLBACK|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "ACT-AST-VERIFY",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "ACT-AST-VERIFY|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-AGENT-PENDING",
+      "type": "ABOUT",
+      "target": "INC-AST-AGENT-RETRY",
+      "properties": {
+        "edge_id": "CLM-AST-AGENT-PENDING|ABOUT|INC-AST-AGENT-RETRY|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-CARRIER-TIME",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "CLM-AST-CARRIER-TIME|ABOUT|INC-AST-CARRIER-LAG|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-CARRIER-TIME",
+      "type": "CONTRADICTS",
+      "target": "CLM-AST-CARRIER-VENDOR",
+      "properties": {
+        "edge_id": "CLM-AST-CARRIER-TIME|CONTRADICTS|CLM-AST-CARRIER-VENDOR|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-CARRIER-VENDOR",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "CLM-AST-CARRIER-VENDOR|ABOUT|INC-AST-CARRIER-LAG|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-FORECAST-PENDING",
+      "type": "ABOUT",
+      "target": "INC-AST-FORECAST-BIAS",
+      "properties": {
+        "edge_id": "CLM-AST-FORECAST-PENDING|ABOUT|INC-AST-FORECAST-BIAS|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-INVOICE-PENDING",
+      "type": "ABOUT",
+      "target": "INC-AST-INVOICE-DUP",
+      "properties": {
+        "edge_id": "CLM-AST-INVOICE-PENDING|ABOUT|INC-AST-INVOICE-DUP|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-OWNER-RETIRED",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "CLM-AST-OWNER-RETIRED|ABOUT|INC-AST-PARTNER-SLA|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PAYOUT-EVENT",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "CLM-AST-PAYOUT-EVENT|ABOUT|INC-AST-PAYOUT-DRIFT|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PAYOUT-EVENT",
+      "type": "CONTRADICTS",
+      "target": "CLM-AST-PAYOUT-FRAUD",
+      "properties": {
+        "edge_id": "CLM-AST-PAYOUT-EVENT|CONTRADICTS|CLM-AST-PAYOUT-FRAUD|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PAYOUT-FRAUD",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "CLM-AST-PAYOUT-FRAUD|ABOUT|INC-AST-PAYOUT-DRIFT|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PRIVACY-BLOCK",
+      "type": "ABOUT",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "CLM-AST-PRIVACY-BLOCK|ABOUT|INC-AST-SECURITY-EXPORT|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PRIVACY-EXEMPT",
+      "type": "ABOUT",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "CLM-AST-PRIVACY-EXEMPT|ABOUT|INC-AST-SECURITY-EXPORT|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-PRIVACY-EXEMPT",
+      "type": "CONTRADICTS",
+      "target": "CLM-AST-PRIVACY-BLOCK",
+      "properties": {
+        "edge_id": "CLM-AST-PRIVACY-EXEMPT|CONTRADICTS|CLM-AST-PRIVACY-BLOCK|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-ROUTE-CPU",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "CLM-AST-ROUTE-CPU|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-ROUTE-CPU",
+      "type": "CONTRADICTS",
+      "target": "CLM-AST-ROUTE-SCHEMA",
+      "properties": {
+        "edge_id": "CLM-AST-ROUTE-CPU|CONTRADICTS|CLM-AST-ROUTE-SCHEMA|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-ROUTE-PENDING",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "CLM-AST-ROUTE-PENDING|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-ROUTE-SCHEMA",
+      "type": "ABOUT",
+      "target": "CHG-AST-ROUTE-V3",
+      "properties": {
+        "edge_id": "CLM-AST-ROUTE-SCHEMA|ABOUT|CHG-AST-ROUTE-V3|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-ROUTE-SCHEMA",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "CLM-AST-ROUTE-SCHEMA|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "CLM-AST-WAREHOUSE-PENDING",
+      "type": "ABOUT",
+      "target": "INC-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "CLM-AST-WAREHOUSE-PENDING|ABOUT|INC-AST-WAREHOUSE-QUEUE|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DEC-AST-MAY-ROLLBACK",
+      "type": "BASED_ON",
+      "target": "INC-AST-OLD-MIGRATION",
+      "properties": {
+        "edge_id": "DEC-AST-MAY-ROLLBACK|BASED_ON|INC-AST-OLD-MIGRATION|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DEC-AST-OWNER-REVIEW",
+      "type": "BASED_ON",
+      "target": "CLM-AST-OWNER-RETIRED",
+      "properties": {
+        "edge_id": "DEC-AST-OWNER-REVIEW|BASED_ON|CLM-AST-OWNER-RETIRED|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-AUTH-ROTATE",
+      "type": "CONTAINS",
+      "target": "CHG-AST-AUTH-ROTATE",
+      "properties": {
+        "edge_id": "DPL-AST-AUTH-ROTATE|CONTAINS|CHG-AST-AUTH-ROTATE|2026-08-25T07:45:00+05:30",
+        "valid_from": "2026-08-25T07:45:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-CARRIER-ADAPT",
+      "type": "CONTAINS",
+      "target": "CHG-AST-CARRIER-ADAPT",
+      "properties": {
+        "edge_id": "DPL-AST-CARRIER-ADAPT|CONTAINS|CHG-AST-CARRIER-ADAPT|2026-10-11T19:00:00+05:30",
+        "valid_from": "2026-10-11T19:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-FIN-INVOICE",
+      "type": "CONTAINS",
+      "target": "CHG-AST-FIN-INVOICE",
+      "properties": {
+        "edge_id": "DPL-AST-FIN-INVOICE|CONTAINS|CHG-AST-FIN-INVOICE|2026-10-08T06:00:00+05:30",
+        "valid_from": "2026-10-08T06:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-HIST-ROUTE",
+      "type": "BEFORE",
+      "target": "INC-AST-OLD-MIGRATION",
+      "properties": {
+        "edge_id": "DPL-AST-HIST-ROUTE|BEFORE|INC-AST-OLD-MIGRATION|2026-05-10T18:00:00+05:30",
+        "valid_from": "2026-05-10T18:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-HIST-ROUTE",
+      "type": "CONTAINS",
+      "target": "CHG-AST-HIST-ROUTE",
+      "properties": {
+        "edge_id": "DPL-AST-HIST-ROUTE|CONTAINS|CHG-AST-HIST-ROUTE|2026-05-10T18:00:00+05:30",
+        "valid_from": "2026-05-10T18:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-ML-ETA",
+      "type": "CONTAINS",
+      "target": "CHG-AST-ML-ETA",
+      "properties": {
+        "edge_id": "DPL-AST-ML-ETA|CONTAINS|CHG-AST-ML-ETA|2026-10-10T10:00:00+05:30",
+        "valid_from": "2026-10-10T10:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-PARTNER-CRM",
+      "type": "CONTAINS",
+      "target": "CHG-AST-PARTNER-CRM",
+      "properties": {
+        "edge_id": "DPL-AST-PARTNER-CRM|CONTAINS|CHG-AST-PARTNER-CRM|2026-10-06T09:00:00+05:30",
+        "valid_from": "2026-10-06T09:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-PRIVACY-PIPE",
+      "type": "CONTAINS",
+      "target": "CHG-AST-PRIVACY-PIPE",
+      "properties": {
+        "edge_id": "DPL-AST-PRIVACY-PIPE|CONTAINS|CHG-AST-PRIVACY-PIPE|2026-10-09T09:00:00+05:30",
+        "valid_from": "2026-10-09T09:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-ROUTE-V3",
+      "type": "BEFORE",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "DPL-AST-ROUTE-V3|BEFORE|INC-AST-ROUTE-OUTAGE|2026-10-12T09:05:00+05:30",
+        "valid_from": "2026-10-12T09:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-ROUTE-V3",
+      "type": "CONTAINS",
+      "target": "CHG-AST-ROUTE-V3",
+      "properties": {
+        "edge_id": "DPL-AST-ROUTE-V3|CONTAINS|CHG-AST-ROUTE-V3|2026-10-12T09:05:00+05:30",
+        "valid_from": "2026-10-12T09:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "DPL-AST-WMS-PEAK",
+      "type": "CONTAINS",
+      "target": "CHG-AST-WMS-PEAK",
+      "properties": {
+        "edge_id": "DPL-AST-WMS-PEAK|CONTAINS|CHG-AST-WMS-PEAK|2026-10-10T12:00:00+05:30",
+        "valid_from": "2026-10-10T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0001",
+      "type": "ABOUT",
+      "target": "CHG-AST-ROUTE-V3",
+      "properties": {
+        "edge_id": "EVD-AST-0001|ABOUT|CHG-AST-ROUTE-V3|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0001",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVD-AST-0001|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:07:00+05:30",
+        "valid_from": "2026-10-12T09:07:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0001",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0001",
+      "properties": {
+        "edge_id": "EVD-AST-0001|DERIVED_FROM|SRCREC-AST-0001|2026-10-12T09:07:00+05:30",
+        "valid_from": "2026-10-12T09:07:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0001",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-ROUTE-SCHEMA",
+      "properties": {
+        "edge_id": "EVD-AST-0001|SUPPORTS|CLM-AST-ROUTE-SCHEMA|2026-10-12T09:07:00+05:30",
+        "valid_from": "2026-10-12T09:07:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0002",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVD-AST-0002|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:09:00+05:30",
+        "valid_from": "2026-10-12T09:09:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0002",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0002",
+      "properties": {
+        "edge_id": "EVD-AST-0002|DERIVED_FROM|SRCREC-AST-0002|2026-10-12T09:09:00+05:30",
+        "valid_from": "2026-10-12T09:09:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0002",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-ROUTE-SCHEMA",
+      "properties": {
+        "edge_id": "EVD-AST-0002|SUPPORTS|CLM-AST-ROUTE-SCHEMA|2026-10-12T09:09:00+05:30",
+        "valid_from": "2026-10-12T09:09:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0003",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVD-AST-0003|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:15:20+05:30",
+        "valid_from": "2026-10-12T09:15:20+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0003",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0003",
+      "properties": {
+        "edge_id": "EVD-AST-0003|DERIVED_FROM|SRCREC-AST-0003|2026-10-12T09:15:20+05:30",
+        "valid_from": "2026-10-12T09:15:20+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0003",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-ROUTE-SCHEMA",
+      "properties": {
+        "edge_id": "EVD-AST-0003|SUPPORTS|CLM-AST-ROUTE-SCHEMA|2026-10-12T09:15:20+05:30",
+        "valid_from": "2026-10-12T09:15:20+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0004",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVD-AST-0004|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:20:00+05:30",
+        "valid_from": "2026-10-12T09:20:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0004",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0004",
+      "properties": {
+        "edge_id": "EVD-AST-0004|DERIVED_FROM|SRCREC-AST-0004|2026-10-12T09:20:00+05:30",
+        "valid_from": "2026-10-12T09:20:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0004",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-ROUTE-CPU",
+      "properties": {
+        "edge_id": "EVD-AST-0004|SUPPORTS|CLM-AST-ROUTE-CPU|2026-10-12T09:20:00+05:30",
+        "valid_from": "2026-10-12T09:20:00+05:30",
+        "confidence": 0.63
+      }
+    },
+    {
+      "source": "EVD-AST-0005",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVD-AST-0005|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:18:00+05:30",
+        "valid_from": "2026-10-12T09:18:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0005",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0005",
+      "properties": {
+        "edge_id": "EVD-AST-0005|DERIVED_FROM|SRCREC-AST-0005|2026-10-12T09:18:00+05:30",
+        "valid_from": "2026-10-12T09:18:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0005",
+      "type": "REFUTES",
+      "target": "CLM-AST-ROUTE-CPU",
+      "properties": {
+        "edge_id": "EVD-AST-0005|REFUTES|CLM-AST-ROUTE-CPU|2026-10-12T09:18:00+05:30",
+        "valid_from": "2026-10-12T09:18:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0005",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-ROUTE-SCHEMA",
+      "properties": {
+        "edge_id": "EVD-AST-0005|SUPPORTS|CLM-AST-ROUTE-SCHEMA|2026-10-12T09:18:00+05:30",
+        "valid_from": "2026-10-12T09:18:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0006",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVD-AST-0006|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:22:00+05:30",
+        "valid_from": "2026-10-12T09:22:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0006",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0006",
+      "properties": {
+        "edge_id": "EVD-AST-0006|DERIVED_FROM|SRCREC-AST-0006|2026-10-12T09:22:00+05:30",
+        "valid_from": "2026-10-12T09:22:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0006",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-ROUTE-CPU",
+      "properties": {
+        "edge_id": "EVD-AST-0006|SUPPORTS|CLM-AST-ROUTE-CPU|2026-10-12T09:22:00+05:30",
+        "valid_from": "2026-10-12T09:22:00+05:30",
+        "confidence": 0.51
+      }
+    },
+    {
+      "source": "EVD-AST-0007",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVD-AST-0007|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:25:00+05:30",
+        "valid_from": "2026-10-12T09:25:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0007",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0007",
+      "properties": {
+        "edge_id": "EVD-AST-0007|DERIVED_FROM|SRCREC-AST-0007|2026-10-12T09:25:00+05:30",
+        "valid_from": "2026-10-12T09:25:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0007",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-ROUTE-SCHEMA",
+      "properties": {
+        "edge_id": "EVD-AST-0007|SUPPORTS|CLM-AST-ROUTE-SCHEMA|2026-10-12T09:25:00+05:30",
+        "valid_from": "2026-10-12T09:25:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0008",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVD-AST-0008|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:10:00+05:30",
+        "valid_from": "2026-10-12T09:10:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0008",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0008",
+      "properties": {
+        "edge_id": "EVD-AST-0008|DERIVED_FROM|SRCREC-AST-0008|2026-10-12T09:10:00+05:30",
+        "valid_from": "2026-10-12T09:10:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0008",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-ROUTE-SCHEMA",
+      "properties": {
+        "edge_id": "EVD-AST-0008|SUPPORTS|CLM-AST-ROUTE-SCHEMA|2026-10-12T09:10:00+05:30",
+        "valid_from": "2026-10-12T09:10:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0009",
+      "type": "ABOUT",
+      "target": "INC-AST-OLD-MIGRATION",
+      "properties": {
+        "edge_id": "EVD-AST-0009|ABOUT|INC-AST-OLD-MIGRATION|2026-05-12T11:00:00+05:30",
+        "valid_from": "2026-05-12T11:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0009",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0009",
+      "properties": {
+        "edge_id": "EVD-AST-0009|DERIVED_FROM|SRCREC-AST-0009|2026-05-12T11:00:00+05:30",
+        "valid_from": "2026-05-12T11:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0009",
+      "type": "SIMILAR_TO",
+      "target": "EVD-AST-0001",
+      "properties": {
+        "edge_id": "EVD-AST-0009|SIMILAR_TO|EVD-AST-0001|2026-10-12T10:00:00+05:30",
+        "valid_from": "2026-10-12T10:00:00+05:30",
+        "confidence": 0.52,
+        "relationship_kind": "candidate_similarity_only"
+      }
+    },
+    {
+      "source": "EVD-AST-0010",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "EVD-AST-0010|ABOUT|INC-AST-CARRIER-LAG|2026-10-12T09:47:00+05:30",
+        "valid_from": "2026-10-12T09:47:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0010",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0010",
+      "properties": {
+        "edge_id": "EVD-AST-0010|DERIVED_FROM|SRCREC-AST-0010|2026-10-12T09:47:00+05:30",
+        "valid_from": "2026-10-12T09:47:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0010",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-CARRIER-TIME",
+      "properties": {
+        "edge_id": "EVD-AST-0010|SUPPORTS|CLM-AST-CARRIER-TIME|2026-10-12T09:47:00+05:30",
+        "valid_from": "2026-10-12T09:47:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0011",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "EVD-AST-0011|ABOUT|INC-AST-CARRIER-LAG|2026-10-12T09:52:00+05:30",
+        "valid_from": "2026-10-12T09:52:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0011",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0011",
+      "properties": {
+        "edge_id": "EVD-AST-0011|DERIVED_FROM|SRCREC-AST-0011|2026-10-12T09:52:00+05:30",
+        "valid_from": "2026-10-12T09:52:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0011",
+      "type": "REFUTES",
+      "target": "CLM-AST-CARRIER-VENDOR",
+      "properties": {
+        "edge_id": "EVD-AST-0011|REFUTES|CLM-AST-CARRIER-VENDOR|2026-10-12T09:52:00+05:30",
+        "valid_from": "2026-10-12T09:52:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0012",
+      "type": "ABOUT",
+      "target": "INC-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "EVD-AST-0012|ABOUT|INC-AST-WAREHOUSE-QUEUE|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0012",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0012",
+      "properties": {
+        "edge_id": "EVD-AST-0012|DERIVED_FROM|SRCREC-AST-0012|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0013",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "EVD-AST-0013|ABOUT|INC-AST-PAYOUT-DRIFT|2026-10-12T10:11:00+05:30",
+        "valid_from": "2026-10-12T10:11:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0013",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0013",
+      "properties": {
+        "edge_id": "EVD-AST-0013|DERIVED_FROM|SRCREC-AST-0013|2026-10-12T10:11:00+05:30",
+        "valid_from": "2026-10-12T10:11:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0013",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-PAYOUT-EVENT",
+      "properties": {
+        "edge_id": "EVD-AST-0013|SUPPORTS|CLM-AST-PAYOUT-EVENT|2026-10-12T10:11:00+05:30",
+        "valid_from": "2026-10-12T10:11:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0014",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "EVD-AST-0014|ABOUT|INC-AST-PAYOUT-DRIFT|2026-10-12T10:20:00+05:30",
+        "valid_from": "2026-10-12T10:20:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0014",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0014",
+      "properties": {
+        "edge_id": "EVD-AST-0014|DERIVED_FROM|SRCREC-AST-0014|2026-10-12T10:20:00+05:30",
+        "valid_from": "2026-10-12T10:20:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0014",
+      "type": "REFUTES",
+      "target": "CLM-AST-PAYOUT-FRAUD",
+      "properties": {
+        "edge_id": "EVD-AST-0014|REFUTES|CLM-AST-PAYOUT-FRAUD|2026-10-12T10:20:00+05:30",
+        "valid_from": "2026-10-12T10:20:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0015",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "EVD-AST-0015|ABOUT|INC-AST-PARTNER-SLA|2026-10-12T10:19:00+05:30",
+        "valid_from": "2026-10-12T10:19:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0015",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0015",
+      "properties": {
+        "edge_id": "EVD-AST-0015|DERIVED_FROM|SRCREC-AST-0015|2026-10-12T10:19:00+05:30",
+        "valid_from": "2026-10-12T10:19:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0015",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-OWNER-RETIRED",
+      "properties": {
+        "edge_id": "EVD-AST-0015|SUPPORTS|CLM-AST-OWNER-RETIRED|2026-10-12T10:19:00+05:30",
+        "valid_from": "2026-10-12T10:19:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0016",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "EVD-AST-0016|ABOUT|INC-AST-PARTNER-SLA|2026-10-12T10:21:00+05:30",
+        "valid_from": "2026-10-12T10:21:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0016",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0016",
+      "properties": {
+        "edge_id": "EVD-AST-0016|DERIVED_FROM|SRCREC-AST-0016|2026-10-12T10:21:00+05:30",
+        "valid_from": "2026-10-12T10:21:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0016",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-OWNER-RETIRED",
+      "properties": {
+        "edge_id": "EVD-AST-0016|SUPPORTS|CLM-AST-OWNER-RETIRED|2026-10-12T10:21:00+05:30",
+        "valid_from": "2026-10-12T10:21:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0017",
+      "type": "ABOUT",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "EVD-AST-0017|ABOUT|INC-AST-SECURITY-EXPORT|2026-10-10T13:02:00+05:30",
+        "valid_from": "2026-10-10T13:02:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0017",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0017",
+      "properties": {
+        "edge_id": "EVD-AST-0017|DERIVED_FROM|SRCREC-AST-0017|2026-10-10T13:02:00+05:30",
+        "valid_from": "2026-10-10T13:02:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0017",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-PRIVACY-BLOCK",
+      "properties": {
+        "edge_id": "EVD-AST-0017|SUPPORTS|CLM-AST-PRIVACY-BLOCK|2026-10-10T13:02:00+05:30",
+        "valid_from": "2026-10-10T13:02:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0018",
+      "type": "ABOUT",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "EVD-AST-0018|ABOUT|INC-AST-SECURITY-EXPORT|2026-10-10T13:04:00+05:30",
+        "valid_from": "2026-10-10T13:04:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0018",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0018",
+      "properties": {
+        "edge_id": "EVD-AST-0018|DERIVED_FROM|SRCREC-AST-0018|2026-10-10T13:04:00+05:30",
+        "valid_from": "2026-10-10T13:04:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0018",
+      "type": "REFUTES",
+      "target": "CLM-AST-PRIVACY-EXEMPT",
+      "properties": {
+        "edge_id": "EVD-AST-0018|REFUTES|CLM-AST-PRIVACY-EXEMPT|2026-10-10T13:04:00+05:30",
+        "valid_from": "2026-10-10T13:04:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0018",
+      "type": "SUPPORTS",
+      "target": "CLM-AST-PRIVACY-BLOCK",
+      "properties": {
+        "edge_id": "EVD-AST-0018|SUPPORTS|CLM-AST-PRIVACY-BLOCK|2026-10-10T13:04:00+05:30",
+        "valid_from": "2026-10-10T13:04:00+05:30",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source": "EVD-AST-0019",
+      "type": "ABOUT",
+      "target": "INC-AST-FORECAST-BIAS",
+      "properties": {
+        "edge_id": "EVD-AST-0019|ABOUT|INC-AST-FORECAST-BIAS|2026-10-12T11:08:00+05:30",
+        "valid_from": "2026-10-12T11:08:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0019",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0019",
+      "properties": {
+        "edge_id": "EVD-AST-0019|DERIVED_FROM|SRCREC-AST-0019|2026-10-12T11:08:00+05:30",
+        "valid_from": "2026-10-12T11:08:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0020",
+      "type": "ABOUT",
+      "target": "INC-AST-INVOICE-DUP",
+      "properties": {
+        "edge_id": "EVD-AST-0020|ABOUT|INC-AST-INVOICE-DUP|2026-10-09T15:05:00+05:30",
+        "valid_from": "2026-10-09T15:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0020",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0020",
+      "properties": {
+        "edge_id": "EVD-AST-0020|DERIVED_FROM|SRCREC-AST-0020|2026-10-09T15:05:00+05:30",
+        "valid_from": "2026-10-09T15:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0021",
+      "type": "ABOUT",
+      "target": "INC-AST-AGENT-RETRY",
+      "properties": {
+        "edge_id": "EVD-AST-0021|ABOUT|INC-AST-AGENT-RETRY|2026-10-12T11:35:00+05:30",
+        "valid_from": "2026-10-12T11:35:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0021",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0021",
+      "properties": {
+        "edge_id": "EVD-AST-0021|DERIVED_FROM|SRCREC-AST-0021|2026-10-12T11:35:00+05:30",
+        "valid_from": "2026-10-12T11:35:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0022",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "EVD-AST-0022|ABOUT|INC-AST-PARTNER-SLA|2026-10-12T10:26:00+05:30",
+        "valid_from": "2026-10-12T10:26:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0022",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0022",
+      "properties": {
+        "edge_id": "EVD-AST-0022|DERIVED_FROM|SRCREC-AST-0022|2026-10-12T10:26:00+05:30",
+        "valid_from": "2026-10-12T10:26:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0023",
+      "type": "ABOUT",
+      "target": "INC-AST-ACCESS-EXPIRED",
+      "properties": {
+        "edge_id": "EVD-AST-0023|ABOUT|INC-AST-ACCESS-EXPIRED|2026-08-25T08:03:00+05:30",
+        "valid_from": "2026-08-25T08:03:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0023",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0023",
+      "properties": {
+        "edge_id": "EVD-AST-0023|DERIVED_FROM|SRCREC-AST-0023|2026-08-25T08:03:00+05:30",
+        "valid_from": "2026-08-25T08:03:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0024",
+      "type": "ABOUT",
+      "target": "INC-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "EVD-AST-0024|ABOUT|INC-AST-WAREHOUSE-QUEUE|2026-10-12T09:57:00+05:30",
+        "valid_from": "2026-10-12T09:57:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0024",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0024",
+      "properties": {
+        "edge_id": "EVD-AST-0024|DERIVED_FROM|SRCREC-AST-0024|2026-10-12T09:57:00+05:30",
+        "valid_from": "2026-10-12T09:57:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0025",
+      "type": "ABOUT",
+      "target": "INC-AST-SLA-RECON",
+      "properties": {
+        "edge_id": "EVD-AST-0025|ABOUT|INC-AST-SLA-RECON|2026-10-12T11:28:00+05:30",
+        "valid_from": "2026-10-12T11:28:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVD-AST-0025",
+      "type": "DERIVED_FROM",
+      "target": "SRCREC-AST-0025",
+      "properties": {
+        "edge_id": "EVD-AST-0025|DERIVED_FROM|SRCREC-AST-0025|2026-10-12T11:28:00+05:30",
+        "valid_from": "2026-10-12T11:28:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-AGENT-FAILED",
+      "type": "ABOUT",
+      "target": "INC-AST-AGENT-RETRY",
+      "properties": {
+        "edge_id": "EVT-AST-AGENT-FAILED|ABOUT|INC-AST-AGENT-RETRY|2026-10-12T11:35:00+05:30",
+        "valid_from": "2026-10-12T11:35:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-CARRIER",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "EVT-AST-CARRIER|ABOUT|INC-AST-CARRIER-LAG|2026-10-12T09:42:00+05:30",
+        "valid_from": "2026-10-12T09:42:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-CARRIER",
+      "type": "BEFORE",
+      "target": "EVT-AST-WAREHOUSE",
+      "properties": {
+        "edge_id": "EVT-AST-CARRIER|BEFORE|EVT-AST-WAREHOUSE|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-CPU",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVT-AST-CPU|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:20:00+05:30",
+        "valid_from": "2026-10-12T09:20:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-CPU",
+      "type": "BEFORE",
+      "target": "EVT-AST-CARRIER",
+      "properties": {
+        "edge_id": "EVT-AST-CPU|BEFORE|EVT-AST-CARRIER|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-DEPLOY",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVT-AST-DEPLOY|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:05:00+05:30",
+        "valid_from": "2026-10-12T09:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-DEPLOY",
+      "type": "BEFORE",
+      "target": "EVT-AST-FIRST-422",
+      "properties": {
+        "edge_id": "EVT-AST-DEPLOY|BEFORE|EVT-AST-FIRST-422|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-EXPORT",
+      "type": "ABOUT",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "EVT-AST-EXPORT|ABOUT|INC-AST-SECURITY-EXPORT|2026-10-10T13:02:00+05:30",
+        "valid_from": "2026-10-10T13:02:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-FIRST-422",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "EVT-AST-FIRST-422|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:15:00+05:30",
+        "valid_from": "2026-10-12T09:15:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-FIRST-422",
+      "type": "BEFORE",
+      "target": "EVT-AST-CPU",
+      "properties": {
+        "edge_id": "EVT-AST-FIRST-422|BEFORE|EVT-AST-CPU|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-OWNER",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "EVT-AST-OWNER|ABOUT|INC-AST-PARTNER-SLA|2026-10-12T10:18:00+05:30",
+        "valid_from": "2026-10-12T10:18:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-PAYOUT",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "EVT-AST-PAYOUT|ABOUT|INC-AST-PAYOUT-DRIFT|2026-10-12T10:05:00+05:30",
+        "valid_from": "2026-10-12T10:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-PAYOUT",
+      "type": "BEFORE",
+      "target": "EVT-AST-OWNER",
+      "properties": {
+        "edge_id": "EVT-AST-PAYOUT|BEFORE|EVT-AST-OWNER|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-WAREHOUSE",
+      "type": "ABOUT",
+      "target": "INC-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "EVT-AST-WAREHOUSE|ABOUT|INC-AST-WAREHOUSE-QUEUE|2026-10-12T09:47:00+05:30",
+        "valid_from": "2026-10-12T09:47:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "EVT-AST-WAREHOUSE",
+      "type": "BEFORE",
+      "target": "EVT-AST-PAYOUT",
+      "properties": {
+        "edge_id": "EVT-AST-WAREHOUSE|BEFORE|EVT-AST-PAYOUT|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "INC-AST-AGENT-RETRY",
+      "type": "DEPENDS_ON",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "INC-AST-AGENT-RETRY|DEPENDS_ON|INC-AST-ROUTE-OUTAGE|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0,
+        "reason": "operational storyline link; not causal proof"
+      }
+    },
+    {
+      "source": "INC-AST-CARRIER-LAG",
+      "type": "AFFECTS",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "INC-AST-CARRIER-LAG|AFFECTS|INC-AST-PARTNER-SLA|2026-10-12T12:30:00+05:30",
+        "valid_from": "2026-10-12T12:30:00+05:30",
+        "confidence": 0.7,
+        "relationship_kind": "candidate_propagation"
+      }
+    },
+    {
+      "source": "INC-AST-CARRIER-LAG",
+      "type": "AFFECTS",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "INC-AST-CARRIER-LAG|AFFECTS|INC-AST-PAYOUT-DRIFT|2026-10-12T12:30:00+05:30",
+        "valid_from": "2026-10-12T12:30:00+05:30",
+        "confidence": 0.7,
+        "relationship_kind": "candidate_propagation"
+      }
+    },
+    {
+      "source": "INC-AST-CARRIER-LAG",
+      "type": "DEPENDS_ON",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "INC-AST-CARRIER-LAG|DEPENDS_ON|INC-AST-ROUTE-OUTAGE|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0,
+        "reason": "operational storyline link; not causal proof"
+      }
+    },
+    {
+      "source": "INC-AST-FORECAST-BIAS",
+      "type": "DEPENDS_ON",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "INC-AST-FORECAST-BIAS|DEPENDS_ON|INC-AST-ROUTE-OUTAGE|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0,
+        "reason": "operational storyline link; not causal proof"
+      }
+    },
+    {
+      "source": "INC-AST-PARTNER-SLA",
+      "type": "DEPENDS_ON",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "INC-AST-PARTNER-SLA|DEPENDS_ON|INC-AST-CARRIER-LAG|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0,
+        "reason": "operational storyline link; not causal proof"
+      }
+    },
+    {
+      "source": "INC-AST-PAYOUT-DRIFT",
+      "type": "AFFECTS",
+      "target": "INC-AST-INVOICE-DUP",
+      "properties": {
+        "edge_id": "INC-AST-PAYOUT-DRIFT|AFFECTS|INC-AST-INVOICE-DUP|2026-10-12T12:30:00+05:30",
+        "valid_from": "2026-10-12T12:30:00+05:30",
+        "confidence": 0.7,
+        "relationship_kind": "candidate_propagation"
+      }
+    },
+    {
+      "source": "INC-AST-PAYOUT-DRIFT",
+      "type": "DEPENDS_ON",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "INC-AST-PAYOUT-DRIFT|DEPENDS_ON|INC-AST-CARRIER-LAG|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0,
+        "reason": "operational storyline link; not causal proof"
+      }
+    },
+    {
+      "source": "INC-AST-ROUTE-OUTAGE",
+      "type": "AFFECTS",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "INC-AST-ROUTE-OUTAGE|AFFECTS|INC-AST-CARRIER-LAG|2026-10-12T12:30:00+05:30",
+        "valid_from": "2026-10-12T12:30:00+05:30",
+        "confidence": 0.7,
+        "relationship_kind": "candidate_propagation"
+      }
+    },
+    {
+      "source": "INC-AST-ROUTE-OUTAGE",
+      "type": "AFFECTS",
+      "target": "INC-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "INC-AST-ROUTE-OUTAGE|AFFECTS|INC-AST-WAREHOUSE-QUEUE|2026-10-12T12:30:00+05:30",
+        "valid_from": "2026-10-12T12:30:00+05:30",
+        "confidence": 0.7,
+        "relationship_kind": "candidate_propagation"
+      }
+    },
+    {
+      "source": "INC-AST-SLA-RECON",
+      "type": "DEPENDS_ON",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "INC-AST-SLA-RECON|DEPENDS_ON|INC-AST-CARRIER-LAG|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0,
+        "reason": "operational storyline link; not causal proof"
+      }
+    },
+    {
+      "source": "INC-AST-WAREHOUSE-QUEUE",
+      "type": "DEPENDS_ON",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "INC-AST-WAREHOUSE-QUEUE|DEPENDS_ON|INC-AST-ROUTE-OUTAGE|2026-10-12T12:00:00+05:30",
+        "valid_from": "2026-10-12T12:00:00+05:30",
+        "confidence": 1.0,
+        "reason": "operational storyline link; not causal proof"
+      }
+    },
+    {
+      "source": "Q-AST-AGENT-CHECKPOINT",
+      "type": "ABOUT",
+      "target": "INC-AST-AGENT-RETRY",
+      "properties": {
+        "edge_id": "Q-AST-AGENT-CHECKPOINT|ABOUT|INC-AST-AGENT-RETRY|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-CARRIER-RECEIPT",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "Q-AST-CARRIER-RECEIPT|ABOUT|INC-AST-CARRIER-LAG|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-DATA-CONSENT",
+      "type": "ABOUT",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "Q-AST-DATA-CONSENT|ABOUT|INC-AST-SECURITY-EXPORT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-FINANCE-LEDGER",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "Q-AST-FINANCE-LEDGER|ABOUT|INC-AST-PAYOUT-DRIFT|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-FORECAST-RETRAIN",
+      "type": "ABOUT",
+      "target": "INC-AST-FORECAST-BIAS",
+      "properties": {
+        "edge_id": "Q-AST-FORECAST-RETRAIN|ABOUT|INC-AST-FORECAST-BIAS|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-MIXED-VERSIONS",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "Q-AST-MIXED-VERSIONS|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-OWNER-APPROVAL",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "Q-AST-OWNER-APPROVAL|ABOUT|INC-AST-PARTNER-SLA|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "Q-AST-ROLLBACK-PROOF",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "Q-AST-ROLLBACK-PROOF|ABOUT|INC-AST-ROUTE-OUTAGE|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0001",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0001|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:07:00+05:30",
+        "valid_from": "2026-10-12T09:07:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0002",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0002|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:09:00+05:30",
+        "valid_from": "2026-10-12T09:09:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0003",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0003|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:15:20+05:30",
+        "valid_from": "2026-10-12T09:15:20+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0004",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0004|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:20:00+05:30",
+        "valid_from": "2026-10-12T09:20:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0005",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0005|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:18:00+05:30",
+        "valid_from": "2026-10-12T09:18:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0006",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0006|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:22:00+05:30",
+        "valid_from": "2026-10-12T09:22:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0007",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0007|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:25:00+05:30",
+        "valid_from": "2026-10-12T09:25:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0008",
+      "type": "ABOUT",
+      "target": "INC-AST-ROUTE-OUTAGE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0008|ABOUT|INC-AST-ROUTE-OUTAGE|2026-10-12T09:10:00+05:30",
+        "valid_from": "2026-10-12T09:10:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0009",
+      "type": "ABOUT",
+      "target": "INC-AST-OLD-MIGRATION",
+      "properties": {
+        "edge_id": "SRCREC-AST-0009|ABOUT|INC-AST-OLD-MIGRATION|2026-05-12T11:00:00+05:30",
+        "valid_from": "2026-05-12T11:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0010",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "SRCREC-AST-0010|ABOUT|INC-AST-CARRIER-LAG|2026-10-12T09:47:00+05:30",
+        "valid_from": "2026-10-12T09:47:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0011",
+      "type": "ABOUT",
+      "target": "INC-AST-CARRIER-LAG",
+      "properties": {
+        "edge_id": "SRCREC-AST-0011|ABOUT|INC-AST-CARRIER-LAG|2026-10-12T09:52:00+05:30",
+        "valid_from": "2026-10-12T09:52:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0012",
+      "type": "ABOUT",
+      "target": "INC-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0012|ABOUT|INC-AST-WAREHOUSE-QUEUE|2026-10-12T09:55:00+05:30",
+        "valid_from": "2026-10-12T09:55:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0013",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "SRCREC-AST-0013|ABOUT|INC-AST-PAYOUT-DRIFT|2026-10-12T10:11:00+05:30",
+        "valid_from": "2026-10-12T10:11:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0014",
+      "type": "ABOUT",
+      "target": "INC-AST-PAYOUT-DRIFT",
+      "properties": {
+        "edge_id": "SRCREC-AST-0014|ABOUT|INC-AST-PAYOUT-DRIFT|2026-10-12T10:20:00+05:30",
+        "valid_from": "2026-10-12T10:20:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0015",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "SRCREC-AST-0015|ABOUT|INC-AST-PARTNER-SLA|2026-10-12T10:19:00+05:30",
+        "valid_from": "2026-10-12T10:19:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0016",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "SRCREC-AST-0016|ABOUT|INC-AST-PARTNER-SLA|2026-10-12T10:21:00+05:30",
+        "valid_from": "2026-10-12T10:21:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0017",
+      "type": "ABOUT",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "SRCREC-AST-0017|ABOUT|INC-AST-SECURITY-EXPORT|2026-10-10T13:02:00+05:30",
+        "valid_from": "2026-10-10T13:02:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0018",
+      "type": "ABOUT",
+      "target": "INC-AST-SECURITY-EXPORT",
+      "properties": {
+        "edge_id": "SRCREC-AST-0018|ABOUT|INC-AST-SECURITY-EXPORT|2026-10-10T13:04:00+05:30",
+        "valid_from": "2026-10-10T13:04:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0019",
+      "type": "ABOUT",
+      "target": "INC-AST-FORECAST-BIAS",
+      "properties": {
+        "edge_id": "SRCREC-AST-0019|ABOUT|INC-AST-FORECAST-BIAS|2026-10-12T11:08:00+05:30",
+        "valid_from": "2026-10-12T11:08:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0020",
+      "type": "ABOUT",
+      "target": "INC-AST-INVOICE-DUP",
+      "properties": {
+        "edge_id": "SRCREC-AST-0020|ABOUT|INC-AST-INVOICE-DUP|2026-10-09T15:05:00+05:30",
+        "valid_from": "2026-10-09T15:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0021",
+      "type": "ABOUT",
+      "target": "INC-AST-AGENT-RETRY",
+      "properties": {
+        "edge_id": "SRCREC-AST-0021|ABOUT|INC-AST-AGENT-RETRY|2026-10-12T11:35:00+05:30",
+        "valid_from": "2026-10-12T11:35:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0022",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "SRCREC-AST-0022|ABOUT|INC-AST-PARTNER-SLA|2026-10-12T10:26:00+05:30",
+        "valid_from": "2026-10-12T10:26:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0023",
+      "type": "ABOUT",
+      "target": "INC-AST-ACCESS-EXPIRED",
+      "properties": {
+        "edge_id": "SRCREC-AST-0023|ABOUT|INC-AST-ACCESS-EXPIRED|2026-08-25T08:03:00+05:30",
+        "valid_from": "2026-08-25T08:03:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0024",
+      "type": "ABOUT",
+      "target": "INC-AST-WAREHOUSE-QUEUE",
+      "properties": {
+        "edge_id": "SRCREC-AST-0024|ABOUT|INC-AST-WAREHOUSE-QUEUE|2026-10-12T09:57:00+05:30",
+        "valid_from": "2026-10-12T09:57:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-0025",
+      "type": "ABOUT",
+      "target": "INC-AST-SLA-RECON",
+      "properties": {
+        "edge_id": "SRCREC-AST-0025|ABOUT|INC-AST-SLA-RECON|2026-10-12T11:28:00+05:30",
+        "valid_from": "2026-10-12T11:28:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "SRCREC-AST-IDENTITY",
+      "type": "ABOUT",
+      "target": "INC-AST-PARTNER-SLA",
+      "properties": {
+        "edge_id": "SRCREC-AST-IDENTITY|ABOUT|INC-AST-PARTNER-SLA|2025-01-01T00:00:00+05:30",
+        "valid_from": "2025-01-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+from __future__ import annotations
+
+from enum import Enum
+from typing import Any
+from pydantic import BaseModel, Field
+
+
+class EventType(str, Enum):
+    SITUATION_CREATED = "SITUATION_CREATED"
+    PLAN_CREATED = "PLAN_CREATED"
+    TASK_CREATED = "TASK_CREATED"
+    TASK_CLAIMED = "TASK_CLAIMED"
+    TASK_COMPLETED = "TASK_COMPLETED"
+    EVIDENCE_FOUND = "EVIDENCE_FOUND"
+    HYPOTHESIS_CREATED = "HYPOTHESIS_CREATED"
+    HYPOTHESIS_REJECTED = "HYPOTHESIS_REJECTED"
+    CLAIM_CREATED = "CLAIM_CREATED"
+    DECISION_CREATED = "DECISION_CREATED"
+    ACTION_PROPOSED = "ACTION_PROPOSED"
+    APPROVAL_REQUESTED = "APPROVAL_REQUESTED"
+    ACTION_EXECUTED = "ACTION_EXECUTED"
+    OUTCOME_OBSERVED = "OUTCOME_OBSERVED"
+    DEPLOYMENT_STARTED = "DEPLOYMENT_STARTED"
+    TASK_STARTED = "TASK_STARTED"
+    CHECKPOINT_SAVED = "CHECKPOINT_SAVED"
+    EXECUTION_RESUMED = "EXECUTION_RESUMED"
+    TASK_BLOCKED = "TASK_BLOCKED"
+    FINDING_CREATED = "FINDING_CREATED"
+    FINDING_VERIFIED = "FINDING_VERIFIED"
+    FINDING_REJECTED = "FINDING_REJECTED"
+    HANDOFF_CREATED = "HANDOFF_CREATED"
+    HANDOFF_ACCEPTED = "HANDOFF_ACCEPTED"
+    HANDOFF_REJECTED = "HANDOFF_REJECTED"
+    BRANCH_CREATED = "BRANCH_CREATED"
+    BRANCH_VALIDATED = "BRANCH_VALIDATED"
+    BRANCH_MERGED = "BRANCH_MERGED"
+    BRANCH_REJECTED = "BRANCH_REJECTED"
+    LOCK_ACQUIRED = "LOCK_ACQUIRED"
+    LOCK_RELEASED = "LOCK_RELEASED"
+    CONTENTION_DETECTED = "CONTENTION_DETECTED"
+    DEADLOCK_DETECTED = "DEADLOCK_DETECTED"
+    ACTION_GOVERNANCE_ALLOWED = "ACTION_GOVERNANCE_ALLOWED"
+    ACTION_GOVERNANCE_DENIED = "ACTION_GOVERNANCE_DENIED"
+    ACTION_STARTED = "ACTION_STARTED"
+    ACTION_SUCCEEDED = "ACTION_SUCCEEDED"
+    ACTION_FAILED = "ACTION_FAILED"
+    MEMORY_COMPACTED = "MEMORY_COMPACTED"
+    RESULT_WRITTEN_BACK = "RESULT_WRITTEN_BACK"
+    EVIDENCE_VALIDATED = "EVIDENCE_VALIDATED"
+    CLAIM_PROMOTED = "CLAIM_PROMOTED"
+    HYPOTHESIS_PROMOTED = "HYPOTHESIS_PROMOTED"
+    INCIDENT_CLOSED = "INCIDENT_CLOSED"
+    INCIDENT_PROMOTED_TO_PRECEDENT = "INCIDENT_PROMOTED_TO_PRECEDENT"
+    RESPONSIBILITY_PROMOTED = "RESPONSIBILITY_PROMOTED"
+    EXPERTISE_UPDATED = "EXPERTISE_UPDATED"
+    KNOWLEDGE_SUPERSEDED = "KNOWLEDGE_SUPERSEDED"
+    KNOWLEDGE_STALE = "KNOWLEDGE_STALE"
+    KNOWLEDGE_INVALIDATED = "KNOWLEDGE_INVALIDATED"
+    REVALIDATION_REQUIRED = "REVALIDATION_REQUIRED"
+    KNOWLEDGE_REVALIDATED = "KNOWLEDGE_REVALIDATED"
+    PLAN_MARKED_STALE = "PLAN_MARKED_STALE"
+    TASK_MARKED_STALE = "TASK_MARKED_STALE"
+    INGESTION_RUN_STARTED = "INGESTION_RUN_STARTED"
+    INGESTION_RUN_COMPLETED = "INGESTION_RUN_COMPLETED"
+    INGESTION_RUN_FAILED = "INGESTION_RUN_FAILED"
+    SOURCE_RECORD_INGESTED = "SOURCE_RECORD_INGESTED"
+    SOURCE_RECORD_UPDATED = "SOURCE_RECORD_UPDATED"
+    ENTITY_RESOLVED = "ENTITY_RESOLVED"
+    ENTITY_RESOLUTION_QUARANTINED = "ENTITY_RESOLUTION_QUARANTINED"
+    ARTIFACT_STORED = "ARTIFACT_STORED"
+    EXTERNAL_FACT_WRITTEN = "EXTERNAL_FACT_WRITTEN"
+    EXTERNAL_FACT_SUPERSEDED = "EXTERNAL_FACT_SUPERSEDED"
+    DOCUMENT_INDEXED = "DOCUMENT_INDEXED"
+    DOCUMENT_REINDEXED = "DOCUMENT_REINDEXED"
+    DOCUMENT_REMOVED_FROM_INDEX = "DOCUMENT_REMOVED_FROM_INDEX"
+    VECTOR_INDEX_UPDATED = "VECTOR_INDEX_UPDATED"
+    LEXICAL_INDEX_UPDATED = "LEXICAL_INDEX_UPDATED"
+
+
+class ClaimCreate(BaseModel):
+    id: str = Field(min_length=1)
+    statement: str = Field(min_length=1)
+    subject_id: str = Field(min_length=1)
+    asserted_by_id: str | None = None
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+    status: str = "OPEN"
+    created_at: str
+    source_ref_id: str | None = None
+
+
+class HypothesisCreate(BaseModel):
+    id: str
+    statement: str
+    subject_id: str
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+    status: str = "OPEN"
+    created_at: str
+
+
+class QuestionCreate(BaseModel):
+    id: str
+    text: str
+    subject_id: str
+    status: str = "OPEN"
+    priority: str = "MEDIUM"
+    created_at: str
+
+
+class TaskCreate(BaseModel):
+    id: str
+    name: str
+    subject_id: str
+    status: str = "OPEN"
+    priority: str = "P2"
+    created_at: str
+    assigned_to_id: str | None = None
+
+
+class ActionCreate(BaseModel):
+    id: str
+    name: str
+    subject_id: str
+    action_type: str
+    idempotency_key: str
+    status: str = "PROPOSED"
+    created_at: str
+
+
+class EventCreate(BaseModel):
+    id: str
+    event_type: EventType
+    occurred_at: str
+    summary: str
+    about_ids: list[str] = Field(default_factory=list)
+    performed_by_id: str | None = None
+    properties: dict[str, Any] = Field(default_factory=dict)

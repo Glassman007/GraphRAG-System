@@ -1,0 +1,12 @@
+{
+  "artifact_id": "ART-12010D9523EBE5C491BF209A",
+  "uri": "file:///G:/graphhacks/phase9_acceptance_artifacts_accept_p9_20261016_234351_44edfa/northstar/telemetry/12/12010d9523ebe5c491bf209a8e52ad6c72b46565e753024d475ea45ce79567f7/payload.bin",
+  "sha256": "12010d9523ebe5c491bf209a8e52ad6c72b46565e753024d475ea45ce79567f7",
+  "size_bytes": 47,
+  "mime_type": "text/plain",
+  "artifact_type": "LOG",
+  "created_at": "2026-10-16T23:44:04+05:30",
+  "source_type": "telemetry",
+  "source_record_id": "SRCREC-ING-9C71669F4843EF4E4C16",
+  "retention_class": null
+}

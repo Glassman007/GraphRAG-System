@@ -1,0 +1,144 @@
+{
+  "scenario_id": "SCN-PHASE8-ANALYTICS",
+  "title": "Phase 8 analytics support graph",
+  "description": "Adds explicit process semantics, commitment breach evidence, and richer project overlap dimensions without replacing canonical truth.",
+  "tenant_id": "northstar",
+  "nodes": [
+    {
+      "id": "POL-DB-04",
+      "label": "Policy",
+      "properties": {
+        "id": "POL-DB-04",
+        "tenant_id": "northstar",
+        "requires_owner_approval": true
+      }
+    },
+    {
+      "id": "DS-REFUND-TELEMETRY",
+      "label": "DataSource",
+      "properties": {
+        "id": "DS-REFUND-TELEMETRY",
+        "tenant_id": "northstar",
+        "name": "Refund Telemetry Dataset",
+        "source_type": "analytics_dataset",
+        "status": "ACTIVE",
+        "created_at": "2026-08-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "POL-REFUND-AUTO-01",
+      "label": "Policy",
+      "properties": {
+        "id": "POL-REFUND-AUTO-01",
+        "tenant_id": "northstar",
+        "name": "Refund Automation Control Requirements",
+        "status": "ACTIVE",
+        "version": "1",
+        "valid_from": "2026-08-01T00:00:00+05:30",
+        "created_at": "2026-08-01T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "PROJ-REFUND-C",
+      "label": "Project",
+      "properties": {
+        "id": "PROJ-REFUND-C",
+        "tenant_id": "northstar",
+        "name": "Refund Audit Reporting",
+        "goal": "Produce manual audit reports for refund disputes and compliance review",
+        "status": "ACTIVE",
+        "created_at": "2026-09-20T00:00:00+05:30"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "EVT-INC-001",
+      "type": "TRIGGERED",
+      "target": "EVT-TASK-INV",
+      "properties": {
+        "edge_id": "EVT-INC-001|TRIGGERED|EVT-TASK-INV|2026-10-16T14:08:00+05:30",
+        "valid_from": "2026-10-16T14:08:00+05:30",
+        "confidence": 1.0,
+        "source_ref_id": "event-ledger"
+      }
+    },
+    {
+      "source": "COM-017",
+      "type": "BREACHED_BY",
+      "target": "E-003",
+      "properties": {
+        "edge_id": "COM-017|BREACHED_BY|E-003|2026-10-16T14:11:00+05:30",
+        "valid_from": "2026-10-16T14:11:00+05:30",
+        "confidence": 0.98,
+        "source_ref_id": "DS-LOG"
+      }
+    },
+    {
+      "source": "DPL-882",
+      "type": "REQUIRES",
+      "target": "COM-017",
+      "properties": {
+        "edge_id": "DPL-882|REQUIRES|COM-017|2026-10-13T10:00:00+05:30",
+        "valid_from": "2026-10-13T10:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PROJ-REFUND-A",
+      "type": "DEPENDS_ON",
+      "target": "DS-REFUND-TELEMETRY",
+      "properties": {
+        "edge_id": "PROJ-REFUND-A|DEPENDS_ON|DS-REFUND-TELEMETRY|2026-09-01T00:00:00+05:30",
+        "valid_from": "2026-09-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PROJ-REFUND-B",
+      "type": "DEPENDS_ON",
+      "target": "DS-REFUND-TELEMETRY",
+      "properties": {
+        "edge_id": "PROJ-REFUND-B|DEPENDS_ON|DS-REFUND-TELEMETRY|2026-09-15T00:00:00+05:30",
+        "valid_from": "2026-09-15T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PROJ-REFUND-A",
+      "type": "REQUIRES",
+      "target": "POL-REFUND-AUTO-01",
+      "properties": {
+        "edge_id": "PROJ-REFUND-A|REQUIRES|POL-REFUND-AUTO-01|2026-09-01T00:00:00+05:30",
+        "valid_from": "2026-09-01T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PROJ-REFUND-B",
+      "type": "REQUIRES",
+      "target": "POL-REFUND-AUTO-01",
+      "properties": {
+        "edge_id": "PROJ-REFUND-B|REQUIRES|POL-REFUND-AUTO-01|2026-09-15T00:00:00+05:30",
+        "valid_from": "2026-09-15T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "PROJ-REFUND-C",
+      "type": "DEPENDS_ON",
+      "target": "SYS-REFUND-API",
+      "properties": {
+        "edge_id": "PROJ-REFUND-C|DEPENDS_ON|SYS-REFUND-API|2026-09-20T00:00:00+05:30",
+        "valid_from": "2026-09-20T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    }
+  ],
+  "ground_truth": {
+    "inc001_explicit_trigger": ["EVT-INC-001", "EVT-TASK-INV"],
+    "com017_breach_evidence": "E-003",
+    "high_collision_pair": ["PROJ-REFUND-A", "PROJ-REFUND-B"],
+    "shared_system_only_negative_project": "PROJ-REFUND-C"
+  }
+}

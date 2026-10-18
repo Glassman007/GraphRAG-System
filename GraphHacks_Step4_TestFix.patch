@@ -1,0 +1,19 @@
+--- a/frontend/src/test/step2Usability.test.tsx
++++ b/frontend/src/test/step2Usability.test.tsx
+@@ -3,6 +3,7 @@
+ import { MemoryRouter } from 'react-router-dom'
+ import { GraphLegend } from '../components/GraphLegend'
+ import { ReadableRecord } from '../components/ReadableRecord'
++import { TechnicalModeProvider } from '../presentation/TechnicalModeContext'
+ import { mergeGraphs } from '../graph/adapters'
+ 
+ describe('Step 2 accessibility and graph exploration',()=>{
+@@ -14,7 +15,7 @@
+   expect(tapped).toEqual(['Evidence'])
+  })
+  it('readable record presents a name, not only JSON',()=>{
+-  render(<MemoryRouter><ReadableRecord value={{id:'INC-AST-1',name:'Dispatch outage',description:'Fleet dispatch interrupted',status:'OPEN',severity:'SEV-2'}} /></MemoryRouter>)
++  render(<TechnicalModeProvider><MemoryRouter><ReadableRecord value={{id:'INC-AST-1',name:'Dispatch outage',description:'Fleet dispatch interrupted',status:'OPEN',severity:'SEV-2'}} /></MemoryRouter></TechnicalModeProvider>)
+   expect(screen.getByText('Dispatch outage')).toBeTruthy()
+   expect(screen.getByText('Fleet dispatch interrupted')).toBeTruthy()
+   expect(screen.getByText(/INC-AST-1/)).toBeTruthy()

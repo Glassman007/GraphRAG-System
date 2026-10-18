@@ -1,0 +1,28 @@
+import { describe,it,expect } from 'vitest'
+import { render,screen,fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { GraphLegend } from '../components/GraphLegend'
+import { ReadableRecord } from '../components/ReadableRecord'
+import { TechnicalModeProvider } from '../presentation/TechnicalModeContext'
+import { mergeGraphs } from '../graph/adapters'
+
+describe('Step 2 accessibility and graph exploration',()=>{
+ it('legend control toggles its actual category',()=>{
+  const tapped:string[]=[]
+  render(<GraphLegend types={['Action','Evidence','System']} hidden={new Set(['Evidence'])} onToggle={v=>tapped.push(v)}/> )
+  expect(screen.getByRole('button',{name:/evidence/i}).getAttribute('aria-pressed')).toBe('false')
+  fireEvent.click(screen.getByRole('button',{name:/evidence/i}))
+  expect(tapped).toEqual(['Evidence'])
+ })
+ it('readable record presents a name, not only JSON',()=>{
+  render(<TechnicalModeProvider><MemoryRouter><ReadableRecord value={{id:'INC-AST-1',name:'Dispatch outage',description:'Fleet dispatch interrupted',status:'OPEN',severity:'SEV-2'}} /></MemoryRouter></TechnicalModeProvider>)
+  expect(screen.getByText('Dispatch outage')).toBeTruthy()
+  expect(screen.getByText('Fleet dispatch interrupted')).toBeTruthy()
+  expect(screen.getByText(/INC-AST-1/)).toBeTruthy()
+ })
+ it('expanding neighbors retains richer source nodes',()=>{
+  const full={nodes:[{id:'SYS-A',type:'System',label:'Dispatch',data:{id:'SYS-A',name:'Dispatch'}}],edges:[]}
+  const placeholder={nodes:[{id:'SYS-A',type:'Entity',label:'SYS-A',data:{id:'SYS-A'}}],edges:[]}
+  expect(mergeGraphs(full,placeholder).nodes[0].label).toBe('Dispatch')
+ })
+})

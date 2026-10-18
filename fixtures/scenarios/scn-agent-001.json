@@ -1,0 +1,166 @@
+{
+  "scenario_id": "SCN-AGENT-001",
+  "title": "Agent Coordination Deadlock and Handoff",
+  "description": "Supports deadlock, handoff contract, governed action and exactly-once foundations.",
+  "tenant_id": "northstar",
+  "nodes": [
+    {
+      "id": "AGENT-A",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-A",
+        "tenant_id": "northstar",
+        "name": "Dependency Investigator",
+        "agent_type": "specialist",
+        "status": "IDLE",
+        "created_at": "2026-10-16T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "AGENT-B",
+      "label": "Agent",
+      "properties": {
+        "id": "AGENT-B",
+        "tenant_id": "northstar",
+        "name": "Policy Verifier",
+        "agent_type": "specialist",
+        "status": "IDLE",
+        "created_at": "2026-10-16T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TASK-A",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-A",
+        "tenant_id": "northstar",
+        "name": "Find affected systems",
+        "status": "BLOCKED",
+        "priority": "P1",
+        "created_at": "2026-10-16T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "TASK-B",
+      "label": "Task",
+      "properties": {
+        "id": "TASK-B",
+        "tenant_id": "northstar",
+        "name": "Verify approval policy",
+        "status": "BLOCKED",
+        "priority": "P1",
+        "created_at": "2026-10-16T00:00:00+05:30"
+      }
+    },
+    {
+      "id": "HANDOFF-A-B",
+      "label": "Handoff",
+      "properties": {
+        "id": "HANDOFF-A-B",
+        "tenant_id": "northstar",
+        "name": "Dependency findings handoff",
+        "status": "INVALID",
+        "created_at": "2026-10-16T00:10:00+05:30",
+        "required_artifacts": [
+          "evidence_ids",
+          "conclusion",
+          "open_questions"
+        ]
+      }
+    },
+    {
+      "id": "ACT-RESTART-001",
+      "label": "Action",
+      "properties": {
+        "id": "ACT-RESTART-001",
+        "tenant_id": "northstar",
+        "name": "Restart Pricing API",
+        "action_type": "service_restart",
+        "status": "PROPOSED",
+        "idempotency_key": "restart:SYS-PRICING-API:INC-001",
+        "created_at": "2026-10-16T00:15:00+05:30"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "TASK-A",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-A",
+      "properties": {
+        "edge_id": "TASK-A|ASSIGNED_TO|AGENT-A|2026-10-16T00:00:00+05:30",
+        "valid_from": "2026-10-16T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-B",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-B",
+      "properties": {
+        "edge_id": "TASK-B|ASSIGNED_TO|AGENT-B|2026-10-16T00:00:00+05:30",
+        "valid_from": "2026-10-16T00:00:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-A",
+      "type": "BLOCKED_BY",
+      "target": "TASK-B",
+      "properties": {
+        "edge_id": "TASK-A|BLOCKED_BY|TASK-B|2026-10-16T00:05:00+05:30",
+        "valid_from": "2026-10-16T00:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "TASK-B",
+      "type": "BLOCKED_BY",
+      "target": "TASK-A",
+      "properties": {
+        "edge_id": "TASK-B|BLOCKED_BY|TASK-A|2026-10-16T00:05:00+05:30",
+        "valid_from": "2026-10-16T00:05:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "HANDOFF-A-B",
+      "type": "HANDOFF_FOR",
+      "target": "TASK-A",
+      "properties": {
+        "edge_id": "HANDOFF-A-B|HANDOFF_FOR|TASK-A|2026-10-16T00:10:00+05:30",
+        "valid_from": "2026-10-16T00:10:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "HANDOFF-A-B",
+      "type": "ASSIGNED_TO",
+      "target": "AGENT-B",
+      "properties": {
+        "edge_id": "HANDOFF-A-B|ASSIGNED_TO|AGENT-B|2026-10-16T00:10:00+05:30",
+        "valid_from": "2026-10-16T00:10:00+05:30",
+        "confidence": 1.0
+      }
+    },
+    {
+      "source": "ACT-RESTART-001",
+      "type": "ABOUT",
+      "target": "SYS-PRICING-API",
+      "properties": {
+        "edge_id": "ACT-RESTART-001|ABOUT|SYS-PRICING-API|2026-10-16T00:15:00+05:30",
+        "valid_from": "2026-10-16T00:15:00+05:30",
+        "confidence": 1.0
+      }
+    }
+  ],
+  "ground_truth": {
+    "deadlock_cycle": [
+      "TASK-A",
+      "TASK-B",
+      "TASK-A"
+    ],
+    "handoff_invalid_because": "evidence_ids missing",
+    "exactly_once_key": "restart:SYS-PRICING-API:INC-001"
+  }
+}
