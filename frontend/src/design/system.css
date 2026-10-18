@@ -1,0 +1,295 @@
+/*
+ * GraphHacks component primitives. Every class is prefixed `gh-` so this file can be
+ * adopted screen by screen without colliding with the incumbent styles.css.
+ */
+@import './tokens.css';
+
+/* ── Base + browser surfaces ─────────────────────────────────────────── */
+.gh-root {
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-variant-ligatures: none;
+  font-kerning: none;
+  -webkit-font-smoothing: antialiased;
+  caret-color: var(--signal);
+  accent-color: var(--signal);
+}
+.gh-root,
+.gh-root *,
+.gh-root *::before,
+.gh-root *::after { box-sizing: border-box; }
+.gh-root ::selection { background: var(--signal); color: var(--void); }
+.gh-root * { scrollbar-width: thin; scrollbar-color: var(--rule) var(--void); }
+.gh-root ::-webkit-scrollbar { width: 10px; height: 10px; }
+.gh-root ::-webkit-scrollbar-track { background: var(--void); }
+.gh-root ::-webkit-scrollbar-thumb { background: var(--rule); border: 2px solid var(--void); }
+.gh-root :focus-visible { outline: 1px solid var(--rule-bright); outline-offset: 2px; box-shadow: var(--glow-soft); }
+.gh-root a { color: var(--text-bright); text-decoration-color: var(--rule-bright); text-underline-offset: 3px; }
+.gh-root a:hover { color: var(--signal); text-decoration-color: var(--signal); }
+
+/* ── Type roles ──────────────────────────────────────────────────────── */
+.gh-display {
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-weight: 800;
+  font-variation-settings: 'wdth' 75;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--signal);
+  text-shadow: var(--glow-signal);
+  margin: 0;
+  text-wrap: balance;
+}
+.gh-headline {
+  font-family: var(--font-display);
+  font-size: var(--fs-headline);
+  font-weight: 700;
+  font-variation-settings: 'wdth' 87.5;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--text-bright);
+  margin: 0;
+}
+.gh-title { font-size: var(--fs-title); font-weight: 600; letter-spacing: 0.04em; line-height: 1.25; color: var(--text-bright); margin: 0; }
+.gh-label { font-size: var(--fs-label); font-weight: 600; letter-spacing: var(--track-label); line-height: 1rem; text-transform: uppercase; color: var(--text-muted); }
+.gh-data { font-weight: 500; font-feature-settings: 'tnum' 1, 'zero' 1; }
+.gh-metric {
+  font-family: var(--font-display);
+  font-size: var(--fs-metric);
+  font-weight: 600;
+  font-variation-settings: 'wdth' 87.5;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  line-height: 1;
+  color: var(--text-bright);
+}
+.gh-muted { color: var(--text-muted); }
+.gh-prose { max-width: 72ch; }
+
+/* ── Panel: CSS-drawn edge + corner ticks + seated title ─────────────── */
+.gh-panel {
+  --tick: 8px;
+  --tick-color: var(--rule-bright);
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  padding: var(--sp-md);
+}
+.gh-panel::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--tick-color), var(--tick-color)) top left / var(--tick) 1px no-repeat,
+    linear-gradient(var(--tick-color), var(--tick-color)) top left / 1px var(--tick) no-repeat,
+    linear-gradient(var(--tick-color), var(--tick-color)) top right / var(--tick) 1px no-repeat,
+    linear-gradient(var(--tick-color), var(--tick-color)) top right / 1px var(--tick) no-repeat,
+    linear-gradient(var(--tick-color), var(--tick-color)) bottom left / var(--tick) 1px no-repeat,
+    linear-gradient(var(--tick-color), var(--tick-color)) bottom left / 1px var(--tick) no-repeat,
+    linear-gradient(var(--tick-color), var(--tick-color)) bottom right / var(--tick) 1px no-repeat,
+    linear-gradient(var(--tick-color), var(--tick-color)) bottom right / 1px var(--tick) no-repeat;
+}
+.gh-panel__title {
+  position: absolute;
+  z-index: 1;
+  top: calc(-0.5rem - 1px);
+  left: var(--sp-sm);
+  margin: 0;
+  padding: 0 6px;
+  background: var(--panel);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  line-height: 1rem;
+  text-transform: uppercase;
+  color: var(--text-bright);
+}
+.gh-panel__title::before { content: '┤ ' / ''; color: var(--rule-bright); }
+.gh-panel__title::after { content: ' ├' / ''; color: var(--rule-bright); }
+.gh-panel--active { border-color: var(--rule-bright); }
+.gh-panel--trace { border-color: var(--trace-line); }
+.gh-panel--trace { --tick-color: var(--trace); }
+.gh-panel--trace .gh-panel__title { color: var(--trace); }
+.gh-divider { border: 0; border-top: 1px solid var(--rule-faint); margin: var(--sp-md) 0; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.gh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  height: var(--control-h);
+  padding: 0 var(--sp-md);
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--panel);
+  color: var(--text);
+  font: 600 var(--fs-label) / 1 var(--font-mono);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.gh-btn:hover { background: var(--text); color: var(--void); border-color: var(--text); }
+.gh-btn--primary { background: var(--signal); border-color: var(--signal); color: var(--void); }
+.gh-btn--primary:hover { background: var(--text-bright); border-color: var(--text-bright); }
+.gh-btn--primary:active { background: var(--signal-deep); border-color: var(--signal-deep); }
+.gh-btn--governed { border-color: var(--warn); color: var(--warn); }
+.gh-btn--governed::before { content: '!' / ''; font-weight: 800; }
+.gh-btn--governed:hover { background: var(--warn); color: var(--void); border-color: var(--warn); }
+.gh-btn:disabled,
+.gh-btn[aria-disabled='true'] {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--rule-faint);
+  color: color-mix(in srgb, var(--text-muted) 45%, transparent);
+  cursor: not-allowed;
+}
+
+/* ── Status badge: glyph + word, never color alone ───────────────────── */
+.gh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+  white-space: nowrap;
+}
+.gh-badge::before { content: '[' / ''; color: var(--rule-bright); }
+.gh-badge::after { content: ']' / ''; color: var(--rule-bright); }
+.gh-badge__glyph { font-family: 'GH Glyph', monospace; }
+.gh-badge--ok .gh-badge__glyph { color: var(--signal); }
+.gh-badge--warn { color: var(--warn); }
+.gh-badge--crit { color: var(--crit); }
+.gh-badge--trace { color: var(--trace); }
+.gh-badge--done { color: var(--text-muted); }
+
+/* ── Tabs ────────────────────────────────────────────────────────────── */
+.gh-tabs { display: flex; flex-wrap: wrap; gap: var(--sp-xs); border-bottom: 1px solid var(--rule-faint); padding-bottom: var(--sp-xs); }
+.gh-tab {
+  height: 28px;
+  padding: 0 var(--sp-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: 600 var(--fs-label) / 1 var(--font-mono);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.gh-tab::before { content: '[ ' / ''; }
+.gh-tab::after { content: ' ]' / ''; }
+.gh-tab:hover { color: var(--text-bright); border-color: var(--rule); }
+.gh-tab[aria-selected='true'] { background: var(--signal); color: var(--void); }
+
+/* ── Fields ──────────────────────────────────────────────────────────── */
+.gh-field { display: grid; gap: 6px; }
+.gh-field > span { font-size: var(--fs-label); font-weight: 600; letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-muted); }
+.gh-input {
+  height: var(--control-h);
+  padding: 0 var(--sp-sm);
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--void);
+  color: var(--text-bright);
+  font: 500 var(--fs-body) / 1 var(--font-mono);
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.gh-input::placeholder { color: color-mix(in srgb, var(--text-muted) 80%, transparent); }
+.gh-input:focus { outline: none; border-color: var(--rule-bright); box-shadow: var(--glow-soft); }
+.gh-input[aria-invalid='true'] { border-color: var(--crit); }
+.gh-prompt { position: relative; display: block; }
+.gh-prompt::before { content: '>' / ''; position: absolute; left: var(--sp-sm); top: 50%; translate: 0 -50%; color: var(--signal); pointer-events: none; }
+.gh-prompt > .gh-input { width: 100%; padding-left: calc(var(--sp-sm) + 2ch); }
+.gh-field__error { color: var(--crit); font-size: var(--fs-label); }
+
+/* ── Table ───────────────────────────────────────────────────────────── */
+.gh-table { width: 100%; border-collapse: collapse; font-feature-settings: 'tnum' 1, 'zero' 1; }
+.gh-table th {
+  height: var(--row-h);
+  padding: 0 var(--sp-sm);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.gh-table td { height: var(--row-h); padding: 0 var(--sp-sm); border-bottom: 1px solid var(--rule-faint); font-weight: 500; }
+.gh-table tbody tr { transition: background var(--dur-fast) var(--ease-out); }
+.gh-table tbody tr:hover { background: var(--raised); }
+.gh-table td:first-child { padding-left: calc(var(--sp-sm) + 2ch); position: relative; }
+.gh-table tbody tr:hover td:first-child::before,
+.gh-table tbody tr[aria-selected='true'] td:first-child::before {
+  content: '▸' / '';
+  position: absolute;
+  left: var(--sp-sm);
+  font-family: 'GH Glyph', monospace;
+  color: var(--signal);
+}
+.gh-table tbody tr[aria-selected='true'] { background: var(--raised); }
+.gh-table__empty { padding: var(--sp-lg) var(--sp-md); text-align: center; color: var(--text-muted); }
+
+/* ── Meter: CSS-drawn character cells, never glyph runs ──────────────── */
+.gh-meter {
+  --value: 0.5;
+  --cells: 20;
+  display: inline-block;
+  width: calc(var(--cells) * 1ch);
+  height: 0.9em;
+  vertical-align: -0.1em;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(1ch - 2px), var(--void) calc(1ch - 2px) 1ch),
+    linear-gradient(90deg, var(--signal) 0 calc(var(--value) * 100%), var(--rule-faint) 0);
+}
+.gh-meter--warn { background:
+    repeating-linear-gradient(90deg, transparent 0 calc(1ch - 2px), var(--void) calc(1ch - 2px) 1ch),
+    linear-gradient(90deg, var(--warn) 0 calc(var(--value) * 100%), var(--rule-faint) 0); }
+
+/* ── Tree (├─ └─ marks) ──────────────────────────────────────────────── */
+.gh-tree { list-style: none; margin: 0; padding: 0; }
+.gh-tree li { position: relative; padding-left: 3ch; }
+.gh-tree li::before { content: '├─' / ''; position: absolute; left: 0; font-family: 'GH Glyph', monospace; color: var(--rule-bright); }
+.gh-tree li:last-child::before { content: '└─' / ''; }
+.gh-tree--trace li::before { color: var(--trace-line); }
+
+/* ── Status line (shell top bar) ─────────────────────────────────────── */
+.gh-statusline { display: flex; align-items: center; flex-wrap: wrap; gap: 0; font-size: var(--fs-label); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.gh-statusline > * + *::before { content: '│' / ''; font-family: 'GH Glyph', monospace; color: var(--rule); margin: 0 var(--sp-sm); }
+.gh-live { display: inline-flex; align-items: center; gap: 8px; color: var(--text-bright); }
+.gh-live::before { content: ''; width: 7px; height: 7px; background: var(--signal); box-shadow: var(--glow-signal); }
+.gh-live--down::before { background: var(--crit); box-shadow: none; }
+
+/* ── Trace text (what the graph proved) ──────────────────────────────── */
+.gh-trace { color: var(--trace); }
+.gh-code {
+  display: block;
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--trace-line);
+  background: var(--void);
+  color: var(--trace);
+  font: 500 0.8125rem / 1.25rem var(--font-mono);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* ── Rain layer + decode ─────────────────────────────────────────────── */
+.gh-rain { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+.gh-decoding { color: var(--signal); text-shadow: var(--glow-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gh-btn, .gh-input, .gh-table tbody tr { transition: none; }
+}
