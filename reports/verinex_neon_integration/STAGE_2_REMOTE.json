@@ -1,0 +1,46 @@
+{
+  "checked_at": "2026-10-21T16:01:24.130129+00:00",
+  "authentication": "anonymous",
+  "health": {
+    "source_id": "NEON-STAGE2",
+    "live": true,
+    "repository": "neondatabase/postgres-sample-dbs",
+    "ref": "main",
+    "branch": "main",
+    "commit_sha": "b54cb67534bf20775803b181b7a1c6f573422161",
+    "ok": true,
+    "status": "HEALTHY",
+    "configured": true,
+    "message": "GitHub repository access verified.",
+    "checks": {
+      "authentication": "NOT_REQUIRED",
+      "reachability": "PASS",
+      "required_permission": "PASS",
+      "api_access": "PASS"
+    }
+  },
+  "result": "PASS",
+  "discovered_regular_files": 14,
+  "sample_sql_files": [
+    "chinook.sql",
+    "dvdrental.sql",
+    "pagila.sql"
+  ],
+  "fetched_file": {
+    "path": "dvdrental.sql",
+    "blob_sha": "5fe9c6fee0ba073362952964edd04a6527c24aee",
+    "size": 2760206,
+    "repository": "neondatabase/postgres-sample-dbs",
+    "branch": null,
+    "ref": "b54cb67534bf20775803b181b7a1c6f573422161",
+    "commit_sha": "b54cb67534bf20775803b181b7a1c6f573422161",
+    "html_url": "https://github.com/neondatabase/postgres-sample-dbs/blob/b54cb67534bf20775803b181b7a1c6f573422161/dvdrental.sql",
+    "sha256": "fa73f75e117e7f2af010ba7542b224d76897a17ac4972be257513c86ad4da12a"
+  },
+  "content_bytes": 2760206,
+  "content_sha256": "fa73f75e117e7f2af010ba7542b224d76897a17ac4972be257513c86ad4da12a",
+  "canonical_source_uri": "https://github.com/neondatabase/postgres-sample-dbs/blob/b54cb67534bf20775803b181b7a1c6f573422161/dvdrental.sql",
+  "pages_fetched": 2,
+  "sql_executed": false,
+  "graph_written": false
+}

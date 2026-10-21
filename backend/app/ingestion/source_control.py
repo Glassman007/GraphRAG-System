@@ -12,6 +12,7 @@ from typing import Any
 from backend.app.graph.client import FalkorGraphClient
 from backend.app.graph.mutations import upsert_node
 from backend.app.ingestion.artifacts.local import LocalArtifactStore
+from backend.app.ingestion.adapters.github import parse_repository
 from backend.app.ingestion.credentials import CredentialStore, default_credential_store
 from backend.app.ingestion.models import SourceConfig, TrustClass
 from backend.app.ingestion.pipeline import IngestionPipeline
@@ -46,7 +47,7 @@ class ConnectorDefinition:
 
 
 CONNECTORS: dict[str, ConnectorDefinition] = {
-    "github": ConnectorDefinition("github", "GitHub", "Repositories and engineering change history.", "Engineering", ("api_token", "app"), ("organization", "repositories")),
+    "github": ConnectorDefinition("github", "GitHub", "Repositories and engineering change history.", "Engineering", ("none", "api_token", "app"), ("organization", "repositories", "files")),
     "jira": ConnectorDefinition("jira", "Jira", "Projects, issues, assignees and delivery work.", "Work tracking", ("api_token", "username_password"), ("projects",)),
     "slack": ConnectorDefinition("slack", "Slack", "Selected engineering channels and incident conversations.", "Communication", ("api_token",), ("channels",)),
     "teams": ConnectorDefinition("teams", "Microsoft Teams", "Selected Teams conversations through the existing adapter boundary.", "Communication", ("service_credential",), ("teams", "channels"), supports_live_mode=False),
@@ -223,6 +224,17 @@ class SourceControlService:
             item = dict(registry[key]); cfg = {"settings": {"query": item.get("query"), "cursor_column": item.get("cursor_column", "id"), "registered_view": key}}
         if mode == "live" and connector == "github" and not cfg.get("base_url"):
             cfg["base_url"] = "https://api.github.com"
+        if mode == "live" and connector == "github":
+            for key in ("repository", "repository_url", "owner", "repo", "ref", "branch", "files", "anonymous", "max_file_bytes"):
+                if key in cfg:
+                    settings[key] = cfg.pop(key)
+            repository = settings.get("repository") or settings.get("repository_url")
+            if not repository and (settings.get("owner") or settings.get("repo")):
+                repository = f"{settings.get('owner', '')}/{settings.get('repo', '')}"
+            if repository:
+                settings["repository"] = "/".join(parse_repository(repository))
+                settings.pop("repository_url", None)
+            cfg["settings"] = settings
         if mode == "live" and connector == "slack" and not cfg.get("base_url"):
             cfg["base_url"] = "https://slack.com/api"
         base_url = cfg.get("base_url")
@@ -328,8 +340,8 @@ class SourceControlService:
         try:
             health = adapter.health_check()
             ok = bool(health.get("ok"))
-            status = "HEALTHY" if ok else ("AUTH_FAILED" if config.credential_ref and not self.credentials.exists(config.credential_ref) else "UNREACHABLE")
-            message = "Connection test passed." if ok else "Connector could not verify required configuration or reachability."
+            status = "HEALTHY" if ok else str(health.get("status") or ("AUTH_FAILED" if config.credential_ref and not self.credentials.exists(config.credential_ref) else "UNREACHABLE"))
+            message = str(health.get("message") or ("Connection test passed." if ok else "Connector could not verify required configuration or reachability."))
         except PermissionError as exc:
             status, message, health = "PERMISSION_ERROR", str(exc), {"ok": False}
         except Exception as exc:
@@ -337,7 +349,9 @@ class SourceControlService:
         at = now_iso()
         upsert_node(self.client, "DataSource", source_id, {"connection_status": status, "last_connection_test": at, "connection_message": message, "lifecycle_status": "CONNECTED" if status == "HEALTHY" else "DEGRADED", "updated_at": at})
         self.events.record("CONNECTION_TESTED", about_ids=[source_id], actor_id=actor_id, summary=f"Connection test {status} for {source_id}", properties={"phase": "13", "status": status})
-        return {"source_id": source_id, "status": status, "checks": {"authentication": "PASS" if status == "HEALTHY" else "FAIL", "reachability": "PASS" if health.get("ok") else "FAIL", "required_permission": "PASS" if health.get("ok") else "UNKNOWN", "api_access": "PASS" if health.get("ok") else "FAIL"}, "message": message, "live": bool(health.get("live", False)), "fixture": not bool(health.get("live", False))}
+        checks = health.get("checks") or {"authentication": "PASS" if status == "HEALTHY" else "FAIL", "reachability": "PASS" if health.get("ok") else "FAIL", "required_permission": "PASS" if health.get("ok") else "UNKNOWN", "api_access": "PASS" if health.get("ok") else "FAIL"}
+        details = {key: health[key] for key in ("repository", "branch", "ref", "commit_sha", "http_status", "retry_after", "rate_limit_reset") if key in health}
+        return {"source_id": source_id, "status": status, "checks": checks, "message": message, "live": bool(health.get("live", False)), "fixture": not bool(health.get("live", False)), "connection_details": details}
 
     def mapping_preview(self, source_id: str) -> dict[str, Any]:
         node = self._source_node(source_id)
