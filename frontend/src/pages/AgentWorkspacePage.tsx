@@ -3,6 +3,7 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {Link} from 'react-router-dom'
 import {useAuth} from '../auth/AuthContext'
 import {apiRequest} from '../api/client'
+import {listSourceCatalog} from '../api/sources'
 import {ErrorPanel} from '../components/AsyncState'
 import {GovernedToolPanel} from '../demo/GovernedToolPanel'
 import {GraphView} from '../components/GraphView'
@@ -12,8 +13,10 @@ import {allScenarios} from '../demo/demoModel'
 import './agentWorkspace.css'
 
 const base='/api/v1/agent-runtime/workspace'
+type Brain={graph_id:string;display_name:string;available:boolean}
+type BrainList={items:Brain[];default_graph_id:string|null}
 type Status='QUEUED'|'RUNNING'|'PAUSING'|'PAUSED'|'CANCELLING'|'CANCELLED'|'COMPLETED'|'FAILED'|'PARTIAL'|'NEEDS_REVIEW'|'INTERRUPTED'
-type Workspace={id:string;goal:string;source_entity_id?:string;owner:string;status:Status;created_at:string;updated_at:string;error?:string;execution_mode:string;recovery_available:boolean}
+type Workspace={id:string;graph_id?:string;goal:string;source_entity_id?:string;owner:string;status:Status;created_at:string;updated_at:string;error?:string;execution_mode:string;recovery_available:boolean}
 type Finding={summary:string;confidence:string;risk:string;citations:string[];knowledge_gaps:string[];requires_human_review:boolean}
 type Task={id:string;task_id?:string;objective:string;capability:string;depends_on:string[];status:string;agent_id:string;attempts:number;result?:Finding;error?:string}
 type Event={index?:number;event_index?:number;kind:string;summary:string;task_id:string;agent_id:string;status:string;created_at:string}
@@ -56,10 +59,10 @@ function TaskGraph({tasks,selected,onSelect}:{tasks:Task[];selected:string;onSel
  </div><details className="aw-explore" onToggle={e=>setShowNetwork(e.currentTarget.open)}><summary>Show connected dependency network (live scheduler tasks)</summary>{showNetwork&&<><GraphView graph={network} layout="breadthfirst" height={340} onNode={n=>onSelect(String(n.id))}/><p className="aw-footnote">These task IDs belong to the supervisor runtime; they are not canonical organizational entities. Edges encode validated scheduling prerequisites.</p></>}</details></div>
 }
 
-function CitationLinks({ids}:{ids:string[]}){return <span className="aw-citations">{ids.map(id=><Link key={id} to={`/entities/${encodeURIComponent(id)}`}>{id} ↗</Link>)}{!ids.length&&<span className="aw-muted">None verified</span>}</span>}
+function CitationLinks({ids,graphId}:{ids:string[];graphId?:string}){return <span className="aw-citations">{ids.map(id=>graphId?<span key={id}>{id}</span>:<Link key={id} to={`/entities/${encodeURIComponent(id)}`}>{id} ↗</Link>)}{!ids.length&&<span className="aw-muted">None verified</span>}</span>}
 
-function EvidenceExplorer({ids}:{ids:string[]}){
- const {config}=useAuth();const [selected,setSelected]=useState('')
+function EvidenceExplorer({ids,config}:{ids:string[];config:import('../api/types').ApiConfig}){
+ const [selected,setSelected]=useState('')
  const focus=ids.includes(selected)?selected:ids[0]||''
  const record=useQuery({queryKey:['workspace-evidence-entity',config.tenantId,config.baseUrl,focus],queryFn:()=>getEntity(config,focus),enabled:!!focus,retry:false})
  const neighborhood=useQuery({queryKey:['workspace-evidence-neighbors',config.tenantId,config.baseUrl,focus],queryFn:()=>getNeighbors(config,focus,{limit:40}),enabled:!!focus,retry:false})
@@ -69,7 +72,7 @@ function EvidenceExplorer({ids}:{ids:string[]}){
   return found
  },[focus,neighborhood.data])
  if(!ids.length)return <p className="aw-muted">No verified final citations to explore.</p>
- return <div className="aw-evidence-explorer"><div className="aw-controls-row"><label className="aw-field aw-grow"><span>Evidence or connected graph entity</span><select value={focus} onChange={e=>setSelected(e.target.value)}>{ids.map(id=><option value={id} key={id}>{id}</option>)}</select></label><Link to={`/entities/${encodeURIComponent(focus)}`}>Open complete entity record ↗</Link></div>
+ return <div className="aw-evidence-explorer"><div className="aw-controls-row"><label className="aw-field aw-grow"><span>Evidence or connected graph entity</span><select value={focus} onChange={e=>setSelected(e.target.value)}>{ids.map(id=><option value={id} key={id}>{id}</option>)}</select></label><span className="aw-muted">Scoped to selected Company Brain</span></div>
   {record.error&&<ErrorPanel error={record.error}/>}{neighborhood.error&&<ErrorPanel error={neighborhood.error}/>}
   {record.data&&<div className="aw-inspector"><b>{String(record.data?.entity?.name||record.data?.name||focus)}</b><p className="aw-muted">Record and provenance are backed by the current tenant graph. Edges below are returned graph relationships, not claims inferred by this interface.</p></div>}
   {neighborhood.isLoading?<p className="aw-muted">Retrieving connected evidence…</p>:<GraphView graph={graph} layout="breadthfirst" height={315}/>}<p className="aw-footnote">Graph paths and provenance are current graph reads. Click any node to inspect its recorded links. Claims still require source verification.</p>
@@ -78,20 +81,35 @@ function EvidenceExplorer({ids}:{ids:string[]}){
 
 export function AgentWorkspacePage(){
  const {config,hasPermission}=useAuth();const qc=useQueryClient()
+ const brainList=useQuery({queryKey:['workspace-brains',config.baseUrl,config.tenantId,config.token],queryFn:()=>apiRequest<BrainList>(config,'/api/v1/graphs'),retry:false})
+ const [selectedSource,setSelectedSource]=useState('')
+ const sourceCatalog=useQuery({queryKey:['workspace-source-catalog',config.baseUrl,config.tenantId],queryFn:()=>listSourceCatalog(config),retry:false})
+ const [selectedGraph,setSelectedGraph]=useState(()=>{
+  try{return new URLSearchParams(window.location.search).get('graph')||sessionStorage.getItem('verinex.workspace.graph.'+config.tenantId)||''}catch{return ''}
+ })
+ const availableBrains=brainList.data?.items.filter(item=>item.available)||[]
+ const activeGraph=availableBrains.some(item=>item.graph_id===selectedGraph)?selectedGraph:''
+ const scopedConfig={...config,graphId:activeGraph||undefined}
+ const graphSources=(sourceCatalog.data?.items||[]).filter(item=>item.graph_id===activeGraph)
+ const changeGraph=(next:string)=>{
+  setSelectedGraph(next);setSelectedSource('');setChosen('');setFocused('');setSource('');setOpenedScenario('');setMemoryRequested(false);setShowEvidence(false)
+  try{sessionStorage.setItem('verinex.workspace.graph.'+config.tenantId,next)}catch{/* session storage disabled */}
+ }
+
  const [objective,setObjective]=useState('Investigate the route orchestration outage and produce an evidence-backed remediation proposal.')
  const [source,setSource]=useState('');const [consent,setConsent]=useState(false);const [parallel,setParallel]=useState(3)
  const [chosen,setChosen]=useState('');const [focused,setFocused]=useState('');const [tab,setTab]=useState<'activity'|'memory'|'replay'|'changes'|'approvals'>('activity')
  const [memoryQuery,setMemoryQuery]=useState('');const [memoryIds,setMemoryIds]=useState('');const [memoryRequested,setMemoryRequested]=useState(false)
  const [frame,setFrame]=useState(0);const [openedScenario,setOpenedScenario]=useState('');const [showEvidence,setShowEvidence]=useState(false)
  const capabilities=useQuery({queryKey:['workspace-capabilities',config.baseUrl,config.tenantId],queryFn:()=>apiRequest<Capabilities>(config,base+'/capabilities'),retry:false,refetchInterval:30000})
- const runs=useQuery({queryKey:['workspace-list',config.baseUrl,config.tenantId,config.token],queryFn:()=>apiRequest<{items:Workspace[]}>(config,base+'/runs'),retry:false,refetchInterval:3500})
+ const runs=useQuery({queryKey:['workspace-list',config.baseUrl,config.tenantId,config.token,activeGraph],queryFn:()=>apiRequest<{items:Workspace[]}>(scopedConfig,base+'/runs'),enabled:!!activeGraph,retry:false,refetchInterval:3500})
  const activeId=chosen||runs.data?.items[0]?.id||''
- const detail=useQuery({queryKey:['workspace-detail',config.baseUrl,config.tenantId,config.token,activeId],queryFn:()=>apiRequest<Detail>(config,base+'/runs/'+encodeURIComponent(activeId)),enabled:!!activeId,retry:false,refetchInterval:2500})
- const changes=useQuery({queryKey:['workspace-changes',config.baseUrl,config.tenantId,config.token],queryFn:()=>apiRequest<{items:Change[]}>(config,base+'/changes?limit=30'),enabled:tab==='changes',retry:false,refetchInterval:6000})
- const memory=useQuery({queryKey:['workspace-memory',config.baseUrl,config.tenantId,config.token,memoryQuery,memoryIds],queryFn:()=>apiRequest<MemoryResponse>(config,'/api/v1/agent-runtime/memory/search',{method:'POST',body:{query:memoryQuery,entity_ids:memoryIds.split(',').map(x=>x.trim()).filter(Boolean),limit:20}}),enabled:tab==='memory'&&memoryRequested,retry:false})
+ const detail=useQuery({queryKey:['workspace-detail',config.baseUrl,config.tenantId,config.token,activeGraph,activeId],queryFn:()=>apiRequest<Detail>(scopedConfig,base+'/runs/'+encodeURIComponent(activeId)),enabled:!!activeId,retry:false,refetchInterval:2500})
+ const changes=useQuery({queryKey:['workspace-changes',config.baseUrl,config.tenantId,config.token,activeGraph],queryFn:()=>apiRequest<{items:Change[]}>(scopedConfig,base+'/changes?limit=30'),enabled:!!activeGraph&&tab==='changes',retry:false,refetchInterval:6000})
+ const memory=useQuery({queryKey:['workspace-memory',config.baseUrl,config.tenantId,config.token,activeGraph,memoryQuery,memoryIds],queryFn:()=>apiRequest<MemoryResponse>(scopedConfig,'/api/v1/agent-runtime/memory/search',{method:'POST',body:{query:memoryQuery,entity_ids:memoryIds.split(',').map(x=>x.trim()).filter(Boolean),limit:20}}),enabled:!!activeGraph&&tab==='memory'&&memoryRequested,retry:false})
  const refresh=()=>{qc.invalidateQueries({queryKey:['workspace-list']});qc.invalidateQueries({queryKey:['workspace-detail']})}
- const start=useMutation({mutationFn:()=>apiRequest<{id:string;status:string}>(config,base+'/runs',{method:'POST',body:{goal:objective.trim(),source_entity_id:source.trim()||null,max_parallel:parallel,allow_external_model:consent}}),onSuccess:record=>{setChosen(record.id);setFocused('');setTab('activity');refresh()}})
- const control=useMutation({mutationFn:(operation:'pause'|'cancel'|'resume'|'retry')=>apiRequest(config,base+'/runs/'+encodeURIComponent(activeId)+'/control',{method:'POST',body:{operation,allow_external_model:consent}}),onSuccess:refresh})
+ const start=useMutation({mutationFn:()=>apiRequest<{id:string;status:string}>(scopedConfig,base+'/runs',{method:'POST',body:{graph_id:activeGraph||null,goal:objective.trim(),source_entity_id:source.trim()||null,max_parallel:parallel,allow_external_model:consent}}),onSuccess:record=>{setChosen(record.id);setFocused('');setTab('activity');refresh()}})
+ const control=useMutation({mutationFn:(operation:'pause'|'cancel'|'resume'|'retry')=>apiRequest(scopedConfig,base+'/runs/'+encodeURIComponent(activeId)+'/control',{method:'POST',body:{operation,allow_external_model:consent}}),onSuccess:refresh})
  const current=detail.data?.workspace
  const result=detail.data?.supervisor
  const tasks=result?.tasks||[]
@@ -99,7 +117,7 @@ export function AgentWorkspacePage(){
  const selectedTask=tasks.find(t=>(t.task_id||t.id)===focused)
  const isActive=!!current&&inProgress.includes(current.status)
  const live=!!current&&current.status==='RUNNING'
- const canStart=hasPermission('CREATE_INVESTIGATION')&&consent&&objective.trim().length>=12
+ const canStart=hasPermission('CREATE_INVESTIGATION')&&consent&&objective.trim().length>=12&&!!activeGraph
  const selectedScenario=allScenarios.find(s=>s.scenario_id===openedScenario)
  const snapshots=detail.data?.snapshots||[]
  const displayFrame=Math.min(frame,Math.max(0,events.length-1))
@@ -113,22 +131,34 @@ export function AgentWorkspacePage(){
    <div className="aw-stat"><b>{runs.data?.items.filter(r=>terminal.includes(r.status)).length??0}</b><span>Finished / needs review</span></div>
   </div>
   <section className="aw-card aw-launch" aria-label="Agent command interface"><div className="aw-head"><div><span className="aw-overline">COMMAND AGENTS</span><h2>What needs to be accomplished?</h2></div><span className="aw-chip">REAL MODEL EXECUTION ONLY</span></div>
+   <label className="aw-field"><span>Company Brain</span><select aria-label="Company Brain" value={activeGraph} onChange={e=>changeGraph(e.target.value)} disabled={brainList.isLoading}>
+    <option value="">Select an authorized Company Brain</option>
+    {availableBrains.map(brain=><option value={brain.graph_id} key={brain.graph_id}>{brain.display_name} ({brain.graph_id})</option>)}
+   </select></label>
+   <label className="aw-field"><span>Source (optional)</span><select aria-label="Source" value={selectedSource} onChange={e=>setSelectedSource(e.target.value)} disabled={!activeGraph}>
+    <option value="">All sources in selected Company Brain</option>
+    {graphSources.map(item=><option value={item.source_id} key={item.source_id}>{item.display_name} ({item.managed?'Managed':'Imported'})</option>)}
+   </select></label>
+   {sourceCatalog.error&&<ErrorPanel error={sourceCatalog.error}/>}
+   <p className="aw-muted">Source selection identifies provenance within this Company Brain; investigations currently query the entire selected graph. Source-exclusive retrieval requires a separate enforced filter.</p>
+   {brainList.error&&<ErrorPanel error={brainList.error}/>}
+   {!brainList.isLoading&&!availableBrains.length&&<p className="aw-muted">No registered Company Brains are available to this tenant. Register an existing graph first.</p>}
    <label className="aw-field"><span>Organizational objective</span><textarea rows={3} maxLength={1500} value={objective} onChange={e=>setObjective(e.target.value)} placeholder="Investigate the outage, verify dependencies, and propose the safest remediation…"/></label>
    <div className="aw-controls-row"><label className="aw-field aw-grow"><span>Starting graph entity (optional)</span><input value={source} onChange={e=>setSource(e.target.value)} placeholder="INC-AST-ROUTE-OUTAGE"/></label><label className="aw-field"><span>Parallel specialists</span><select value={parallel} onChange={e=>setParallel(Number(e.target.value))}>{[1,2,3,4].map(v=><option value={v} key={v}>{v}</option>)}</select></label></div>
    <label className="aw-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>I authorize sending the scoped organizational context and validated handoffs to the configured model. This is <b>not</b> permission to perform external actions.</span></label>
    <div className="aw-command-bottom"><button className="primary" disabled={!canStart||start.isPending} onClick={()=>start.mutate()}>{start.isPending?'Starting…':'Start investigation →'}</button><span className="aw-muted">Actual model runs require provider credentials and a reachable FalkorDB graph.</span></div>
    {start.error&&<ErrorPanel error={start.error}/>} {capabilities.error&&<ErrorPanel error={capabilities.error}/>}
-   <details className="aw-scenarios"><summary>Asteria scenario shortcuts · seeded starting points, not results</summary><div className="aw-scenario-list">{allScenarios.map(s=><button key={s.scenario_id} onClick={()=>{setOpenedScenario(s.scenario_id);setObjective(s.test_prompts[0]||`Investigate ${s.title}`);setSource(s.entry_ids[0]||'')}}>{s.scenario_id}<strong>{s.title}</strong></button>)}</div>{selectedScenario&&<p className="aw-muted">Selected fixture: {selectedScenario.scenario_id} · {selectedScenario.entry_ids.join(', ')}. You must be connected to an appropriately populated Asteria tenant for these IDs to resolve.</p>}</details>
+   <details className="aw-scenarios" hidden={activeGraph!=="asteria_company_brain_v1"}><summary>Asteria scenario shortcuts · seeded starting points, not results</summary><div className="aw-scenario-list">{allScenarios.map(s=><button key={s.scenario_id} onClick={()=>{setOpenedScenario(s.scenario_id);setObjective(s.test_prompts[0]||`Investigate ${s.title}`);setSource(s.entry_ids[0]||'')}}>{s.scenario_id}<strong>{s.title}</strong></button>)}</div>{selectedScenario&&<p className="aw-muted">Selected fixture: {selectedScenario.scenario_id} · {selectedScenario.entry_ids.join(', ')}. You must be connected to an appropriately populated Asteria tenant for these IDs to resolve.</p>}</details>
   </section>
   <div className="aw-layout"><aside className="aw-card aw-run-list"><div className="aw-head"><div><span className="aw-overline">EXECUTION QUEUE</span><h2>Investigations</h2></div><button onClick={refresh} aria-label="Refresh runs">↻</button></div>
     {runs.error&&<ErrorPanel error={runs.error}/>}{!runs.data?.items.length&&<div className="aw-empty">No workspace runs yet. Start one above to create a real investigation.</div>}
-    {runs.data?.items.map(run=><button className={`aw-run ${activeId===run.id?'aw-picked':''}`} key={run.id} onClick={()=>{setChosen(run.id);setFocused('');setFrame(0)}}><span className="aw-run-top"><b className={`aw-pill aw-pill-${run.status.toLowerCase()}`}>{run.status.replaceAll('_',' ')}</b><small>{stamp(run.created_at)}</small></span><strong>{run.goal}</strong><small>{run.id}</small></button>)}
+    {runs.data?.items.map(run=><button className={`aw-run ${activeId===run.id?'aw-picked':''}`} key={run.id} onClick={()=>{setChosen(run.id);setFocused('');setFrame(0)}}><span className="aw-run-top"><b className={`aw-pill aw-pill-${run.status.toLowerCase()}`}>{run.status.replaceAll('_',' ')}</b><small>{stamp(run.created_at)}</small></span><strong>{run.goal}</strong><small>{run.graph_id||'Legacy default'} · {run.id}</small></button>)}
     <p className="aw-footnote">Only runs owned by the authenticated principal are listed.</p>
    </aside>
    <div className="aw-main">
     {detail.error&&<ErrorPanel error={detail.error}/>}
     {!current?<section className="aw-card aw-empty-state"><span className="aw-overline">AWAITING OBJECTIVE</span><h2>The workspace is ready.</h2><p>Start an investigation or choose one of your saved runs to observe tasks and inspect verified outcomes.</p></section>:<>
-     <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">SUPERVISOR / {current.id}</span><h2>{current.goal}</h2><p className="aw-muted">Owner {current.owner} · {stamp(current.created_at)}</p></div><b className={`aw-pill aw-pill-${current.status.toLowerCase()}`}>{current.status}</b></div>
+     <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">SUPERVISOR / {current.id}</span><h2>{current.goal}</h2><p className="aw-muted">Owner {current.owner} · {stamp(current.created_at)} · Brain: {current.graph_id||'Legacy default'}</p></div><b className={`aw-pill aw-pill-${current.status.toLowerCase()}`}>{current.status}</b></div>
       <div className="aw-metrics"><span><strong>{tasks.length}</strong> scheduled tasks</span><span><strong>{tasks.filter(t=>t.status==='COMPLETED').length}</strong> completed</span><span><strong>{events.length}</strong> recorded events</span><span><strong>{result?.tokens_used??0}</strong> tokens / estimate</span></div>
       <div className="aw-actions"><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('pause')}>Pause after current tasks</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('cancel')}>Cancel scheduling</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!current.recovery_available||!['PAUSED','INTERRUPTED'].includes(current.status)||control.isPending} onClick={()=>control.mutate('resume')}>Resume</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!['FAILED','PARTIAL','NEEDS_REVIEW'].includes(current.status)||control.isPending} onClick={()=>control.mutate('retry')}>Retry failed work</button><button onClick={()=>detail.refetch()}>Refresh now</button></div>
       {current.error&&<p role="alert">{current.error}</p>}{control.error&&<ErrorPanel error={control.error}/>}
@@ -138,12 +168,12 @@ export function AgentWorkspacePage(){
      <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">DEPENDENCY-AWARE COORDINATION</span><h2>Specialist task graph</h2></div><span className="aw-muted">Select a task to inspect findings</span></div>
       <TaskGraph tasks={tasks} selected={focused} onSelect={setFocused}/>
       {selectedTask&&<div className="aw-inspector"><div className="aw-head"><h3>{selectedTask.task_id||selectedTask.id}</h3><b className="aw-pill">{selectedTask.status}</b></div><p>{selectedTask.objective}</p><p className="aw-muted">Agent: {selectedTask.agent_id||'none'} · Capability: {selectedTask.capability} · Attempts: {selectedTask.attempts} · Needs: {selectedTask.depends_on.join(', ')||'no prerequisites'}</p>
-      {selectedTask.result&&<><p>{selectedTask.result.summary}</p><p>Evidence confidence: <b>{selectedTask.result.confidence}</b> · Risk: {selectedTask.result.risk}</p><CitationLinks ids={selectedTask.result.citations||[]}/>{!!selectedTask.result.knowledge_gaps?.length&&<p>Open questions: {selectedTask.result.knowledge_gaps.join('; ')}</p>}</>}{selectedTask.error&&<p role="alert">{selectedTask.error}</p>}</div>}
+      {selectedTask.result&&<><p>{selectedTask.result.summary}</p><p>Evidence confidence: <b>{selectedTask.result.confidence}</b> · Risk: {selectedTask.result.risk}</p><CitationLinks ids={selectedTask.result.citations||[]} graphId={current.graph_id}/>{!!selectedTask.result.knowledge_gaps?.length&&<p>Open questions: {selectedTask.result.knowledge_gaps.join('; ')}</p>}</>}{selectedTask.error&&<p role="alert">{selectedTask.error}</p>}</div>}
      </section>
      <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">EVIDENCE-BASED OUTCOME</span><h2>Result and next decisions</h2></div><span className="aw-chip">{result?.status||'AWAITING RESULTS'}</span></div>
       {result?.answer?<p className="aw-answer">{result.answer}</p>:<p className="aw-muted">No verified final synthesis yet; individual specialist findings may still be available.</p>}
-      <p className="aw-small-heading">CITED GRAPH RECORDS</p><CitationLinks ids={result?.citations||[]}/>
-      <details className="aw-explore" onToggle={e=>setShowEvidence(e.currentTarget.open)}><summary>Explore cited evidence and graph relationships here</summary>{showEvidence&&<EvidenceExplorer ids={result?.citations||[]}/>}</details>
+      <p className="aw-small-heading">CITED GRAPH RECORDS</p><CitationLinks ids={result?.citations||[]} graphId={current.graph_id}/>
+      <details className="aw-explore" onToggle={e=>setShowEvidence(e.currentTarget.open)}><summary>Explore cited evidence and graph relationships here</summary>{showEvidence&&<EvidenceExplorer ids={result?.citations||[]} config={{...scopedConfig,graphId:current.graph_id}}/>}</details>
       {!!result?.knowledge_gaps?.length&&<><p className="aw-small-heading">UNRESOLVED QUESTIONS</p><ul>{result.knowledge_gaps.map((text,i)=><li key={i}>{text}</li>)}</ul></>}
       {!!result?.escalations?.length&&<><p className="aw-small-heading">HUMAN ESCALATION</p><ul>{result.escalations.map((e,i)=><li key={i}>{e.reason} — {e.task_ids.join(', ')} {e.detail||''}</li>)}</ul></>}
       <p className="aw-footnote">An evidence-backed recommendation is never itself authorization to execute an action. Use the approval board below for separate governed operations.</p>

@@ -1,0 +1,341 @@
+diff --git a/backend/app/api_v1/router.py b/backend/app/api_v1/router.py
+--- a/backend/app/api_v1/router.py
++++ b/backend/app/api_v1/router.py
+@@ -20,6 +20,7 @@
+ from backend.app.api_v1.security import Principal, authenticate, client_for, require
+ from backend.app.retrieval.models import RetrievalMode, RetrievalRequest
+ from backend.app.retrieval.service import RetrievalService
++from backend.app.retrieval.paths import scoped_index_root
+ from backend.app.services.action_coordination_service import ActionCoordinationService
+ from backend.app.services.anomaly_service import GraphAnomalyService
+ from backend.app.services.authority_resolution_service import AuthorityResolutionService
+@@ -61,6 +62,7 @@
+     format_workspace, build_replay, task_comparison, now as workspace_now)
+ from backend.app.services.phase4_graph import GraphSnapshot, has_label
+ from backend.app.ingestion.source_control import SourceControlService
++from backend.app.ingestion.source_catalog import list_source_catalog
+ 
+ router = APIRouter(prefix="/api/v1", responses={400:{"model":ErrorResponse},401:{"model":ErrorResponse},403:{"model":ErrorResponse},404:{"model":ErrorResponse},409:{"model":ErrorResponse},422:{"model":ErrorResponse},429:{"model":ErrorResponse},503:{"model":ErrorResponse}})
+ 
+@@ -86,7 +88,7 @@
+     client=client_for(principal)
+     repo_root=Path(__file__).resolve().parents[3]
+     artifact_root=Path(os.getenv("GRAPH_HACKS_ARTIFACT_ROOT") or repo_root/".graphhacks_artifacts")
+-    retrieval_root=Path(os.getenv("GRAPH_HACKS_RETRIEVAL_ROOT") or repo_root/".graphhacks_retrieval")/principal.tenant_id
++    retrieval_root=scoped_index_root(tenant_id=principal.tenant_id,graph_id=client.settings.falkordb_graph,root=repo_root)
+     return RetrievalService(client,lexical=BM25LexicalIndex(retrieval_root/"lexical.json"),vector=LocalVectorIndex(path=retrieval_root/"vector.json"),artifact_store=LocalArtifactStore(artifact_root))
+ 
+ 
+@@ -1461,6 +1463,12 @@
+     except FileExistsError as exc: raise ApiError(409,"CONFLICT","A source with this ID already exists.",details={"source_id":str(exc)}) from exc
+     except ValueError as exc: raise ApiError(422,"VALIDATION_FAILED",str(exc)) from exc
+ 
++@router.get("/sources/catalog", tags=["Sources"], summary="List sources in authorized Company Brains")
++def source_catalog(principal: Principal = Depends(require("READ_GRAPH"))):
++    # Includes read-only Asteria fixture sources. Never treats them as active connectors.
++    return list_source_catalog(tenant_id=principal.tenant_id)
++
++
+ @router.get("/sources/runs", tags=["Sources"], summary="List ingestion runs")
+ def list_ingestion_runs(source_id:str|None=None, principal:Principal=Depends(require("MANAGE_INGESTION"))):
+     return {"items": _sources(principal).list_runs(source_id=source_id)}
+diff --git a/backend/app/ingestion/source_catalog.py b/backend/app/ingestion/source_catalog.py
+new file mode 100644
+--- /dev/null
++++ b/backend/app/ingestion/source_catalog.py
+@@ -0,0 +1,45 @@
++"""Tenant-authorized read-only catalogue: sources belong to registered Company Brains.
++
++Never infer a Company Brain from a DataSource ID or return arbitrary FalkorDB graphs.
++Fixture/seed sources are visible but are NOT operational ingestion configurations.
++"""
++from __future__ import annotations
++
++from typing import Any
++
++from backend.app.graph.registry import GraphRegistry
++from backend.app.services.phase4_graph import GraphSnapshot, has_label
++
++
++def list_source_catalog(*, tenant_id: str, registry: GraphRegistry | None = None) -> dict[str, Any]:
++    registry = registry or GraphRegistry()
++    brain_list = registry.list_for_tenant(tenant_id=tenant_id)
++    items: list[dict[str, Any]] = []
++    for brain in brain_list['items']:
++        if not brain.get('available'):
++            continue
++        graph_id = brain['graph_id']
++        client = registry.client_for_graph(tenant_id=tenant_id, graph_id=graph_id)
++        snapshot = GraphSnapshot.load(client)
++        for node in snapshot.nodes.values():
++            if not has_label(node, 'DataSource') or node.get('configuration_removed'):
++                continue
++            source_id = str(node.get('id') or '')
++            if not source_id:
++                continue
++            managed = node.get('managed_by') == 'phase13-source-control'
++            # Seeded DataSource records are historical provenance, not live connections.
++            items.append({
++                'source_id': source_id,
++                'display_name': str(node.get('display_name') or node.get('name') or source_id),
++                'graph_id': graph_id,
++                'brain_name': brain['display_name'],
++                'connector_type': str(node.get('connector_type') or node.get('source_type') or 'historical'),
++                'connection_mode': str(node.get('connection_mode') or ('fixture' if node.get('fixture_pack') else 'historical')),
++                'managed': managed,
++                'can_sync': managed and bool(node.get('enabled', True)),
++                'status': str(node.get('last_ingestion_status') or node.get('lifecycle_status') or ('IMPORTED' if not managed else 'DRAFT')),
++                'fixture_pack': str(node.get('fixture_pack') or '') or None,
++            })
++    items.sort(key=lambda item: (item['brain_name'].casefold(), item['display_name'].casefold(), item['source_id']))
++    return {'items': items, 'brains': brain_list['items']}
+diff --git a/backend/app/ingestion/source_control.py b/backend/app/ingestion/source_control.py
+--- a/backend/app/ingestion/source_control.py
++++ b/backend/app/ingestion/source_control.py
+@@ -20,6 +20,7 @@
+ from backend.app.ingestion.resolution.service import IngestionEntityResolutionService
+ from backend.app.retrieval.indexing import RetrievalIndexer
+ from backend.app.retrieval.lexical import BM25LexicalIndex
++from backend.app.retrieval.paths import scoped_index_root
+ from backend.app.retrieval.vector import LocalVectorIndex
+ from backend.app.services.event_ledger_service import EventLedgerService
+ from backend.app.services.phase4_graph import GraphSnapshot, has_label
+@@ -374,7 +375,7 @@
+         import os
+         source_registry = self._registry(source_id)
+         artifact_root = Path(os.getenv("GRAPH_HACKS_ARTIFACT_ROOT") or self.root / ".graphhacks_artifacts")
+-        retrieval_root = Path(os.getenv("GRAPH_HACKS_RETRIEVAL_ROOT") or self.root / ".graphhacks_retrieval") / self.client.settings.tenant_id
++        retrieval_root = scoped_index_root(tenant_id=self.client.settings.tenant_id, graph_id=self.client.settings.falkordb_graph, root=self.root)
+         store = LocalArtifactStore(artifact_root)
+         indexer = RetrievalIndexer(self.client, lexical=BM25LexicalIndex(retrieval_root / "lexical.json"), vector=LocalVectorIndex(path=retrieval_root / "vector.json"), artifact_store=store)
+         return IngestionPipeline(self.client, registry=source_registry, artifact_store=store, retrieval_indexer=indexer, root=self.root)
+diff --git a/backend/app/retrieval/paths.py b/backend/app/retrieval/paths.py
+new file mode 100644
+--- /dev/null
++++ b/backend/app/retrieval/paths.py
+@@ -0,0 +1,16 @@
++"""Keep filesystem retrieval indexes isolated between registered Company Brains."""
++from __future__ import annotations
++
++import os
++from pathlib import Path
++
++def scoped_index_root(*, tenant_id: str, graph_id: str, root: Path) -> Path:
++    """Preserve historical company_brain index path; segregate other graphs.
++
++    Tenant and graph are validated at the authenticated API/registry boundary.
++    No dynamic path components are accepted from unauthenticated requests.
++    """
++    base = Path(os.getenv('GRAPH_HACKS_RETRIEVAL_ROOT') or root / '.graphhacks_retrieval')
++    if graph_id == 'company_brain':
++        return base / tenant_id
++    return base / tenant_id / 'brains' / graph_id
+diff --git a/backend/tests/test_source_catalog_stage3.py b/backend/tests/test_source_catalog_stage3.py
+new file mode 100644
+--- /dev/null
++++ b/backend/tests/test_source_catalog_stage3.py
+@@ -0,0 +1,83 @@
++"""Non-network contract checks for registered Company Brain source discovery."""
++from types import SimpleNamespace
++
++from fastapi.testclient import TestClient
++
++from backend.app.ingestion.source_catalog import list_source_catalog
++from backend.app.services.phase4_graph import GraphSnapshot
++
++
++def _n(source_id, name, tenant='asteria', **kwargs):
++    return {'id': source_id, 'name': name, 'tenant_id': tenant, '_labels': ['Entity','DataSource'], **kwargs}
++
++
++class FakeRegistry:
++    def __init__(self):
++        self.graphs = {
++            'asteria_company_brain_v1': [
++                _n('DS-AST-GITHUB','GitHub Mirror',fixture_pack='asteria-v1'),
++                _n('DS-AST-JIRA','Jira Project Export',fixture_pack='asteria-v1'),
++            ],
++            'company_brain': [
++                _n('SRC-A','Sample-db', managed_by='phase13-source-control',connector_type='github',last_ingestion_status='SUCCEEDED'),
++                _n('SRC-B','Chinook', managed_by='phase13-source-control',connector_type='github'),
++                _n('SRC-C','SampleA', managed_by='phase13-source-control',connector_type='github'),
++                _n('DS-OTHER','Other Tenant',tenant='other',managed_by='phase13-source-control'),
++            ],
++        }
++
++    def list_for_tenant(self, *, tenant_id):
++        assert tenant_id=='asteria'
++        return {'items':[{'graph_id':graph_id,'display_name':graph_id,'available':True} for graph_id in self.graphs]}
++
++    def client_for_graph(self, *, tenant_id, graph_id):
++        assert tenant_id=='asteria'
++        assert graph_id in self.graphs
++        return SimpleNamespace(graph_id=graph_id, settings=SimpleNamespace(tenant_id=tenant_id))
++
++
++def test_fixture_and_three_managed_sources_share_two_brains(monkeypatch):
++    from backend.app.ingestion import source_catalog
++    fake=FakeRegistry()
++    monkeypatch.setattr(source_catalog.GraphSnapshot,'load',lambda client: GraphSnapshot({n['id']:n for n in fake.graphs[client.graph_id] if n['tenant_id']==client.settings.tenant_id},[]))
++    result=list_source_catalog(tenant_id='asteria', registry=fake)
++    assert len(result['items'])==5
++    assert sum(bool(s['managed']) for s in result['items'])==3
++    assert sum(not s['managed'] for s in result['items'])==2
++    assert not any(s['source_id']=='DS-OTHER' for s in result['items'])
++    assert all(s['graph_id']=='company_brain' for s in result['items'] if s['managed'])
++    assert all(not s['can_sync'] for s in result['items'] if not s['managed'])
++
++
++def test_unknown_or_unavailable_graph_never_enumerated(monkeypatch):
++    from backend.app.ingestion import source_catalog
++    fake=FakeRegistry()
++    fake.list_for_tenant=lambda *,tenant_id: {'items':[{'graph_id':'asteria_company_brain_v1','display_name':'Asteria','available':False}]}
++    monkeypatch.setattr(source_catalog.GraphSnapshot,'load',lambda client: (_ for _ in ()).throw(AssertionError('must not be called')))
++    assert list_source_catalog(tenant_id='asteria',registry=fake)['items']==[]
++
++
++def test_seeded_data_is_not_a_live_source(monkeypatch):
++    from backend.app.ingestion import source_catalog
++    fake=FakeRegistry()
++    monkeypatch.setattr(source_catalog.GraphSnapshot,'load',lambda client: GraphSnapshot({n['id']:n for n in fake.graphs[client.graph_id] if n['tenant_id']==client.settings.tenant_id},[]))
++    github=next(x for x in list_source_catalog(tenant_id='asteria',registry=fake)['items'] if x['source_id']=='DS-AST-GITHUB')
++    assert github['fixture_pack']=='asteria-v1'
++    assert github['status']=='IMPORTED'
++    assert github['can_sync'] is False
++
++
++def test_catalog_endpoint_registered():
++    from backend.app.main import app
++    matches=[r for r in app.routes if getattr(r,'path',None)=='/api/v1/sources/catalog']
++    assert len(matches)==1
++    assert 'GET' in matches[0].methods
++
++
++def test_retrieval_index_namespaced_by_graph(tmp_path, monkeypatch):
++    from backend.app.retrieval.paths import scoped_index_root
++    monkeypatch.delenv('GRAPH_HACKS_RETRIEVAL_ROOT', raising=False)
++    default_path=scoped_index_root(tenant_id='asteria',graph_id='company_brain',root=tmp_path)
++    asteria_path=scoped_index_root(tenant_id='asteria',graph_id='asteria_company_brain_v1',root=tmp_path)
++    assert asteria_path!=default_path
++    assert str(asteria_path).startswith(str(tmp_path))
+diff --git a/frontend/src/api/sources.ts b/frontend/src/api/sources.ts
+--- a/frontend/src/api/sources.ts
++++ b/frontend/src/api/sources.ts
+@@ -2,6 +2,7 @@
+ import type { ApiConfig, Dict } from './types'
+ export const listConnectors=(c:ApiConfig,s?:AbortSignal)=>apiRequest<{items:Dict[]}>(c,'/api/v1/connectors',{signal:s})
+ export const getConnector=(c:ApiConfig,t:string,s?:AbortSignal)=>apiRequest<Dict>(c,`/api/v1/connectors/${encodeURIComponent(t)}`,{signal:s})
++export const listSourceCatalog=(c:ApiConfig,s?:AbortSignal)=>apiRequest<{items:Dict[];brains:Dict[]}>(c,'/api/v1/sources/catalog',{signal:s})
+ export const listSources=(c:ApiConfig,s?:AbortSignal)=>apiRequest<{items:Dict[]}>(c,'/api/v1/sources',{signal:s})
+ export const createSource=(c:ApiConfig,b:Dict)=>apiRequest<Dict>(c,'/api/v1/sources',{method:'POST',body:b})
+ export const getSource=(c:ApiConfig,id:string,s?:AbortSignal)=>apiRequest<Dict>(c,`/api/v1/sources/${encodeURIComponent(id)}`,{signal:s})
+diff --git a/frontend/src/pages/AgentWorkspacePage.tsx b/frontend/src/pages/AgentWorkspacePage.tsx
+--- a/frontend/src/pages/AgentWorkspacePage.tsx
++++ b/frontend/src/pages/AgentWorkspacePage.tsx
+@@ -3,6 +3,7 @@
+ import {Link} from 'react-router-dom'
+ import {useAuth} from '../auth/AuthContext'
+ import {apiRequest} from '../api/client'
++import {listSourceCatalog} from '../api/sources'
+ import {ErrorPanel} from '../components/AsyncState'
+ import {GovernedToolPanel} from '../demo/GovernedToolPanel'
+ import {GraphView} from '../components/GraphView'
+@@ -81,14 +82,17 @@
+ export function AgentWorkspacePage(){
+  const {config,hasPermission}=useAuth();const qc=useQueryClient()
+  const brainList=useQuery({queryKey:['workspace-brains',config.baseUrl,config.tenantId,config.token],queryFn:()=>apiRequest<BrainList>(config,'/api/v1/graphs'),retry:false})
++ const [selectedSource,setSelectedSource]=useState('')
++ const sourceCatalog=useQuery({queryKey:['workspace-source-catalog',config.baseUrl,config.tenantId],queryFn:()=>listSourceCatalog(config),retry:false})
+  const [selectedGraph,setSelectedGraph]=useState(()=>{
+-  try{return sessionStorage.getItem('verinex.workspace.graph.'+config.tenantId)||''}catch{return ''}
++  try{return new URLSearchParams(window.location.search).get('graph')||sessionStorage.getItem('verinex.workspace.graph.'+config.tenantId)||''}catch{return ''}
+  })
+  const availableBrains=brainList.data?.items.filter(item=>item.available)||[]
+  const activeGraph=availableBrains.some(item=>item.graph_id===selectedGraph)?selectedGraph:''
+  const scopedConfig={...config,graphId:activeGraph||undefined}
++ const graphSources=(sourceCatalog.data?.items||[]).filter(item=>item.graph_id===activeGraph)
+  const changeGraph=(next:string)=>{
+-  setSelectedGraph(next);setChosen('');setFocused('');setSource('');setOpenedScenario('');setMemoryRequested(false);setShowEvidence(false)
++  setSelectedGraph(next);setSelectedSource('');setChosen('');setFocused('');setSource('');setOpenedScenario('');setMemoryRequested(false);setShowEvidence(false)
+   try{sessionStorage.setItem('verinex.workspace.graph.'+config.tenantId,next)}catch{/* session storage disabled */}
+  }
+ 
+@@ -131,6 +135,12 @@
+     <option value="">Select an authorized Company Brain</option>
+     {availableBrains.map(brain=><option value={brain.graph_id} key={brain.graph_id}>{brain.display_name} ({brain.graph_id})</option>)}
+    </select></label>
++   <label className="aw-field"><span>Source (optional)</span><select aria-label="Source" value={selectedSource} onChange={e=>setSelectedSource(e.target.value)} disabled={!activeGraph}>
++    <option value="">All sources in selected Company Brain</option>
++    {graphSources.map(item=><option value={item.source_id} key={item.source_id}>{item.display_name} ({item.managed?'Managed':'Imported'})</option>)}
++   </select></label>
++   {sourceCatalog.error&&<ErrorPanel error={sourceCatalog.error}/>}
++   <p className="aw-muted">Source selection identifies provenance within this Company Brain; investigations currently query the entire selected graph. Source-exclusive retrieval requires a separate enforced filter.</p>
+    {brainList.error&&<ErrorPanel error={brainList.error}/>}
+    {!brainList.isLoading&&!availableBrains.length&&<p className="aw-muted">No registered Company Brains are available to this tenant. Register an existing graph first.</p>}
+    <label className="aw-field"><span>Organizational objective</span><textarea rows={3} maxLength={1500} value={objective} onChange={e=>setObjective(e.target.value)} placeholder="Investigate the outage, verify dependencies, and propose the safest remediation…"/></label>
+diff --git a/frontend/src/pages/sources/AddSourcePage.tsx b/frontend/src/pages/sources/AddSourcePage.tsx
+--- a/frontend/src/pages/sources/AddSourcePage.tsx
++++ b/frontend/src/pages/sources/AddSourcePage.tsx
+@@ -5,6 +5,7 @@
+ import { createSource,listConnectors,getConnector,previewSource,syncSource,testSource,updateSource } from '../../api/sources'
+ import { ErrorPanel,LoadingPanel } from '../../components/AsyncState'
+ import { TechnicalDetails } from '../../components/TechnicalDetails'
++import { apiRequest } from '../../api/client'
+ 
+ const steps=['Choose connector','Connection details','Authentication','Scope','Mapping','Test connection','Preview ingestion','Connect & sync']
+-export function AddSourcePage(){const {config}=useAuth();const nav=useNavigate();const [step,setStep]=useState(0);const [connector,setConnector]=useState('github');const [displayName,setDisplayName]=useState('');const [mode,setMode]=useState<'fixture'|'live'>('fixture');const [org,setOrg]=useState('');const [repository,setRepository]=useState('');const [ref,setRef]=useState('');const [files,setFiles]=useState('');const [baseUrl,setBaseUrl]=useState('');const [registeredView,setRegisteredView]=useState('');const [registeredEndpoint,setRegisteredEndpoint]=useState('');const [username,setUsername]=useState('');const [scope,setScope]=useState('');const [token,setToken]=useState('');const [sourceId,setSourceId]=useState('');const [testResult,setTestResult]=useState<any>();const [preview,setPreview]=useState<any>();const connectors=useQuery({queryKey:['connectors'],queryFn:({signal})=>listConnectors(config,signal)});const definition=useQuery({queryKey:['connector',connector],queryFn:({signal})=>getConnector(config,connector,signal),enabled:!!connector});const draft=useMutation({mutationFn:()=>createSource(config,{display_name:displayName||`My ${connector}`,connector_type:connector,connection_mode:mode,connection_config:{settings:connector==='github'&&mode==='live'?{...(repository?{repository}:{}),...(org&&!repository?{org}:{}),...(ref?{ref}:{}),...(!token?{anonymous:true}:{})}:{org},...(baseUrl?{base_url:baseUrl}:{}),...(registeredView?{registered_view:registeredView}:{}),...(registeredEndpoint?{registered_endpoint:registeredEndpoint}:{})},credentials:{...(token?{token}:{}),...(username?{username}:{})},scope_config:{selected:scope.split(',').map(x=>x.trim()).filter(Boolean),...(connector==='github'&&mode==='live'?{files:files.split(',').map(x=>x.trim()).filter(Boolean)}:{})},mapping_profile:`${connector}-default-v1`,expected_sync_interval_minutes:60}),onSuccess:r=>setSourceId(String(r.source_id))});const test=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}const r=await testSource(config,id);setTestResult(r);return r}});const previewMut=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}const r=await previewSource(config,id);setPreview(r);return r}});const sync=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}await updateSource(config,id,{scope_config:{selected:scope.split(',').map(x=>x.trim()).filter(Boolean),...(connector==='github'&&mode==='live'?{files:files.split(',').map(x=>x.trim()).filter(Boolean)}:{})}});const r=await syncSource(config,id,'full');return {id,result:r}},onSuccess:r=>nav(`/sources/${r.id}`)});const error=draft.error||test.error||previewMut.error||sync.error;const connectorOptions=connectors.data?.items||[];const canNext=step===0?!!connector:step===1?!!displayName:true;return <section><div className="page-header"><div><h2>Connect an organizational source</h2><p>GraphHacks will test and preview before anything is written to the Company Brain.</p></div></div><ol className="wizard-steps">{steps.map((s,i)=><li key={s} className={i===step?'active':i<step?'done':''}>{i+1}. {s}</li>)}</ol>{error&&<ErrorPanel error={error}/>}<section className="panel wizard-panel">{step===0&&<div><h3>Choose connector</h3>{connectors.isLoading?<LoadingPanel/>:<div className="card-grid">{connectorOptions.map((c:any)=><button className={`connector-card ${connector===c.connector_type?'selected':''}`} key={c.connector_type} onClick={()=>setConnector(c.connector_type)}><strong>{c.display_name}</strong><span>{c.description}</span><small>{c.supports_live_mode?'Live + fixture':'Fixture/demo currently'}</small></button>)}</div>}</div>}{step===1&&<div><h3>Connection details</h3><label className="field"><span>Source name</span><input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Northstar Engineering GitHub"/></label><label className="field"><span>Mode</span><select value={mode} onChange={e=>setMode(e.target.value as any)}><option value="fixture">Fixture / demo</option><option value="live" disabled={!definition.data?.supports_live_mode}>Live connected</option></select></label>{connector==='github'&&<>{mode==='live'&&<><label className="field"><span>Public repository URL or owner/repo</span><input value={repository} onChange={e=>setRepository(e.target.value)} placeholder="https://github.com/owner/repository"/></label><label className="field"><span>Branch or commit SHA (optional)</span><input value={ref} onChange={e=>setRef(e.target.value)} placeholder="Default branch"/></label></>}<label className="field"><span>Organization (alternative to a repository)</span><input value={org} onChange={e=>setOrg(e.target.value)}/></label>{mode==='live'&&<label className="field"><span>GitHub API base URL (optional for github.com)</span><input value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} placeholder="https://api.github.com"/></label>}</>}{connector==='jira'&&<label className="field"><span>Jira base URL</span><input value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} placeholder="https://jira.example.com"/></label>}{connector==='database'&&mode==='live'&&<label className="field"><span>Registered database view</span><input value={registeredView} onChange={e=>setRegisteredView(e.target.value)} placeholder="service_catalog"/></label>}{connector==='internal_api'&&mode==='live'&&<label className="field"><span>Registered internal endpoint</span><input value={registeredEndpoint} onChange={e=>setRegisteredEndpoint(e.target.value)} placeholder="service-catalog"/></label>}<p className="muted">Live connector endpoints remain bounded by server allowlists/registries; arbitrary URLs and SQL are rejected.</p></div>}{step===2&&<div><h3>Authentication</h3>{mode==='fixture'?<p>Fixture mode uses server-side deterministic test data and requires no real credential.</p>:<>{connector==='github'&&<p>Public GitHub repositories can connect without a token.</p>}{connector==='jira'&&<label className="field"><span>Username / email</span><input value={username} onChange={e=>setUsername(e.target.value)}/></label>}<label className="field"><span>API token / service credential</span><input type="password" value={token} onChange={e=>setToken(e.target.value)}/></label></>}<p className="muted">Secrets are stored server-side. The browser receives only configured/not-configured status after saving.</p></div>}{step===3&&<div><h3>Choose source scope</h3>{connector==='github'&&mode==='live'&&<label className="field"><span>Selected file paths (comma-separated)</span><input value={files} onChange={e=>setFiles(e.target.value)} placeholder="dvdrental.sql"/></label>}<label className="field"><span>{(definition.data?.supported_scopes||['scope']).join(' / ')}</span><input value={scope} onChange={e=>setScope(e.target.value)} placeholder={connector==='github'&&mode==='live'?'Optional repository filter for organization mode':'Comma-separated repositories / projects / channels'}/></label></div>}{step===4&&<div><h3>How GraphHacks will interpret this source</h3>{(definition.data?.mapping_preview||[]).map((m:any)=><div className="mapping-row" key={`${m.external}-${m.canonical}`}><strong>{m.external}</strong><span>→</span><strong>{m.canonical}</strong><span>{m.meaning}</span></div>)}<TechnicalDetails><pre>{JSON.stringify({mapping_profile:`${connector}-default-v1`,mapping_version:'phase13-v1'},null,2)}</pre></TechnicalDetails></div>}{step===5&&<div><h3>Test connection</h3><button disabled={test.isPending} onClick={()=>test.mutate()}>{test.isPending?'Testing…':'Test connection'}</button>{testResult&&<div className="check-grid">{Object.entries(testResult.checks||{}).map(([k,v])=><div key={k}><strong>{k.replace(/_/g,' ')}</strong><span>{String(v)}</span></div>)}</div>}<p className="muted">Connection testing does not write organizational facts into the Company Brain.</p></div>}{step===6&&<div><h3>Preview ingestion</h3><button disabled={previewMut.isPending} onClick={()=>previewMut.mutate()}>{previewMut.isPending?'Previewing…':'Preview ingestion'}</button>{preview&&<div className="summary-grid"><div className="metric"><strong>{preview.records_fetched}</strong><span>Fetched</span></div><div className="metric"><strong>{preview.records_normalized}</strong><span>Normalized</span></div><div className="metric"><strong>{preview.candidate_entities}</strong><span>Entities recognized</span></div><div className="metric"><strong>{preview.candidate_relationships}</strong><span>Relationships</span></div><div className="metric"><strong>{preview.ambiguous_identities}</strong><span>Need review</span></div><div className="metric"><strong>{preview.errors}</strong><span>Errors</span></div></div>} {preview&&<p className={preview.canonical_graph_mutated?'danger-text':'success-text'}>{preview.canonical_graph_mutated?'Unexpected mutation detected':'Preview made no canonical graph writes.'}</p>}</div>}{step===7&&<div><h3>Connect and ingest</h3><p>GraphHacks will persist this source instance and run the initial synchronization. You can inspect the ingestion run, identity issues and provenance afterward.</p><button disabled={sync.isPending} onClick={()=>sync.mutate()}>{sync.isPending?'Synchronizing…':'Connect & sync'}</button></div>}</section><div className="wizard-actions"><button disabled={step===0} onClick={()=>setStep(v=>Math.max(0,v-1))}>Back</button>{step<7&&<button disabled={!canNext} onClick={()=>setStep(v=>Math.min(7,v+1))}>Continue</button>}</div></section>}
++export function AddSourcePage(){const {config}=useAuth();const [targetGraph,setTargetGraph]=useState('');const brains=useQuery({queryKey:['source-destination-brains',config.tenantId],queryFn:()=>apiRequest<{items:{graph_id:string;display_name:string;available:boolean}[]}>(config,'/api/v1/graphs'),retry:false});const sourceConfig={...config,graphId:targetGraph||undefined};const nav=useNavigate();const [step,setStep]=useState(0);const [connector,setConnector]=useState('github');const [displayName,setDisplayName]=useState('');const [mode,setMode]=useState<'fixture'|'live'>('fixture');const [org,setOrg]=useState('');const [repository,setRepository]=useState('');const [ref,setRef]=useState('');const [files,setFiles]=useState('');const [baseUrl,setBaseUrl]=useState('');const [registeredView,setRegisteredView]=useState('');const [registeredEndpoint,setRegisteredEndpoint]=useState('');const [username,setUsername]=useState('');const [scope,setScope]=useState('');const [token,setToken]=useState('');const [sourceId,setSourceId]=useState('');const [testResult,setTestResult]=useState<any>();const [preview,setPreview]=useState<any>();const connectors=useQuery({queryKey:['connectors'],queryFn:({signal})=>listConnectors(config,signal)});const definition=useQuery({queryKey:['connector',connector],queryFn:({signal})=>getConnector(config,connector,signal),enabled:!!connector});const draft=useMutation({mutationFn:()=>{if(!targetGraph)throw new Error('Select a destination Company Brain');return createSource(sourceConfig,{display_name:displayName||`My ${connector}`,connector_type:connector,connection_mode:mode,connection_config:{settings:connector==='github'&&mode==='live'?{...(repository?{repository}:{}),...(org&&!repository?{org}:{}),...(ref?{ref}:{}),...(!token?{anonymous:true}:{})}:{org},...(baseUrl?{base_url:baseUrl}:{}),...(registeredView?{registered_view:registeredView}:{}),...(registeredEndpoint?{registered_endpoint:registeredEndpoint}:{})},credentials:{...(token?{token}:{}),...(username?{username}:{})},scope_config:{selected:scope.split(',').map(x=>x.trim()).filter(Boolean),...(connector==='github'&&mode==='live'?{files:files.split(',').map(x=>x.trim()).filter(Boolean)}:{})},mapping_profile:`${connector}-default-v1`,expected_sync_interval_minutes:60})},onSuccess:r=>setSourceId(String(r.source_id))});const test=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}const r=await testSource(sourceConfig,id);setTestResult(r);return r}});const previewMut=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}const r=await previewSource(sourceConfig,id);setPreview(r);return r}});const sync=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}await updateSource(sourceConfig,id,{scope_config:{selected:scope.split(',').map(x=>x.trim()).filter(Boolean),...(connector==='github'&&mode==='live'?{files:files.split(',').map(x=>x.trim()).filter(Boolean)}:{})}});const r=await syncSource(sourceConfig,id,'full');return {id,result:r}},onSuccess:r=>nav(`/sources/${r.id}`)});const error=draft.error||test.error||previewMut.error||sync.error;const connectorOptions=connectors.data?.items||[];const canNext=step===0?!!connector:step===1?!!displayName&&!!targetGraph:true;return <section><div className="page-header"><div><h2>Connect an organizational source</h2><p>GraphHacks will test and preview before anything is written to the Company Brain.</p></div></div><ol className="wizard-steps">{steps.map((s,i)=><li key={s} className={i===step?'active':i<step?'done':''}>{i+1}. {s}</li>)}</ol>{error&&<ErrorPanel error={error}/>}<section className="panel wizard-panel">{step===0&&<div><h3>Choose connector</h3>{connectors.isLoading?<LoadingPanel/>:<div className="card-grid">{connectorOptions.map((c:any)=><button className={`connector-card ${connector===c.connector_type?'selected':''}`} key={c.connector_type} onClick={()=>setConnector(c.connector_type)}><strong>{c.display_name}</strong><span>{c.description}</span><small>{c.supports_live_mode?'Live + fixture':'Fixture/demo currently'}</small></button>)}</div>}</div>}{step===1&&<div><h3>Connection details</h3><label className="field"><span>Destination Company Brain</span><select aria-label="Destination Company Brain" value={targetGraph} disabled={!!sourceId} onChange={e=>setTargetGraph(e.target.value)}><option value="">Select registered Company Brain</option>{(brains.data?.items||[]).filter(b=>b.available).map(b=><option key={b.graph_id} value={b.graph_id}>{b.display_name} ({b.graph_id})</option>)}</select></label>{brains.error&&<ErrorPanel error={brains.error}/>}<p className="muted">This selects the existing destination graph for this source. Selecting a graph does not clone, merge or create another Company Brain.</p><label className="field"><span>Source name</span><input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Northstar Engineering GitHub"/></label><label className="field"><span>Mode</span><select value={mode} onChange={e=>setMode(e.target.value as any)}><option value="fixture">Fixture / demo</option><option value="live" disabled={!definition.data?.supports_live_mode}>Live connected</option></select></label>{connector==='github'&&<>{mode==='live'&&<><label className="field"><span>Public repository URL or owner/repo</span><input value={repository} onChange={e=>setRepository(e.target.value)} placeholder="https://github.com/owner/repository"/></label><label className="field"><span>Branch or commit SHA (optional)</span><input value={ref} onChange={e=>setRef(e.target.value)} placeholder="Default branch"/></label></>}<label className="field"><span>Organization (alternative to a repository)</span><input value={org} onChange={e=>setOrg(e.target.value)}/></label>{mode==='live'&&<label className="field"><span>GitHub API base URL (optional for github.com)</span><input value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} placeholder="https://api.github.com"/></label>}</>}{connector==='jira'&&<label className="field"><span>Jira base URL</span><input value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} placeholder="https://jira.example.com"/></label>}{connector==='database'&&mode==='live'&&<label className="field"><span>Registered database view</span><input value={registeredView} onChange={e=>setRegisteredView(e.target.value)} placeholder="service_catalog"/></label>}{connector==='internal_api'&&mode==='live'&&<label className="field"><span>Registered internal endpoint</span><input value={registeredEndpoint} onChange={e=>setRegisteredEndpoint(e.target.value)} placeholder="service-catalog"/></label>}<p className="muted">Live connector endpoints remain bounded by server allowlists/registries; arbitrary URLs and SQL are rejected.</p></div>}{step===2&&<div><h3>Authentication</h3>{mode==='fixture'?<p>Fixture mode uses server-side deterministic test data and requires no real credential.</p>:<>{connector==='github'&&<p>Public GitHub repositories can connect without a token.</p>}{connector==='jira'&&<label className="field"><span>Username / email</span><input value={username} onChange={e=>setUsername(e.target.value)}/></label>}<label className="field"><span>API token / service credential</span><input type="password" value={token} onChange={e=>setToken(e.target.value)}/></label></>}<p className="muted">Secrets are stored server-side. The browser receives only configured/not-configured status after saving.</p></div>}{step===3&&<div><h3>Choose source scope</h3>{connector==='github'&&mode==='live'&&<label className="field"><span>Selected file paths (comma-separated)</span><input value={files} onChange={e=>setFiles(e.target.value)} placeholder="dvdrental.sql"/></label>}<label className="field"><span>{(definition.data?.supported_scopes||['scope']).join(' / ')}</span><input value={scope} onChange={e=>setScope(e.target.value)} placeholder={connector==='github'&&mode==='live'?'Optional repository filter for organization mode':'Comma-separated repositories / projects / channels'}/></label></div>}{step===4&&<div><h3>How GraphHacks will interpret this source</h3>{(definition.data?.mapping_preview||[]).map((m:any)=><div className="mapping-row" key={`${m.external}-${m.canonical}`}><strong>{m.external}</strong><span>→</span><strong>{m.canonical}</strong><span>{m.meaning}</span></div>)}<TechnicalDetails><pre>{JSON.stringify({mapping_profile:`${connector}-default-v1`,mapping_version:'phase13-v1'},null,2)}</pre></TechnicalDetails></div>}{step===5&&<div><h3>Test connection</h3><button disabled={test.isPending} onClick={()=>test.mutate()}>{test.isPending?'Testing…':'Test connection'}</button>{testResult&&<div className="check-grid">{Object.entries(testResult.checks||{}).map(([k,v])=><div key={k}><strong>{k.replace(/_/g,' ')}</strong><span>{String(v)}</span></div>)}</div>}<p className="muted">Connection testing does not write organizational facts into the Company Brain.</p></div>}{step===6&&<div><h3>Preview ingestion</h3><button disabled={previewMut.isPending} onClick={()=>previewMut.mutate()}>{previewMut.isPending?'Previewing…':'Preview ingestion'}</button>{preview&&<div className="summary-grid"><div className="metric"><strong>{preview.records_fetched}</strong><span>Fetched</span></div><div className="metric"><strong>{preview.records_normalized}</strong><span>Normalized</span></div><div className="metric"><strong>{preview.candidate_entities}</strong><span>Entities recognized</span></div><div className="metric"><strong>{preview.candidate_relationships}</strong><span>Relationships</span></div><div className="metric"><strong>{preview.ambiguous_identities}</strong><span>Need review</span></div><div className="metric"><strong>{preview.errors}</strong><span>Errors</span></div></div>} {preview&&<p className={preview.canonical_graph_mutated?'danger-text':'success-text'}>{preview.canonical_graph_mutated?'Unexpected mutation detected':'Preview made no canonical graph writes.'}</p>}</div>}{step===7&&<div><h3>Connect and ingest</h3><p>GraphHacks will persist this source instance and run the initial synchronization. You can inspect the ingestion run, identity issues and provenance afterward.</p><button disabled={sync.isPending} onClick={()=>sync.mutate()}>{sync.isPending?'Synchronizing…':'Connect & sync'}</button></div>}</section><div className="wizard-actions"><button disabled={step===0} onClick={()=>setStep(v=>Math.max(0,v-1))}>Back</button>{step<7&&<button disabled={!canNext} onClick={()=>setStep(v=>Math.min(7,v+1))}>Continue</button>}</div></section>}
+diff --git a/frontend/src/pages/sources/SourceDetailPage.tsx b/frontend/src/pages/sources/SourceDetailPage.tsx
+--- a/frontend/src/pages/sources/SourceDetailPage.tsx
++++ b/frontend/src/pages/sources/SourceDetailPage.tsx
+@@ -7,4 +7,4 @@
+ import { TechnicalDetails } from '../../components/TechnicalDetails'
+ import { ConfirmationDialog } from '../../components/ConfirmationDialog'
+ import { presentRun,presentSource } from '../../presentation'
+-export function SourceDetailPage(){const {sourceId=''}=useParams();const location=useLocation();const {config}=useAuth();const qc=useQueryClient();const [sp,setSp]=useSearchParams();const tab=sp.get('tab')||(location.pathname.endsWith('/mapping')?'mapping':'overview');const [confirmDisable,setConfirmDisable]=useState(false);const [editName,setEditName]=useState('');const [editScope,setEditScope]=useState('');const [editSchedule,setEditSchedule]=useState('');const [newCredential,setNewCredential]=useState('');const detail=useQuery({queryKey:['source',sourceId],queryFn:({signal})=>getSource(config,sourceId,signal)});const runs=useQuery({queryKey:['source-runs',sourceId],queryFn:({signal})=>getSourceRuns(config,sourceId,signal),enabled:tab==='sync-history'||tab==='overview'});const mapping=useQuery({queryKey:['source-mapping',sourceId],queryFn:({signal})=>getSourceMapping(config,sourceId,signal),enabled:tab==='mapping'});const records=useQuery({queryKey:['source-records',sourceId],queryFn:({signal})=>getSourceRecords(config,sourceId,{limit:50},signal),enabled:tab==='records'});const errors=useQuery({queryKey:['source-errors',sourceId],queryFn:({signal})=>getSourceErrors(config,sourceId,signal),enabled:tab==='errors'});const identities=useQuery({queryKey:['source-identities',sourceId],queryFn:({signal})=>listIdentityReview(config,sourceId,signal),enabled:tab==='identity-issues'});const refresh=()=>{qc.invalidateQueries({queryKey:['source',sourceId]});qc.invalidateQueries({queryKey:['source-runs',sourceId]})};const test=useMutation({mutationFn:()=>testSource(config,sourceId),onSuccess:refresh});const sync=useMutation({mutationFn:()=>syncSource(config,sourceId),onSuccess:refresh});const toggle=useMutation({mutationFn:()=>detail.data?.enabled?disableSource(config,sourceId):enableSource(config,sourceId),onSuccess:refresh});const update=useMutation({mutationFn:()=>updateSource(config,sourceId,{display_name:editName||detail.data?.display_name,scope_config:{...(detail.data?.scope||{}),selected:(editScope||((detail.data?.scope?.selected||[]).join(','))).split(',').map((x:string)=>x.trim()).filter(Boolean)},sync_schedule:editSchedule||detail.data?.schedule, ...(newCredential?{credentials:{token:newCredential}}:{})}),onSuccess:()=>{refresh();setNewCredential('')}});if(detail.isLoading)return <LoadingPanel/>;if(detail.error)return <ErrorPanel error={detail.error}/>;const source=presentSource(detail.data||{});const tabs=['overview','configuration','sync-history','mapping','records','identity-issues','errors','provenance'];return <section><div className="page-header"><div><h2>{source.title}</h2><p>{source.subtitle}</p></div><div className="toolbar"><button onClick={()=>test.mutate()}>Test connection</button><button onClick={()=>sync.mutate()} disabled={!detail.data?.enabled}>Sync now</button><button onClick={()=>detail.data?.enabled?setConfirmDisable(true):toggle.mutate()}>{detail.data?.enabled?'Disable':'Enable'}</button></div></div>{(test.error||sync.error||toggle.error)&&<ErrorPanel error={test.error||sync.error||toggle.error}/>}<div className="tabs wrap">{tabs.map(t=><button className={tab===t?'active':''} key={t} onClick={()=>setSp({tab:t})}>{t.replace(/-/g,' ')}</button>)}</div>{tab==='overview'&&<><div className="summary-grid"><div className="metric"><strong>{source.connection}</strong><span>Connection</span></div><div className="metric"><strong>{source.ingestion}</strong><span>Ingestion</span></div><div className="metric"><strong>{detail.data?.ingestion?.last_successful_sync||'Never'}</strong><span>Last successful sync</span></div><div className="metric"><strong>{detail.data?.ingestion?.records_last_run||0}</strong><span>Records last run</span></div><div className="metric"><strong>{detail.data?.attention?.identity_review_count||0}</strong><span>Identity review</span></div><div className="metric"><strong>{detail.data?.attention?.failed_record_count||0}</strong><span>Failed records</span></div></div>{detail.data?.connection_mode==='fixture'&&<div className="notice">FIXTURE / DEMO source — this is not presented as a live organizational integration.</div>}{detail.data?.connector_type==='github'&&<p><Link to={`/company-brain?tab=sql-schema&source_id=${encodeURIComponent(sourceId)}`}>Explore this source in Company Brain</Link></p>}<h3>What GraphHacks learned</h3><div className="summary-grid">{Object.entries(detail.data?.learned||{}).map(([key,value])=><div className="metric" key={key}><strong>{String(value)}</strong><span>{key.replace(/_/g,' ')}</span></div>)}</div><h3>Recent synchronization</h3>{!(runs.data?.items||[]).length?<EmptyState title="No ingestion runs yet"/>:(runs.data?.items||[]).slice(0,5).map((r:any)=>{const p=presentRun(r);return <Link className="panel row-link" key={r.id} to={`/sources/runs/${r.id}`}><strong>{p.title}</strong><span>{p.subtitle}</span><span>{p.outcome}</span></Link>})}</>}{tab==='configuration'&&<section className="panel"><h3>Configuration</h3><dl className="kv"><dt>Connector</dt><dd>{detail.data?.connector_type}</dd><dt>Mode</dt><dd>{detail.data?.connection_mode}</dd><dt>Credential</dt><dd>{detail.data?.credential?.configured?'Configured':'Not configured'}</dd></dl><h4>Edit configuration</h4><label className="field"><span>Source name</span><input value={editName} onChange={e=>setEditName(e.target.value)} placeholder={detail.data?.display_name}/></label><label className="field"><span>Scope</span><input value={editScope} onChange={e=>setEditScope(e.target.value)} placeholder={(detail.data?.scope?.selected||[]).join(', ')}/></label><label className="field"><span>Schedule configuration</span><select value={editSchedule||detail.data?.schedule||'manual'} onChange={e=>setEditSchedule(e.target.value)}><option value="manual">Manual</option><option value="hourly">Hourly (configuration only)</option><option value="daily">Daily (configuration only)</option></select></label><label className="field"><span>Rotate API token / credential (optional)</span><input type="password" value={newCredential} onChange={e=>setNewCredential(e.target.value)}/></label><button onClick={()=>update.mutate()} disabled={update.isPending}>Save configuration</button>{update.error&&<ErrorPanel error={update.error}/>}<p className="muted">Schedule values are persisted for a future worker; Phase 13 does not fake background scheduling. Manual Sync now remains authoritative.</p><p className="muted">Disabling stops future synchronization. Historical provenance remains available.</p><TechnicalDetails><pre>{JSON.stringify(detail.data,null,2)}</pre></TechnicalDetails></section>}{tab==='sync-history'&&<div>{(runs.data?.items||[]).map((r:any)=>{const p=presentRun(r);return <Link className="panel row-link" key={r.id} to={`/sources/runs/${r.id}`}><strong>{p.title}</strong><span>{p.subtitle}</span><span>{p.outcome}</span></Link>})}</div>}{tab==='mapping'&&<section className="panel"><h3>External concept → Company Brain interpretation</h3>{(mapping.data?.mappings||[]).map((m:any)=><div className="mapping-row" key={`${m.external}-${m.canonical}`}><strong>{m.external}</strong><span>→</span><strong>{m.canonical}</strong><span>{m.meaning}</span></div>)}<TechnicalDetails><pre>{JSON.stringify(mapping.data,null,2)}</pre></TechnicalDetails></section>}{tab==='records'&&<div>{(records.data?.items||[]).map((r:any)=><section className="panel" key={r.source_record_id}><h3>{r.title||r.external_id}</h3><p>{r.record_type} from {source.title}</p>{r.interpreted_as?.length?<p>Interpreted as: {r.interpreted_as.map((x:any)=>x.name||x.id).join(', ')}</p>:<p className="muted">No canonical interpretation linked yet.</p>}<TechnicalDetails><pre>{JSON.stringify(r,null,2)}</pre></TechnicalDetails></section>)}</div>}{tab==='identity-issues'&&<div>{(identities.data?.items||[]).length?(identities.data?.items||[]).map((i:any)=><Link className="panel row-link" to="/sources/identity-review" key={i.review_id}><strong>{i.incoming_identity}</strong><span>{i.object_type}</span><span>{Math.round((i.confidence||0)*100)}% suggested-match confidence</span></Link>):<EmptyState title="No identities need review"/>}</div>}{tab==='errors'&&<div>{(errors.data?.items||[]).length?(errors.data?.items||[]).map((e:any)=><section className="panel" key={e.id}><strong>{e.category}</strong><p>{e.reason}</p><small>{e.source_record_id}</small></section>):<EmptyState title="No ingestion errors"/>}</div>}{tab==='provenance'&&<section className="panel"><h3>Source provenance</h3><p>Historical facts produced by this source remain linked to their SourceRecords and IngestionRuns even if synchronization is later disabled.</p><Link to={`/sources/runs?source_id=${sourceId}`}>Open ingestion history</Link><TechnicalDetails><pre>{JSON.stringify(detail.data,null,2)}</pre></TechnicalDetails></section>}<ConfirmationDialog open={confirmDisable} title={`Disable ${source.title}?`} onCancel={()=>setConfirmDisable(false)} onConfirm={()=>{setConfirmDisable(false);toggle.mutate()}}><p>This stops future synchronization. Existing historical provenance remains available.</p></ConfirmationDialog></section>}
++export function SourceDetailPage(){const {sourceId=''}=useParams();const location=useLocation();const {config}=useAuth();const qc=useQueryClient();const [sp,setSp]=useSearchParams();const graphId=sp.get('graph')||undefined;const sourceConfig={...config,graphId};const tab=sp.get('tab')||(location.pathname.endsWith('/mapping')?'mapping':'overview');const [confirmDisable,setConfirmDisable]=useState(false);const [editName,setEditName]=useState('');const [editScope,setEditScope]=useState('');const [editSchedule,setEditSchedule]=useState('');const [newCredential,setNewCredential]=useState('');const detail=useQuery({queryKey:['source',sourceId],queryFn:({signal})=>getSource(sourceConfig,sourceId,signal)});const runs=useQuery({queryKey:['source-runs',sourceId],queryFn:({signal})=>getSourceRuns(sourceConfig,sourceId,signal),enabled:tab==='sync-history'||tab==='overview'});const mapping=useQuery({queryKey:['source-mapping',sourceId],queryFn:({signal})=>getSourceMapping(sourceConfig,sourceId,signal),enabled:tab==='mapping'});const records=useQuery({queryKey:['source-records',sourceId],queryFn:({signal})=>getSourceRecords(sourceConfig,sourceId,{limit:50},signal),enabled:tab==='records'});const errors=useQuery({queryKey:['source-errors',sourceId],queryFn:({signal})=>getSourceErrors(sourceConfig,sourceId,signal),enabled:tab==='errors'});const identities=useQuery({queryKey:['source-identities',sourceId],queryFn:({signal})=>listIdentityReview(sourceConfig,sourceId,signal),enabled:tab==='identity-issues'});const refresh=()=>{qc.invalidateQueries({queryKey:['source',sourceId]});qc.invalidateQueries({queryKey:['source-runs',sourceId]})};const test=useMutation({mutationFn:()=>testSource(sourceConfig,sourceId),onSuccess:refresh});const sync=useMutation({mutationFn:()=>syncSource(sourceConfig,sourceId),onSuccess:refresh});const toggle=useMutation({mutationFn:()=>detail.data?.enabled?disableSource(sourceConfig,sourceId):enableSource(sourceConfig,sourceId),onSuccess:refresh});const update=useMutation({mutationFn:()=>updateSource(sourceConfig,sourceId,{display_name:editName||detail.data?.display_name,scope_config:{...(detail.data?.scope||{}),selected:(editScope||((detail.data?.scope?.selected||[]).join(','))).split(',').map((x:string)=>x.trim()).filter(Boolean)},sync_schedule:editSchedule||detail.data?.schedule, ...(newCredential?{credentials:{token:newCredential}}:{})}),onSuccess:()=>{refresh();setNewCredential('')}});if(detail.isLoading)return <LoadingPanel/>;if(detail.error)return <ErrorPanel error={detail.error}/>;const source=presentSource(detail.data||{});const tabs=['overview','configuration','sync-history','mapping','records','identity-issues','errors','provenance'];return <section><div className="page-header"><div><h2>{source.title}</h2><p>{source.subtitle}</p></div><div className="toolbar"><button onClick={()=>test.mutate()}>Test connection</button><button onClick={()=>sync.mutate()} disabled={!detail.data?.enabled}>Sync now</button><button onClick={()=>detail.data?.enabled?setConfirmDisable(true):toggle.mutate()}>{detail.data?.enabled?'Disable':'Enable'}</button></div></div>{(test.error||sync.error||toggle.error)&&<ErrorPanel error={test.error||sync.error||toggle.error}/>}<div className="tabs wrap">{tabs.map(t=><button className={tab===t?'active':''} key={t} onClick={()=>setSp(graphId?{tab:t,graph:graphId}:{tab:t})}>{t.replace(/-/g,' ')}</button>)}</div>{tab==='overview'&&<><div className="summary-grid"><div className="metric"><strong>{source.connection}</strong><span>Connection</span></div><div className="metric"><strong>{source.ingestion}</strong><span>Ingestion</span></div><div className="metric"><strong>{detail.data?.ingestion?.last_successful_sync||'Never'}</strong><span>Last successful sync</span></div><div className="metric"><strong>{detail.data?.ingestion?.records_last_run||0}</strong><span>Records last run</span></div><div className="metric"><strong>{detail.data?.attention?.identity_review_count||0}</strong><span>Identity review</span></div><div className="metric"><strong>{detail.data?.attention?.failed_record_count||0}</strong><span>Failed records</span></div></div>{detail.data?.connection_mode==='fixture'&&<div className="notice">FIXTURE / DEMO source — this is not presented as a live organizational integration.</div>}{detail.data?.connector_type==='github'&&<p><Link to={`/company-brain?tab=sql-schema&source_id=${encodeURIComponent(sourceId)}`}>Explore this source in Company Brain</Link></p>}<h3>What GraphHacks learned</h3><div className="summary-grid">{Object.entries(detail.data?.learned||{}).map(([key,value])=><div className="metric" key={key}><strong>{String(value)}</strong><span>{key.replace(/_/g,' ')}</span></div>)}</div><h3>Recent synchronization</h3>{!(runs.data?.items||[]).length?<EmptyState title="No ingestion runs yet"/>:(runs.data?.items||[]).slice(0,5).map((r:any)=>{const p=presentRun(r);return <Link className="panel row-link" key={r.id} to={`/sources/runs/${r.id}${graphId?'?graph='+encodeURIComponent(graphId):''}`} ><strong>{p.title}</strong><span>{p.subtitle}</span><span>{p.outcome}</span></Link>})}</>}{tab==='configuration'&&<section className="panel"><h3>Configuration</h3><dl className="kv"><dt>Connector</dt><dd>{detail.data?.connector_type}</dd><dt>Mode</dt><dd>{detail.data?.connection_mode}</dd><dt>Credential</dt><dd>{detail.data?.credential?.configured?'Configured':'Not configured'}</dd></dl><h4>Edit configuration</h4><label className="field"><span>Source name</span><input value={editName} onChange={e=>setEditName(e.target.value)} placeholder={detail.data?.display_name}/></label><label className="field"><span>Scope</span><input value={editScope} onChange={e=>setEditScope(e.target.value)} placeholder={(detail.data?.scope?.selected||[]).join(', ')}/></label><label className="field"><span>Schedule configuration</span><select value={editSchedule||detail.data?.schedule||'manual'} onChange={e=>setEditSchedule(e.target.value)}><option value="manual">Manual</option><option value="hourly">Hourly (configuration only)</option><option value="daily">Daily (configuration only)</option></select></label><label className="field"><span>Rotate API token / credential (optional)</span><input type="password" value={newCredential} onChange={e=>setNewCredential(e.target.value)}/></label><button onClick={()=>update.mutate()} disabled={update.isPending}>Save configuration</button>{update.error&&<ErrorPanel error={update.error}/>}<p className="muted">Schedule values are persisted for a future worker; Phase 13 does not fake background scheduling. Manual Sync now remains authoritative.</p><p className="muted">Disabling stops future synchronization. Historical provenance remains available.</p><TechnicalDetails><pre>{JSON.stringify(detail.data,null,2)}</pre></TechnicalDetails></section>}{tab==='sync-history'&&<div>{(runs.data?.items||[]).map((r:any)=>{const p=presentRun(r);return <Link className="panel row-link" key={r.id} to={`/sources/runs/${r.id}${graphId?'?graph='+encodeURIComponent(graphId):''}`} ><strong>{p.title}</strong><span>{p.subtitle}</span><span>{p.outcome}</span></Link>})}</div>}{tab==='mapping'&&<section className="panel"><h3>External concept → Company Brain interpretation</h3>{(mapping.data?.mappings||[]).map((m:any)=><div className="mapping-row" key={`${m.external}-${m.canonical}`}><strong>{m.external}</strong><span>→</span><strong>{m.canonical}</strong><span>{m.meaning}</span></div>)}<TechnicalDetails><pre>{JSON.stringify(mapping.data,null,2)}</pre></TechnicalDetails></section>}{tab==='records'&&<div>{(records.data?.items||[]).map((r:any)=><section className="panel" key={r.source_record_id}><h3>{r.title||r.external_id}</h3><p>{r.record_type} from {source.title}</p>{r.interpreted_as?.length?<p>Interpreted as: {r.interpreted_as.map((x:any)=>x.name||x.id).join(', ')}</p>:<p className="muted">No canonical interpretation linked yet.</p>}<TechnicalDetails><pre>{JSON.stringify(r,null,2)}</pre></TechnicalDetails></section>)}</div>}{tab==='identity-issues'&&<div>{(identities.data?.items||[]).length?(identities.data?.items||[]).map((i:any)=><Link className="panel row-link" to="/sources/identity-review" key={i.review_id}><strong>{i.incoming_identity}</strong><span>{i.object_type}</span><span>{Math.round((i.confidence||0)*100)}% suggested-match confidence</span></Link>):<EmptyState title="No identities need review"/>}</div>}{tab==='errors'&&<div>{(errors.data?.items||[]).length?(errors.data?.items||[]).map((e:any)=><section className="panel" key={e.id}><strong>{e.category}</strong><p>{e.reason}</p><small>{e.source_record_id}</small></section>):<EmptyState title="No ingestion errors"/>}</div>}{tab==='provenance'&&<section className="panel"><h3>Source provenance</h3><p>Historical facts produced by this source remain linked to their SourceRecords and IngestionRuns even if synchronization is later disabled.</p><Link to={`/sources/runs?source_id=${sourceId}${graphId?'&graph='+encodeURIComponent(graphId):''}`} >Open ingestion history</Link><TechnicalDetails><pre>{JSON.stringify(detail.data,null,2)}</pre></TechnicalDetails></section>}<ConfirmationDialog open={confirmDisable} title={`Disable ${source.title}?`} onCancel={()=>setConfirmDisable(false)} onConfirm={()=>{setConfirmDisable(false);toggle.mutate()}}><p>This stops future synchronization. Existing historical provenance remains available.</p></ConfirmationDialog></section>}
+diff --git a/frontend/src/pages/sources/SourcesPage.tsx b/frontend/src/pages/sources/SourcesPage.tsx
+--- a/frontend/src/pages/sources/SourcesPage.tsx
++++ b/frontend/src/pages/sources/SourcesPage.tsx
+@@ -1,8 +1,37 @@
+ import { Link } from 'react-router-dom'
+ import { useQuery } from '@tanstack/react-query'
+ import { useAuth } from '../../auth/AuthContext'
+-import { listSources } from '../../api/sources'
+-import { EmptyState, ErrorPanel, LoadingPanel } from '../../components/AsyncState'
+-import { presentSource } from '../../presentation'
++import { listSourceCatalog } from '../../api/sources'
++import { ErrorPanel, LoadingPanel } from '../../components/AsyncState'
+ 
+-export function SourcesPage(){const {config}=useAuth();const q=useQuery({queryKey:['sources'],queryFn:({signal})=>listSources(config,signal),retry:false});if(q.isLoading)return <LoadingPanel label="Loading connected sources…"/>;if(q.error)return <ErrorPanel error={q.error}/>;const items=q.data?.items||[];if(!items.length)return <section><div className="page-header"><div><h2>Build your Company Brain</h2><p>Connect information from your engineering systems so GraphHacks can reconstruct how systems, teams, people, incidents, projects, decisions and work relate.</p></div></div><EmptyState title="No organizational sources connected" detail="Connect your first organizational system to build the Company Brain."/><Link className="button-link" to="/sources/new">Connect your first source</Link></section>;const healthy=items.filter((x:any)=>x.lifecycle_status==='HEALTHY').length;const stale=items.filter((x:any)=>x.lifecycle_status==='STALE').length;const attention=items.reduce((n:number,x:any)=>n+Number(x.attention?.identity_review_count||0)+Number(x.attention?.failed_record_count||0),0);const records=items.reduce((n:number,x:any)=>n+Number(x.ingestion?.records_last_run||0),0);return <section><div className="page-header"><div><h2>Sources</h2><p>How your organization's information enters GraphHacks.</p></div><Link className="button-link" to="/sources/new">Add source</Link></div><div className="summary-grid"><div className="metric"><strong>{items.length}</strong><span>Connected sources</span></div><div className="metric"><strong>{healthy}</strong><span>Healthy</span></div><div className="metric"><strong>{stale}</strong><span>Stale</span></div><div className="metric"><strong>{attention}</strong><span>Needs attention</span></div><div className="metric"><strong>{records}</strong><span>Records in latest runs</span></div></div><div className="toolbar"><Link to="/sources/runs">Ingestion runs</Link><Link to="/sources/identity-review">Identity review</Link></div><div className="card-grid">{items.map((raw:any)=>{const s=presentSource(raw);return <Link className="panel source-card" key={raw.source_id} to={`/sources/${raw.source_id}`}><h3>{s.title}</h3><div>{s.subtitle}</div><dl className="kv"><dt>Connection</dt><dd>{s.connection}</dd><dt>Ingestion</dt><dd>{s.ingestion}</dd><dt>Last sync</dt><dd>{raw.ingestion?.last_successful_sync||'Never'}</dd><dt>Attention</dt><dd>{s.attention}</dd></dl>{raw.connection_mode==='fixture'&&<span className="badge">FIXTURE / DEMO</span>}</Link>})}</div></section>}
++export function SourcesPage() {
++ const {config}=useAuth()
++ const catalog=useQuery({queryKey:['source-catalog',config.baseUrl,config.tenantId],queryFn:({signal})=>listSourceCatalog(config,signal),retry:false})
++ if(catalog.isLoading)return <LoadingPanel label="Loading Company Brain sources…"/>
++ if(catalog.error)return <ErrorPanel error={catalog.error}/>
++ const items=catalog.data?.items||[]
++ const brains=(catalog.data?.brains||[]).filter((b:any)=>b.available)
++ const managed=items.filter((x:any)=>x.managed)
++ const fixture=items.filter((x:any)=>!x.managed)
++ return <section>
++  <div className="page-header"><div><h2>Sources</h2><p>Registered Company Brains and their connected or imported sources.</p></div><Link className="button-link" to="/sources/new">Add source</Link></div>
++  <div className="summary-grid">
++   <div className="metric"><strong>{brains.length}</strong><span>Company Brains</span></div>
++   <div className="metric"><strong>{managed.length}</strong><span>Managed source configurations</span></div>
++   <div className="metric"><strong>{fixture.length}</strong><span>Existing / seeded sources</span></div>
++   <div className="metric"><strong>{items.length}</strong><span>Visible sources</span></div>
++  </div>
++  <p className="muted">Sources are inputs; Company Brains are the graphs containing them. A single graph can hold many sources. Only registered, authorized graphs are listed.</p>
++  {!brains.length&&<p role="alert">No registered Company Brains. Register a graph before connecting sources.</p>}
++  {brains.map((brain:any)=>{const rows=items.filter((s:any)=>s.graph_id===brain.graph_id);return <section key={brain.graph_id} className="panel">
++   <h3>{brain.display_name}</h3><p className="muted">{brain.graph_id} · {rows.length} sources</p>
++   <p><Link to={`/agent-workspace?graph=${encodeURIComponent(brain.graph_id)}`}>Open in Agent Workspace →</Link></p>
++   {rows.length===0?<p>No source records found in this graph.</p>:<div className="card-grid">{rows.map((s:any)=>
++     <div className="panel source-card" key={s.source_id}>
++      <h3>{s.display_name}</h3><p className="muted">{s.source_id}</p>
++      <dl className="kv"><dt>Type</dt><dd>{s.connector_type}</dd><dt>Status</dt><dd>{s.status}</dd><dt>Origin</dt><dd>{s.managed?'Managed connector':s.fixture_pack?'Imported Asteria fixture':'Existing graph record'}</dd></dl>
++      {s.managed?<Link to={`/sources/${encodeURIComponent(s.source_id)}?graph=${encodeURIComponent(brain.graph_id)}`}>Manage source →</Link>:<span className="badge">Existing / read-only provenance</span>}
++     </div>)}</div>}
++  </section>})}
++ </section>
++}

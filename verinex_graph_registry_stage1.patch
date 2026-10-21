@@ -1,0 +1,375 @@
+diff --git a/.gitignore b/.gitignore
+index 8073330..2a79518 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -226,3 +226,6 @@
+ # Impeccable design skill: downloaded binary and machine-local settings
+ .claude/skills/impeccable/scripts/bin/
+ .claude/settings.local.json
++
++# Persistent local VERINEX graph registry (back up this directory)
++.verinex/
+diff --git a/backend/app/api_v1/setup.py b/backend/app/api_v1/setup.py
+index dc891e6..700dfde 100644
+--- a/backend/app/api_v1/setup.py
++++ b/backend/app/api_v1/setup.py
+@@ -6,6 +6,7 @@
+ 
+ from backend.app.api_v1.errors import install_error_handlers
+ from backend.app.api_v1.router import router
++from backend.app.graph.registry_api import registry_router
+ 
+ _REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+ 
+@@ -22,3 +23,4 @@
+ 
+     install_error_handlers(app)
+     app.include_router(router)
++    app.include_router(registry_router)
+diff --git a/backend/app/graph/registry.py b/backend/app/graph/registry.py
+new file mode 100644
+index 0000000..576586d
+--- /dev/null
++++ b/backend/app/graph/registry.py
+@@ -0,0 +1,174 @@
++"""VERINEX Company Brain registry (backend stage 1).
++
++Persistent *metadata* only. No graph data is copied or modified. Registrations are
++operator-managed in this stage; APIs expose tenant-scoped read-only discovery.
++Graph selection for agent runs / ingestion belongs to subsequent stages.
++"""
++from __future__ import annotations
++
++import argparse
++import json
++import os
++import re
++import sqlite3
++from datetime import datetime, timezone
++from pathlib import Path
++from typing import Any
++
++from backend.app.config import Settings
++from backend.app.graph.client import FalkorGraphClient
++
++_GRAPH_ID = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,95}$")
++_TENANT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
++_REJECTED_PREFIXES = (
++    "phase", "accept_", "verinex_neon_", "verinex_stage", "company_brain_test_",
++)
++
++
++class InvalidGraphRegistration(ValueError):
++    """The graph or tenant is not eligible for registration."""
++
++
++class GraphNotRegistered(LookupError):
++    """The requested graph isn't registered for this authenticated tenant."""
++
++
++def _validate(graph_id: str, tenant_id: str) -> None:
++    if not _GRAPH_ID.fullmatch(graph_id):
++        raise InvalidGraphRegistration("Graph ID must be 1-96 letters, digits or underscores, beginning with a letter")
++    if not _TENANT_ID.fullmatch(tenant_id):
++        raise InvalidGraphRegistration("Invalid tenant ID")
++    lowered = graph_id.lower()
++    # Acceptance, transient test and derived memory graphs are never selectable
++    # as standalone Company Brains via this operator registration path.
++    if lowered.startswith(_REJECTED_PREFIXES) or lowered.endswith("_agent_memory") or "_neon_" in lowered:
++        raise InvalidGraphRegistration("Test, stage and agent-memory graphs cannot be registered as Company Brains")
++
++
++class GraphRegistry:
++    """SQLite catalogue with explicit (tenant, graph) bindings.
++
++    Never return FalkorDB.list_graphs() directly to API users. Registration
++    requires a trusted local operator, an EXISTING graph, and matching tenant
++    data. A registration alone does not authorize arbitrary Cypher access.
++    """
++
++    def __init__(self, path: str | Path | None = None):
++        root = Path(__file__).resolve().parents[3]
++        configured = path or os.getenv("VERINEX_GRAPH_REGISTRY_PATH")
++        self.path = Path(configured) if configured else root / ".verinex" / "graph_registry.sqlite3"
++
++    def _db(self) -> sqlite3.Connection:
++        self.path.parent.mkdir(parents=True, exist_ok=True)
++        db = sqlite3.connect(str(self.path), timeout=10)
++        db.row_factory = sqlite3.Row
++        db.execute("PRAGMA busy_timeout=10000")
++        db.execute("""CREATE TABLE IF NOT EXISTS company_brains (
++            tenant_id TEXT NOT NULL,
++            graph_id TEXT NOT NULL,
++            display_name TEXT NOT NULL,
++            registered_at TEXT NOT NULL,
++            PRIMARY KEY (tenant_id, graph_id)
++        )""")
++        return db
++
++    @staticmethod
++    def _available_names(client: FalkorGraphClient) -> set[str]:
++        return set(client.db.list_graphs())
++
++    def register_existing(self, *, graph_id: str, tenant_id: str, display_name: str,
++                          client: FalkorGraphClient | None = None) -> dict[str, Any]:
++        _validate(graph_id, tenant_id)
++        display_name = display_name.strip()
++        if not 1 <= len(display_name) <= 100:
++            raise InvalidGraphRegistration("Display name must contain 1-100 characters")
++        client = client or FalkorGraphClient()
++        if graph_id not in self._available_names(client):
++            raise InvalidGraphRegistration("Graph does not exist; registration does not create graphs")
++        # Guard against accidentally assigning a graph to an unrelated tenant.
++        # Does not establish exclusive ownership: company_brain may be shared.
++        try:
++            rows = client.db.select_graph(graph_id).ro_query(
++                "MATCH (n {tenant_id:$tenant}) RETURN n.id LIMIT 1",
++                {"tenant": tenant_id},
++            ).result_set
++        except Exception as exc:
++            raise InvalidGraphRegistration("Could not verify tenant membership in selected graph") from exc
++        if not rows:
++            raise InvalidGraphRegistration("Selected graph has no records belonging to the specified tenant")
++        at = datetime.now(timezone.utc).isoformat()
++        with self._db() as db:
++            db.execute("""INSERT INTO company_brains (tenant_id, graph_id, display_name, registered_at)
++                VALUES (?, ?, ?, ?) ON CONFLICT (tenant_id,graph_id)
++                DO UPDATE SET display_name=excluded.display_name""",
++                (tenant_id, graph_id, display_name, at))
++        return self.resolve(tenant_id=tenant_id, graph_id=graph_id)
++
++    def resolve(self, *, tenant_id: str, graph_id: str) -> dict[str, Any]:
++        # Normalize untrusted IDs before any potential graph interaction.
++        _validate(graph_id, tenant_id)
++        with self._db() as db:
++            row = db.execute("""SELECT tenant_id, graph_id, display_name, registered_at
++                FROM company_brains WHERE tenant_id=? AND graph_id=?""",
++                (tenant_id, graph_id)).fetchone()
++        if row is None:
++            raise GraphNotRegistered("Company Brain not found for this tenant")
++        return dict(row)
++
++    def list_for_tenant(self, *, tenant_id: str, client: FalkorGraphClient | None = None) -> dict[str, Any]:
++        if not _TENANT_ID.fullmatch(tenant_id):
++            raise InvalidGraphRegistration("Invalid tenant ID")
++        with self._db() as db:
++            rows = [dict(row) for row in db.execute(
++                "SELECT graph_id, display_name, registered_at FROM company_brains WHERE tenant_id=? ORDER BY display_name,graph_id",
++                (tenant_id,)).fetchall()]
++        # Never expose other tenants' graph IDs or discovered unregistered DB names.
++        available = self._available_names(client or FalkorGraphClient()) if rows else set()
++        items = [{**row, "available": row["graph_id"] in available} for row in rows]
++        default_name = Settings.from_env().falkordb_graph
++        return {"items": items, "default_graph_id": default_name if any(
++            x["graph_id"] == default_name and x["available"] for x in items) else None}
++
++    def client_for_graph(self, *, tenant_id: str, graph_id: str,
++                         settings: Settings | None = None,
++                         catalog_client: FalkorGraphClient | None = None) -> FalkorGraphClient:
++        """Future workspace/ingestion entrypoint. Never mutate server-wide settings."""
++        self.resolve(tenant_id=tenant_id, graph_id=graph_id)
++        if graph_id not in self._available_names(catalog_client or FalkorGraphClient()):
++            raise GraphNotRegistered("Registered Company Brain is currently unavailable")
++        scoped = (settings or Settings.from_env()).model_copy(update={
++            "tenant_id": tenant_id, "falkordb_graph": graph_id,
++        })
++        return FalkorGraphClient(scoped)
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser(description="Register existing Company Brains; trusted local operator only")
++    sub = parser.add_subparsers(dest="command", required=True)
++    add = sub.add_parser("register", help="Register an existing graph for one tenant")
++    add.add_argument("--graph", required=True)
++    add.add_argument("--tenant", required=True)
++    add.add_argument("--name", required=True)
++    show = sub.add_parser("list", help="List registered graphs for one tenant")
++    show.add_argument("--tenant", required=True)
++    args = parser.parse_args()
++    try:
++        from dotenv import load_dotenv
++        load_dotenv()
++    except ImportError:
++        pass
++    registry = GraphRegistry()
++    try:
++        if args.command == "register":
++            record = registry.register_existing(
++                graph_id=args.graph, tenant_id=args.tenant, display_name=args.name)
++            print(json.dumps({"registered": record}, indent=2))
++        else:
++            print(json.dumps(registry.list_for_tenant(tenant_id=args.tenant), indent=2))
++    except (InvalidGraphRegistration, GraphNotRegistered) as exc:
++        parser.exit(2, f"Registration error: {exc}\n")
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/backend/app/graph/registry_api.py b/backend/app/graph/registry_api.py
+new file mode 100644
+index 0000000..8022951
+--- /dev/null
++++ b/backend/app/graph/registry_api.py
+@@ -0,0 +1,31 @@
++"""Read-only tenant-scoped Company Brain discovery (Graph Registry stage 1)."""
++from __future__ import annotations
++
++from fastapi import APIRouter, Depends
++
++from backend.app.api_v1.errors import ApiError
++from backend.app.api_v1.security import Principal, require
++from backend.app.graph.registry import GraphRegistry, GraphNotRegistered
++
++registry_router = APIRouter(prefix="/api/v1/graphs", tags=["Company Brains"])
++
++
++@registry_router.get("", summary="List registered, authorized Company Brains")
++def list_graphs(principal: Principal = Depends(require("READ_GRAPH"))):
++    try:
++        return GraphRegistry().list_for_tenant(tenant_id=principal.tenant_id)
++    except Exception as exc:
++        raise ApiError(503, "GRAPH_REGISTRY_UNAVAILABLE", "Company Brain registry is unavailable") from exc
++
++
++@registry_router.get("/{graph_id}", summary="Read one authorized Company Brain registration")
++def graph_detail(graph_id: str, principal: Principal = Depends(require("READ_GRAPH"))):
++    try:
++        registry = GraphRegistry()
++        item = registry.resolve(tenant_id=principal.tenant_id, graph_id=graph_id)
++        listed = registry.list_for_tenant(tenant_id=principal.tenant_id)
++        return next(row for row in listed["items"] if row["graph_id"] == item["graph_id"])
++    except (GraphNotRegistered, ValueError, StopIteration):
++        raise ApiError(404, "NOT_FOUND", "Company Brain not found") from None
++    except Exception as exc:
++        raise ApiError(503, "GRAPH_REGISTRY_UNAVAILABLE", "Company Brain registry is unavailable") from exc
+diff --git a/backend/tests/test_company_brain_registry_stage1.py b/backend/tests/test_company_brain_registry_stage1.py
+new file mode 100644
+index 0000000..f99bf95
+--- /dev/null
++++ b/backend/tests/test_company_brain_registry_stage1.py
+@@ -0,0 +1,124 @@
++"""Pure/offline tests: no running FalkorDB, Groq, or graph mutations."""
++from __future__ import annotations
++
++import pytest
++from fastapi.testclient import TestClient
++
++from backend.app.graph.registry import GraphRegistry, GraphNotRegistered, InvalidGraphRegistration
++from backend.app.graph import registry_api
++from backend.app.main import app
++
++
++class DummyGraph:
++    def __init__(self, tenant_records):
++        self.tenants = tenant_records
++
++    def ro_query(self, query, params):
++        assert "MATCH (n {tenant_id:$tenant})" in query
++        return type("Result", (), {"result_set": [["ONE"]] if params["tenant"] in self.tenants else []})()
++
++
++class DummyDB:
++    def __init__(self, names, bindings):
++        self.names = names
++        self.bindings = bindings
++
++    def list_graphs(self):
++        return self.names
++
++    def select_graph(self, graph_id):
++        assert graph_id in self.names
++        return DummyGraph(self.bindings.get(graph_id, set()))
++
++
++class DummyClient:
++    def __init__(self, names, bindings=None):
++        self.db = DummyDB(names, bindings or {})
++
++
++@pytest.fixture
++def catalog(tmp_path):
++    graphs = ["company_brain", "asteria_company_brain_v1", "phase13_accept_123", "verinex_neon_stage3_foo"]
++    client = DummyClient(graphs, {
++        "company_brain": {"northstar", "asteria"},
++        "asteria_company_brain_v1": {"asteria"},
++    })
++    return GraphRegistry(tmp_path / "registry.sqlite3"), client
++
++
++def test_registration_requires_real_existing_tenant_graph(catalog):
++    registry, client = catalog
++    with pytest.raises(InvalidGraphRegistration, match="does not exist"):
++        registry.register_existing(graph_id="fake_graph", tenant_id="asteria", display_name="Fake", client=client)
++    with pytest.raises(InvalidGraphRegistration, match="no records"):
++        registry.register_existing(graph_id="asteria_company_brain_v1", tenant_id="northstar", display_name="Wrong tenant", client=client)
++    assert registry.list_for_tenant(tenant_id="northstar", client=client)["items"] == []
++
++
++@pytest.mark.parametrize("name", ["verinex_neon_stage3_foo", "phase13_accept_123", "company_brain_agent_memory", "../../path", "company_brain_test_123"])
++def test_registration_rejects_nonproduction_graph_names(catalog, name):
++    registry, client = catalog
++    with pytest.raises(InvalidGraphRegistration):
++        registry.register_existing(graph_id=name, tenant_id="asteria", display_name="Bad", client=client)
++
++
++def test_registry_only_lists_explicit_tenant_bindings(catalog):
++    registry, client = catalog
++    registry.register_existing(graph_id="asteria_company_brain_v1", tenant_id="asteria", display_name="Asteria", client=client)
++    registry.register_existing(graph_id="company_brain", tenant_id="northstar", display_name="Main", client=client)
++    assert [x["graph_id"] for x in registry.list_for_tenant(tenant_id="asteria", client=client)["items"]] == ["asteria_company_brain_v1"]
++    assert [x["graph_id"] for x in registry.list_for_tenant(tenant_id="northstar", client=client)["items"]] == ["company_brain"]
++    with pytest.raises(GraphNotRegistered):
++        registry.resolve(tenant_id="northstar", graph_id="asteria_company_brain_v1")
++
++
++def test_registry_persists_across_instances_and_upserts_label(catalog):
++    registry, client = catalog
++    registry.register_existing(graph_id="asteria_company_brain_v1", tenant_id="asteria", display_name="Asteria old", client=client)
++    registry.register_existing(graph_id="asteria_company_brain_v1", tenant_id="asteria", display_name="Asteria new", client=client)
++    reopened = GraphRegistry(registry.path)
++    assert reopened.resolve(graph_id="asteria_company_brain_v1", tenant_id="asteria")["display_name"] == "Asteria new"
++    assert len(reopened.list_for_tenant(tenant_id="asteria", client=client)["items"]) == 1
++
++
++def test_unavailable_graph_is_not_mistaken_for_an_accessible_database(catalog):
++    registry, client = catalog
++    registry.register_existing(graph_id="asteria_company_brain_v1", tenant_id="asteria", display_name="Asteria", client=client)
++    missing = DummyClient(["company_brain"])
++    item = registry.list_for_tenant(tenant_id="asteria", client=missing)["items"][0]
++    assert item["available"] is False
++    with pytest.raises(GraphNotRegistered):
++        registry.client_for_graph(tenant_id="asteria", graph_id="asteria_company_brain_v1", catalog_client=missing)
++
++
++def test_client_for_graph_rejects_unregistered_before_connecting(catalog):
++    registry, client = catalog
++    with pytest.raises(GraphNotRegistered):
++        registry.client_for_graph(tenant_id="asteria", graph_id="company_brain", catalog_client=client)
++
++
++def test_api_respects_tenant_binding_and_never_lists_raw_db_graphs(catalog, monkeypatch):
++    registry, client = catalog
++    registry.register_existing(graph_id="asteria_company_brain_v1", tenant_id="asteria", display_name="Asteria", client=client)
++    registry.register_existing(graph_id="company_brain", tenant_id="northstar", display_name="Main", client=client)
++
++    # No live connection. Both endpoints use exactly the same per-tenant policy.
++    class FakeAPIRegistry(GraphRegistry):
++        def __init__(self):
++            super().__init__(registry.path)
++
++        def _available_names(self, unused):
++            return set(client.db.list_graphs())
++
++    monkeypatch.setattr(registry_api, "GraphRegistry", FakeAPIRegistry)
++    monkeypatch.setattr("backend.app.graph.registry.FalkorGraphClient", lambda *args, **kwargs: client)
++    api = TestClient(app)
++    assert api.get("/api/v1/graphs").status_code == 401
++    assert api.get("/api/v1/graphs", headers={"Authorization": "Bearer test-reader-token"}).json()["items"][0]["graph_id"] == "company_brain"
++    r = api.get("/api/v1/graphs", headers={"Authorization": "Bearer test-asteria-admin-token", "X-Tenant-ID": "asteria"})
++    assert r.status_code == 200, r.text
++    assert [x["graph_id"] for x in r.json()["items"]] == ["asteria_company_brain_v1"]
++    assert api.get("/api/v1/graphs/asteria_company_brain_v1", headers={"Authorization": "Bearer test-reader-token"}).status_code == 404
++    assert api.get("/api/v1/graphs/verinex_neon_stage3_foo", headers={"Authorization": "Bearer test-asteria-admin-token"}).status_code == 404
++    assert api.get("/api/v1/graphs/asteria_company_brain_v1", headers={"Authorization": "Bearer test-asteria-admin-token"}).status_code == 200
++    assert api.get("/api/v1/graphs", headers={"Authorization": "Bearer test-asteria-admin-token", "X-Tenant-ID": "northstar"}).status_code == 403

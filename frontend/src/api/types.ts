@@ -25,6 +25,7 @@ export interface ApiConfig {
   baseUrl: string
   token: string
   tenantId: string
+  graphId?: string
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {

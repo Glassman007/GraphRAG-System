@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 
 from fastapi import Header, Request
@@ -21,6 +21,7 @@ class Principal:
     tenant_id: str
     roles: tuple[str, ...]
     permissions: frozenset[str]
+    graph_id: str | None = None
 
 
 def _builtins() -> dict[str, Principal]:
@@ -50,7 +51,7 @@ def _configured_principals() -> dict[str, Principal]:
     return values
 
 
-def authenticate(request: Request, authorization: str | None = Header(default=None), x_api_key: str | None = Header(default=None), x_tenant_id: str | None = Header(default=None)) -> Principal:
+def authenticate(request: Request, authorization: str | None = Header(default=None), x_api_key: str | None = Header(default=None), x_tenant_id: str | None = Header(default=None), x_company_brain_id: str | None = Header(default=None)) -> Principal:
     token = x_api_key
     if authorization:
         parts = authorization.split(" ", 1)
@@ -63,6 +64,14 @@ def authenticate(request: Request, authorization: str | None = Header(default=No
         raise ApiError(401, "UNAUTHORIZED", "Invalid authentication credentials.")
     if x_tenant_id and x_tenant_id != principal.tenant_id:
         raise ApiError(403, "TENANT_MISMATCH", "Requested tenant does not match authenticated principal.", details={"principal_tenant": principal.tenant_id})
+    if x_company_brain_id:
+        # The graph name is never accepted just because it exists in FalkorDB.
+        from backend.app.graph.registry import GraphRegistry, GraphNotRegistered, InvalidGraphRegistration
+        try:
+            GraphRegistry().resolve(tenant_id=principal.tenant_id, graph_id=x_company_brain_id)
+        except (GraphNotRegistered, InvalidGraphRegistration) as exc:
+            raise ApiError(404, "GRAPH_NOT_AVAILABLE", "Company Brain is not registered for this tenant") from exc
+        principal = replace(principal, graph_id=x_company_brain_id)
     request.state.principal = principal
     return principal
 
@@ -80,4 +89,11 @@ def require(*permissions: str) -> Callable:
 
 def client_for(principal: Principal) -> FalkorGraphClient:
     settings = Settings.from_env().model_copy(update={"tenant_id": principal.tenant_id})
+    if principal.graph_id:
+        from backend.app.graph.registry import GraphRegistry, GraphNotRegistered
+        try:
+            return GraphRegistry().client_for_graph(tenant_id=principal.tenant_id,
+                                                    graph_id=principal.graph_id, settings=settings)
+        except GraphNotRegistered as exc:
+            raise ApiError(404, "GRAPH_NOT_AVAILABLE", "Registered Company Brain is unavailable") from exc
     return FalkorGraphClient(settings)

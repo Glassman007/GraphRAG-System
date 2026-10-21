@@ -6,6 +6,7 @@ from fastapi import Request
 
 from backend.app.api_v1.errors import install_error_handlers
 from backend.app.api_v1.router import router
+from backend.app.graph.registry_api import registry_router
 
 _REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
@@ -22,3 +23,4 @@ def install_api_v1(app) -> None:
 
     install_error_handlers(app)
     app.include_router(router)
+    app.include_router(registry_router)

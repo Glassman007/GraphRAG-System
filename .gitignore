@@ -226,3 +226,6 @@ appendonlydir/
 # Impeccable design skill: downloaded binary and machine-local settings
 .claude/skills/impeccable/scripts/bin/
 .claude/settings.local.json
+
+# Persistent local VERINEX graph registry (back up this directory)
+.verinex/

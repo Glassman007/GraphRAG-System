@@ -131,6 +131,9 @@ class Completion:
     calls: list[dict[str, Any]]
     tokens: int
     finish_reason: str = ""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    reasoning_tokens: int = 0
 
 
 class OpenAICompatibleProvider:
@@ -218,13 +221,19 @@ class OpenAICompatibleProvider:
                 function = call.get('function') or {}
                 calls.append({'id': str(call.get('id') or ''), 'name': str(function.get('name') or ''),
                               'arguments': str(function.get('arguments') or '{}')})
-            usage = int((body.get('usage') or {}).get('total_tokens') or 0)
+            usage_obj = body.get('usage') or {}
+            usage = int(usage_obj.get('total_tokens') or 0)
+            prompt_tokens = int(usage_obj.get('prompt_tokens') or 0)
+            completion_tokens = int(usage_obj.get('completion_tokens') or 0)
+            reasoning_tokens = int((usage_obj.get('completion_tokens_details') or {}).get('reasoning_tokens') or 0)
             if pacer is not None and ticket is not None:
                 pacer.settle(ticket, usage or ticket[1], response.headers)
                 ticket = None
             return Completion(content=str(message.get('content') or ''), calls=calls,
                               tokens=usage,
-                              finish_reason=str(choice.get('finish_reason') or ''))
+                              finish_reason=str(choice.get('finish_reason') or ''),
+                              prompt_tokens=prompt_tokens, completion_tokens=completion_tokens,
+                              reasoning_tokens=reasoning_tokens)
         except ProviderError:
             raise
         except (httpx.RequestError, ValueError, KeyError, TypeError, IndexError) as exc:

@@ -47,6 +47,7 @@ export async function apiRequest<T>(config: ApiConfig, path: string, options: Re
   const headers = new Headers(options.headers || {})
   headers.set('Accept', 'application/json')
   headers.set('X-Tenant-ID', config.tenantId)
+  if (config.graphId) headers.set('X-Company-Brain-ID', config.graphId)
   headers.set('X-Request-ID', `ui-${Date.now()}-${Math.random().toString(16).slice(2)}`)
   if (config.token) headers.set('Authorization', `Bearer ${config.token}`)
   if (options.body !== undefined) headers.set('Content-Type', 'application/json')

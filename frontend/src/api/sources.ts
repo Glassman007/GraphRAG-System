@@ -2,6 +2,15 @@ import { apiRequest, queryString } from './client'
 import type { ApiConfig, Dict } from './types'
 export const listConnectors=(c:ApiConfig,s?:AbortSignal)=>apiRequest<{items:Dict[]}>(c,'/api/v1/connectors',{signal:s})
 export const getConnector=(c:ApiConfig,t:string,s?:AbortSignal)=>apiRequest<Dict>(c,`/api/v1/connectors/${encodeURIComponent(t)}`,{signal:s})
+export const listSourceCatalog=(c:ApiConfig,s?:AbortSignal)=>apiRequest<{items:Dict[];brains:Dict[]}>(c,'/api/v1/sources/catalog',{signal:s})
+export const inspectSourceRemoval=(c:ApiConfig,id:string,s?:AbortSignal)=>{
+ if(!c.graphId)throw new Error('Select a Company Brain before inspecting a source')
+ return apiRequest<Dict>(c,`/api/v1/sources/catalog/${encodeURIComponent(id)}/removal-impact`,{signal:s})
+}
+export const removeCatalogSource=(c:ApiConfig,id:string)=>{
+ if(!c.graphId)throw new Error('Select a Company Brain before removing a source')
+ return apiRequest<Dict>(c,`/api/v1/sources/catalog/${encodeURIComponent(id)}`,{method:'DELETE'})
+}
 export const listSources=(c:ApiConfig,s?:AbortSignal)=>apiRequest<{items:Dict[]}>(c,'/api/v1/sources',{signal:s})
 export const createSource=(c:ApiConfig,b:Dict)=>apiRequest<Dict>(c,'/api/v1/sources',{method:'POST',body:b})
 export const getSource=(c:ApiConfig,id:string,s?:AbortSignal)=>apiRequest<Dict>(c,`/api/v1/sources/${encodeURIComponent(id)}`,{signal:s})

@@ -1,0 +1,360 @@
+diff --git a/backend/app/api_v1/security.py b/backend/app/api_v1/security.py
+--- a/backend/app/api_v1/security.py
++++ b/backend/app/api_v1/security.py
+@@ -2,7 +2,7 @@
+ 
+ import json
+ import os
+-from dataclasses import dataclass
++from dataclasses import dataclass, replace
+ from typing import Callable
+ 
+ from fastapi import Header, Request
+@@ -21,6 +21,7 @@
+     tenant_id: str
+     roles: tuple[str, ...]
+     permissions: frozenset[str]
++    graph_id: str | None = None
+ 
+ 
+ def _builtins() -> dict[str, Principal]:
+@@ -50,7 +51,7 @@
+     return values
+ 
+ 
+-def authenticate(request: Request, authorization: str | None = Header(default=None), x_api_key: str | None = Header(default=None), x_tenant_id: str | None = Header(default=None)) -> Principal:
++def authenticate(request: Request, authorization: str | None = Header(default=None), x_api_key: str | None = Header(default=None), x_tenant_id: str | None = Header(default=None), x_company_brain_id: str | None = Header(default=None)) -> Principal:
+     token = x_api_key
+     if authorization:
+         parts = authorization.split(" ", 1)
+@@ -63,6 +64,14 @@
+         raise ApiError(401, "UNAUTHORIZED", "Invalid authentication credentials.")
+     if x_tenant_id and x_tenant_id != principal.tenant_id:
+         raise ApiError(403, "TENANT_MISMATCH", "Requested tenant does not match authenticated principal.", details={"principal_tenant": principal.tenant_id})
++    if x_company_brain_id:
++        # The graph name is never accepted just because it exists in FalkorDB.
++        from backend.app.graph.registry import GraphRegistry, GraphNotRegistered, InvalidGraphRegistration
++        try:
++            GraphRegistry().resolve(tenant_id=principal.tenant_id, graph_id=x_company_brain_id)
++        except (GraphNotRegistered, InvalidGraphRegistration) as exc:
++            raise ApiError(404, "GRAPH_NOT_AVAILABLE", "Company Brain is not registered for this tenant") from exc
++        principal = replace(principal, graph_id=x_company_brain_id)
+     request.state.principal = principal
+     return principal
+ 
+@@ -80,4 +89,11 @@
+ 
+ def client_for(principal: Principal) -> FalkorGraphClient:
+     settings = Settings.from_env().model_copy(update={"tenant_id": principal.tenant_id})
++    if principal.graph_id:
++        from backend.app.graph.registry import GraphRegistry, GraphNotRegistered
++        try:
++            return GraphRegistry().client_for_graph(tenant_id=principal.tenant_id,
++                                                    graph_id=principal.graph_id, settings=settings)
++        except GraphNotRegistered as exc:
++            raise ApiError(404, "GRAPH_NOT_AVAILABLE", "Registered Company Brain is unavailable") from exc
+     return FalkorGraphClient(settings)
+diff --git a/backend/app/agent_runtime/workspace.py b/backend/app/agent_runtime/workspace.py
+--- a/backend/app/agent_runtime/workspace.py
++++ b/backend/app/agent_runtime/workspace.py
+@@ -27,6 +27,7 @@
+ class WorkspaceStart(BaseModel):
+     model_config = ConfigDict(extra='forbid')
+     goal: str = Field(min_length=12, max_length=1500)
++    graph_id: str | None = Field(default=None, min_length=1, max_length=96)
+     source_entity_id: str | None = Field(default=None, min_length=3, max_length=150)
+     max_parallel: int = Field(default=3, ge=1, le=4)
+     allow_external_model: bool = False
+diff --git a/backend/app/api_v1/router.py b/backend/app/api_v1/router.py
+--- a/backend/app/api_v1/router.py
++++ b/backend/app/api_v1/router.py
+@@ -188,6 +188,11 @@
+     record = _workspace_store(principal).get(run_id, principal.subject)
+     if record is None:
+         _not_found('Owned workspace run', run_id)
++    # A run is permanently bound to its creation graph. Do not permit a different
++    # graph selection to resume, inspect or control an unrelated run.
++    expected = principal.graph_id or client_for(principal).settings.falkordb_graph
++    if record.get('graph_id', expected) != expected:
++        _not_found('Owned workspace run', run_id)
+     return record
+ 
+ 
+@@ -265,6 +270,10 @@
+     _guard_rate(request,principal,limit=6)
+     if not body.allow_external_model:
+         raise ApiError(422,'CONSENT_REQUIRED','Authorize transmission of selected organizational evidence to the model.')
++    # Explicit graph selection must match the authenticated, registry-validated scope.
++    # No graph requested preserves legacy default behavior.
++    if body.graph_id != principal.graph_id:
++        raise ApiError(422, 'GRAPH_SCOPE_MISMATCH', 'Selected graph must match the authenticated Company Brain header.')
+     # Validate provider before committing a QUEUED record.
+     try:
+         OpenAICompatibleProvider()
+@@ -272,6 +281,7 @@
+         raise ApiError(503,'AGENT_PROVIDER_UNAVAILABLE',str(exc)) from exc
+     run_id='SRUN-'+_workspace_uuid.uuid4().hex.upper()
+     entry={'id':run_id,'owner':principal.subject,'tenant':principal.tenant_id,
++           'graph_id':principal.graph_id or client_for(principal).settings.falkordb_graph,
+            'goal':body.goal,'source_entity_id':body.source_entity_id,'status':'QUEUED',
+            'command':'','allow_external_model':True,'created_at':workspace_now(),
+            'updated_at':workspace_now(),'settings':body.settings().model_dump(),'error':''}
+@@ -282,7 +292,7 @@
+     except Exception as exc:
+         _workspace_store(principal).update(run_id,principal.subject,status='FAILED',error=type(exc).__name__)
+         raise ApiError(503,'WORKER_UNAVAILABLE','Workspace worker could not start') from exc
+-    return {'id':run_id,'status':'QUEUED','execution_mode':'LIVE_MODEL','side_effects':'NONE_READ_ONLY'}
++    return {'id':run_id,'graph_id':entry['graph_id'],'status':'QUEUED','execution_mode':'LIVE_MODEL','side_effects':'NONE_READ_ONLY'}
+ 
+ 
+ @router.get('/agent-runtime/workspace/runs/{run_id}', tags=['Agent Workspace'])
+diff --git a/frontend/src/api/types.ts b/frontend/src/api/types.ts
+--- a/frontend/src/api/types.ts
++++ b/frontend/src/api/types.ts
+@@ -25,6 +25,7 @@
+   baseUrl: string
+   token: string
+   tenantId: string
++  graphId?: string
+ }
+ 
+ export interface RequestOptions extends Omit<RequestInit, 'body'> {
+diff --git a/frontend/src/api/client.ts b/frontend/src/api/client.ts
+--- a/frontend/src/api/client.ts
++++ b/frontend/src/api/client.ts
+@@ -47,6 +47,7 @@
+   const headers = new Headers(options.headers || {})
+   headers.set('Accept', 'application/json')
+   headers.set('X-Tenant-ID', config.tenantId)
++  if (config.graphId) headers.set('X-Company-Brain-ID', config.graphId)
+   headers.set('X-Request-ID', `ui-${Date.now()}-${Math.random().toString(16).slice(2)}`)
+   if (config.token) headers.set('Authorization', `Bearer ${config.token}`)
+   if (options.body !== undefined) headers.set('Content-Type', 'application/json')
+diff --git a/frontend/src/pages/AgentWorkspacePage.tsx b/frontend/src/pages/AgentWorkspacePage.tsx
+--- a/frontend/src/pages/AgentWorkspacePage.tsx
++++ b/frontend/src/pages/AgentWorkspacePage.tsx
+@@ -12,8 +12,10 @@
+ import './agentWorkspace.css'
+ 
+ const base='/api/v1/agent-runtime/workspace'
++type Brain={graph_id:string;display_name:string;available:boolean}
++type BrainList={items:Brain[];default_graph_id:string|null}
+ type Status='QUEUED'|'RUNNING'|'PAUSING'|'PAUSED'|'CANCELLING'|'CANCELLED'|'COMPLETED'|'FAILED'|'PARTIAL'|'NEEDS_REVIEW'|'INTERRUPTED'
+-type Workspace={id:string;goal:string;source_entity_id?:string;owner:string;status:Status;created_at:string;updated_at:string;error?:string;execution_mode:string;recovery_available:boolean}
++type Workspace={id:string;graph_id?:string;goal:string;source_entity_id?:string;owner:string;status:Status;created_at:string;updated_at:string;error?:string;execution_mode:string;recovery_available:boolean}
+ type Finding={summary:string;confidence:string;risk:string;citations:string[];knowledge_gaps:string[];requires_human_review:boolean}
+ type Task={id:string;task_id?:string;objective:string;capability:string;depends_on:string[];status:string;agent_id:string;attempts:number;result?:Finding;error?:string}
+ type Event={index?:number;event_index?:number;kind:string;summary:string;task_id:string;agent_id:string;status:string;created_at:string}
+@@ -56,10 +58,10 @@
+  </div><details className="aw-explore" onToggle={e=>setShowNetwork(e.currentTarget.open)}><summary>Show connected dependency network (live scheduler tasks)</summary>{showNetwork&&<><GraphView graph={network} layout="breadthfirst" height={340} onNode={n=>onSelect(String(n.id))}/><p className="aw-footnote">These task IDs belong to the supervisor runtime; they are not canonical organizational entities. Edges encode validated scheduling prerequisites.</p></>}</details></div>
+ }
+ 
+-function CitationLinks({ids}:{ids:string[]}){return <span className="aw-citations">{ids.map(id=><Link key={id} to={`/entities/${encodeURIComponent(id)}`}>{id} ↗</Link>)}{!ids.length&&<span className="aw-muted">None verified</span>}</span>}
++function CitationLinks({ids,graphId}:{ids:string[];graphId?:string}){return <span className="aw-citations">{ids.map(id=>graphId?<span key={id}>{id}</span>:<Link key={id} to={`/entities/${encodeURIComponent(id)}`}>{id} ↗</Link>)}{!ids.length&&<span className="aw-muted">None verified</span>}</span>}
+ 
+-function EvidenceExplorer({ids}:{ids:string[]}){
+- const {config}=useAuth();const [selected,setSelected]=useState('')
++function EvidenceExplorer({ids,config}:{ids:string[];config:import('../api/types').ApiConfig}){
++ const [selected,setSelected]=useState('')
+  const focus=ids.includes(selected)?selected:ids[0]||''
+  const record=useQuery({queryKey:['workspace-evidence-entity',config.tenantId,config.baseUrl,focus],queryFn:()=>getEntity(config,focus),enabled:!!focus,retry:false})
+  const neighborhood=useQuery({queryKey:['workspace-evidence-neighbors',config.tenantId,config.baseUrl,focus],queryFn:()=>getNeighbors(config,focus,{limit:40}),enabled:!!focus,retry:false})
+@@ -69,7 +71,7 @@
+   return found
+  },[focus,neighborhood.data])
+  if(!ids.length)return <p className="aw-muted">No verified final citations to explore.</p>
+- return <div className="aw-evidence-explorer"><div className="aw-controls-row"><label className="aw-field aw-grow"><span>Evidence or connected graph entity</span><select value={focus} onChange={e=>setSelected(e.target.value)}>{ids.map(id=><option value={id} key={id}>{id}</option>)}</select></label><Link to={`/entities/${encodeURIComponent(focus)}`}>Open complete entity record ↗</Link></div>
++ return <div className="aw-evidence-explorer"><div className="aw-controls-row"><label className="aw-field aw-grow"><span>Evidence or connected graph entity</span><select value={focus} onChange={e=>setSelected(e.target.value)}>{ids.map(id=><option value={id} key={id}>{id}</option>)}</select></label><span className="aw-muted">Scoped to selected Company Brain</span></div>
+   {record.error&&<ErrorPanel error={record.error}/>}{neighborhood.error&&<ErrorPanel error={neighborhood.error}/>}
+   {record.data&&<div className="aw-inspector"><b>{String(record.data?.entity?.name||record.data?.name||focus)}</b><p className="aw-muted">Record and provenance are backed by the current tenant graph. Edges below are returned graph relationships, not claims inferred by this interface.</p></div>}
+   {neighborhood.isLoading?<p className="aw-muted">Retrieving connected evidence…</p>:<GraphView graph={graph} layout="breadthfirst" height={315}/>}<p className="aw-footnote">Graph paths and provenance are current graph reads. Click any node to inspect its recorded links. Claims still require source verification.</p>
+@@ -78,20 +80,32 @@
+ 
+ export function AgentWorkspacePage(){
+  const {config,hasPermission}=useAuth();const qc=useQueryClient()
++ const brainList=useQuery({queryKey:['workspace-brains',config.baseUrl,config.tenantId,config.token],queryFn:()=>apiRequest<BrainList>(config,'/api/v1/graphs'),retry:false})
++ const [selectedGraph,setSelectedGraph]=useState(()=>{
++  try{return sessionStorage.getItem('verinex.workspace.graph.'+config.tenantId)||''}catch{return ''}
++ })
++ const availableBrains=brainList.data?.items.filter(item=>item.available)||[]
++ const activeGraph=availableBrains.some(item=>item.graph_id===selectedGraph)?selectedGraph:''
++ const scopedConfig={...config,graphId:activeGraph||undefined}
++ const changeGraph=(next:string)=>{
++  setSelectedGraph(next);setChosen('');setFocused('');setSource('');setOpenedScenario('');setMemoryRequested(false);setShowEvidence(false)
++  try{sessionStorage.setItem('verinex.workspace.graph.'+config.tenantId,next)}catch{/* session storage disabled */}
++ }
++
+  const [objective,setObjective]=useState('Investigate the route orchestration outage and produce an evidence-backed remediation proposal.')
+  const [source,setSource]=useState('');const [consent,setConsent]=useState(false);const [parallel,setParallel]=useState(3)
+  const [chosen,setChosen]=useState('');const [focused,setFocused]=useState('');const [tab,setTab]=useState<'activity'|'memory'|'replay'|'changes'|'approvals'>('activity')
+  const [memoryQuery,setMemoryQuery]=useState('');const [memoryIds,setMemoryIds]=useState('');const [memoryRequested,setMemoryRequested]=useState(false)
+  const [frame,setFrame]=useState(0);const [openedScenario,setOpenedScenario]=useState('');const [showEvidence,setShowEvidence]=useState(false)
+  const capabilities=useQuery({queryKey:['workspace-capabilities',config.baseUrl,config.tenantId],queryFn:()=>apiRequest<Capabilities>(config,base+'/capabilities'),retry:false,refetchInterval:30000})
+- const runs=useQuery({queryKey:['workspace-list',config.baseUrl,config.tenantId,config.token],queryFn:()=>apiRequest<{items:Workspace[]}>(config,base+'/runs'),retry:false,refetchInterval:3500})
++ const runs=useQuery({queryKey:['workspace-list',config.baseUrl,config.tenantId,config.token,activeGraph],queryFn:()=>apiRequest<{items:Workspace[]}>(scopedConfig,base+'/runs'),enabled:!!activeGraph,retry:false,refetchInterval:3500})
+  const activeId=chosen||runs.data?.items[0]?.id||''
+- const detail=useQuery({queryKey:['workspace-detail',config.baseUrl,config.tenantId,config.token,activeId],queryFn:()=>apiRequest<Detail>(config,base+'/runs/'+encodeURIComponent(activeId)),enabled:!!activeId,retry:false,refetchInterval:2500})
+- const changes=useQuery({queryKey:['workspace-changes',config.baseUrl,config.tenantId,config.token],queryFn:()=>apiRequest<{items:Change[]}>(config,base+'/changes?limit=30'),enabled:tab==='changes',retry:false,refetchInterval:6000})
+- const memory=useQuery({queryKey:['workspace-memory',config.baseUrl,config.tenantId,config.token,memoryQuery,memoryIds],queryFn:()=>apiRequest<MemoryResponse>(config,'/api/v1/agent-runtime/memory/search',{method:'POST',body:{query:memoryQuery,entity_ids:memoryIds.split(',').map(x=>x.trim()).filter(Boolean),limit:20}}),enabled:tab==='memory'&&memoryRequested,retry:false})
++ const detail=useQuery({queryKey:['workspace-detail',config.baseUrl,config.tenantId,config.token,activeGraph,activeId],queryFn:()=>apiRequest<Detail>(scopedConfig,base+'/runs/'+encodeURIComponent(activeId)),enabled:!!activeId,retry:false,refetchInterval:2500})
++ const changes=useQuery({queryKey:['workspace-changes',config.baseUrl,config.tenantId,config.token,activeGraph],queryFn:()=>apiRequest<{items:Change[]}>(scopedConfig,base+'/changes?limit=30'),enabled:!!activeGraph&&tab==='changes',retry:false,refetchInterval:6000})
++ const memory=useQuery({queryKey:['workspace-memory',config.baseUrl,config.tenantId,config.token,activeGraph,memoryQuery,memoryIds],queryFn:()=>apiRequest<MemoryResponse>(scopedConfig,'/api/v1/agent-runtime/memory/search',{method:'POST',body:{query:memoryQuery,entity_ids:memoryIds.split(',').map(x=>x.trim()).filter(Boolean),limit:20}}),enabled:!!activeGraph&&tab==='memory'&&memoryRequested,retry:false})
+  const refresh=()=>{qc.invalidateQueries({queryKey:['workspace-list']});qc.invalidateQueries({queryKey:['workspace-detail']})}
+- const start=useMutation({mutationFn:()=>apiRequest<{id:string;status:string}>(config,base+'/runs',{method:'POST',body:{goal:objective.trim(),source_entity_id:source.trim()||null,max_parallel:parallel,allow_external_model:consent}}),onSuccess:record=>{setChosen(record.id);setFocused('');setTab('activity');refresh()}})
+- const control=useMutation({mutationFn:(operation:'pause'|'cancel'|'resume'|'retry')=>apiRequest(config,base+'/runs/'+encodeURIComponent(activeId)+'/control',{method:'POST',body:{operation,allow_external_model:consent}}),onSuccess:refresh})
++ const start=useMutation({mutationFn:()=>apiRequest<{id:string;status:string}>(scopedConfig,base+'/runs',{method:'POST',body:{graph_id:activeGraph||null,goal:objective.trim(),source_entity_id:source.trim()||null,max_parallel:parallel,allow_external_model:consent}}),onSuccess:record=>{setChosen(record.id);setFocused('');setTab('activity');refresh()}})
++ const control=useMutation({mutationFn:(operation:'pause'|'cancel'|'resume'|'retry')=>apiRequest(scopedConfig,base+'/runs/'+encodeURIComponent(activeId)+'/control',{method:'POST',body:{operation,allow_external_model:consent}}),onSuccess:refresh})
+  const current=detail.data?.workspace
+  const result=detail.data?.supervisor
+  const tasks=result?.tasks||[]
+@@ -99,7 +113,7 @@
+  const selectedTask=tasks.find(t=>(t.task_id||t.id)===focused)
+  const isActive=!!current&&inProgress.includes(current.status)
+  const live=!!current&&current.status==='RUNNING'
+- const canStart=hasPermission('CREATE_INVESTIGATION')&&consent&&objective.trim().length>=12
++ const canStart=hasPermission('CREATE_INVESTIGATION')&&consent&&objective.trim().length>=12&&!!activeGraph
+  const selectedScenario=allScenarios.find(s=>s.scenario_id===openedScenario)
+  const snapshots=detail.data?.snapshots||[]
+  const displayFrame=Math.min(frame,Math.max(0,events.length-1))
+@@ -113,22 +127,28 @@
+    <div className="aw-stat"><b>{runs.data?.items.filter(r=>terminal.includes(r.status)).length??0}</b><span>Finished / needs review</span></div>
+   </div>
+   <section className="aw-card aw-launch" aria-label="Agent command interface"><div className="aw-head"><div><span className="aw-overline">COMMAND AGENTS</span><h2>What needs to be accomplished?</h2></div><span className="aw-chip">REAL MODEL EXECUTION ONLY</span></div>
++   <label className="aw-field"><span>Company Brain</span><select aria-label="Company Brain" value={activeGraph} onChange={e=>changeGraph(e.target.value)} disabled={brainList.isLoading}>
++    <option value="">Select an authorized Company Brain</option>
++    {availableBrains.map(brain=><option value={brain.graph_id} key={brain.graph_id}>{brain.display_name} ({brain.graph_id})</option>)}
++   </select></label>
++   {brainList.error&&<ErrorPanel error={brainList.error}/>}
++   {!brainList.isLoading&&!availableBrains.length&&<p className="aw-muted">No registered Company Brains are available to this tenant. Register an existing graph first.</p>}
+    <label className="aw-field"><span>Organizational objective</span><textarea rows={3} maxLength={1500} value={objective} onChange={e=>setObjective(e.target.value)} placeholder="Investigate the outage, verify dependencies, and propose the safest remediation…"/></label>
+    <div className="aw-controls-row"><label className="aw-field aw-grow"><span>Starting graph entity (optional)</span><input value={source} onChange={e=>setSource(e.target.value)} placeholder="INC-AST-ROUTE-OUTAGE"/></label><label className="aw-field"><span>Parallel specialists</span><select value={parallel} onChange={e=>setParallel(Number(e.target.value))}>{[1,2,3,4].map(v=><option value={v} key={v}>{v}</option>)}</select></label></div>
+    <label className="aw-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>I authorize sending the scoped organizational context and validated handoffs to the configured model. This is <b>not</b> permission to perform external actions.</span></label>
+    <div className="aw-command-bottom"><button className="primary" disabled={!canStart||start.isPending} onClick={()=>start.mutate()}>{start.isPending?'Starting…':'Start investigation →'}</button><span className="aw-muted">Actual model runs require provider credentials and a reachable FalkorDB graph.</span></div>
+    {start.error&&<ErrorPanel error={start.error}/>} {capabilities.error&&<ErrorPanel error={capabilities.error}/>}
+-   <details className="aw-scenarios"><summary>Asteria scenario shortcuts · seeded starting points, not results</summary><div className="aw-scenario-list">{allScenarios.map(s=><button key={s.scenario_id} onClick={()=>{setOpenedScenario(s.scenario_id);setObjective(s.test_prompts[0]||`Investigate ${s.title}`);setSource(s.entry_ids[0]||'')}}>{s.scenario_id}<strong>{s.title}</strong></button>)}</div>{selectedScenario&&<p className="aw-muted">Selected fixture: {selectedScenario.scenario_id} · {selectedScenario.entry_ids.join(', ')}. You must be connected to an appropriately populated Asteria tenant for these IDs to resolve.</p>}</details>
++   <details className="aw-scenarios" hidden={activeGraph!=="asteria_company_brain_v1"}><summary>Asteria scenario shortcuts · seeded starting points, not results</summary><div className="aw-scenario-list">{allScenarios.map(s=><button key={s.scenario_id} onClick={()=>{setOpenedScenario(s.scenario_id);setObjective(s.test_prompts[0]||`Investigate ${s.title}`);setSource(s.entry_ids[0]||'')}}>{s.scenario_id}<strong>{s.title}</strong></button>)}</div>{selectedScenario&&<p className="aw-muted">Selected fixture: {selectedScenario.scenario_id} · {selectedScenario.entry_ids.join(', ')}. You must be connected to an appropriately populated Asteria tenant for these IDs to resolve.</p>}</details>
+   </section>
+   <div className="aw-layout"><aside className="aw-card aw-run-list"><div className="aw-head"><div><span className="aw-overline">EXECUTION QUEUE</span><h2>Investigations</h2></div><button onClick={refresh} aria-label="Refresh runs">↻</button></div>
+     {runs.error&&<ErrorPanel error={runs.error}/>}{!runs.data?.items.length&&<div className="aw-empty">No workspace runs yet. Start one above to create a real investigation.</div>}
+-    {runs.data?.items.map(run=><button className={`aw-run ${activeId===run.id?'aw-picked':''}`} key={run.id} onClick={()=>{setChosen(run.id);setFocused('');setFrame(0)}}><span className="aw-run-top"><b className={`aw-pill aw-pill-${run.status.toLowerCase()}`}>{run.status.replaceAll('_',' ')}</b><small>{stamp(run.created_at)}</small></span><strong>{run.goal}</strong><small>{run.id}</small></button>)}
++    {runs.data?.items.map(run=><button className={`aw-run ${activeId===run.id?'aw-picked':''}`} key={run.id} onClick={()=>{setChosen(run.id);setFocused('');setFrame(0)}}><span className="aw-run-top"><b className={`aw-pill aw-pill-${run.status.toLowerCase()}`}>{run.status.replaceAll('_',' ')}</b><small>{stamp(run.created_at)}</small></span><strong>{run.goal}</strong><small>{run.graph_id||'Legacy default'} · {run.id}</small></button>)}
+     <p className="aw-footnote">Only runs owned by the authenticated principal are listed.</p>
+    </aside>
+    <div className="aw-main">
+     {detail.error&&<ErrorPanel error={detail.error}/>}
+     {!current?<section className="aw-card aw-empty-state"><span className="aw-overline">AWAITING OBJECTIVE</span><h2>The workspace is ready.</h2><p>Start an investigation or choose one of your saved runs to observe tasks and inspect verified outcomes.</p></section>:<>
+-     <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">SUPERVISOR / {current.id}</span><h2>{current.goal}</h2><p className="aw-muted">Owner {current.owner} · {stamp(current.created_at)}</p></div><b className={`aw-pill aw-pill-${current.status.toLowerCase()}`}>{current.status}</b></div>
++     <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">SUPERVISOR / {current.id}</span><h2>{current.goal}</h2><p className="aw-muted">Owner {current.owner} · {stamp(current.created_at)} · Brain: {current.graph_id||'Legacy default'}</p></div><b className={`aw-pill aw-pill-${current.status.toLowerCase()}`}>{current.status}</b></div>
+       <div className="aw-metrics"><span><strong>{tasks.length}</strong> scheduled tasks</span><span><strong>{tasks.filter(t=>t.status==='COMPLETED').length}</strong> completed</span><span><strong>{events.length}</strong> recorded events</span><span><strong>{result?.tokens_used??0}</strong> tokens / estimate</span></div>
+       <div className="aw-actions"><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('pause')}>Pause after current tasks</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('cancel')}>Cancel scheduling</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!current.recovery_available||!['PAUSED','INTERRUPTED'].includes(current.status)||control.isPending} onClick={()=>control.mutate('resume')}>Resume</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!['FAILED','PARTIAL','NEEDS_REVIEW'].includes(current.status)||control.isPending} onClick={()=>control.mutate('retry')}>Retry failed work</button><button onClick={()=>detail.refetch()}>Refresh now</button></div>
+       {current.error&&<p role="alert">{current.error}</p>}{control.error&&<ErrorPanel error={control.error}/>}
+@@ -138,12 +158,12 @@
+      <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">DEPENDENCY-AWARE COORDINATION</span><h2>Specialist task graph</h2></div><span className="aw-muted">Select a task to inspect findings</span></div>
+       <TaskGraph tasks={tasks} selected={focused} onSelect={setFocused}/>
+       {selectedTask&&<div className="aw-inspector"><div className="aw-head"><h3>{selectedTask.task_id||selectedTask.id}</h3><b className="aw-pill">{selectedTask.status}</b></div><p>{selectedTask.objective}</p><p className="aw-muted">Agent: {selectedTask.agent_id||'none'} · Capability: {selectedTask.capability} · Attempts: {selectedTask.attempts} · Needs: {selectedTask.depends_on.join(', ')||'no prerequisites'}</p>
+-      {selectedTask.result&&<><p>{selectedTask.result.summary}</p><p>Evidence confidence: <b>{selectedTask.result.confidence}</b> · Risk: {selectedTask.result.risk}</p><CitationLinks ids={selectedTask.result.citations||[]}/>{!!selectedTask.result.knowledge_gaps?.length&&<p>Open questions: {selectedTask.result.knowledge_gaps.join('; ')}</p>}</>}{selectedTask.error&&<p role="alert">{selectedTask.error}</p>}</div>}
++      {selectedTask.result&&<><p>{selectedTask.result.summary}</p><p>Evidence confidence: <b>{selectedTask.result.confidence}</b> · Risk: {selectedTask.result.risk}</p><CitationLinks ids={selectedTask.result.citations||[]} graphId={current.graph_id}/>{!!selectedTask.result.knowledge_gaps?.length&&<p>Open questions: {selectedTask.result.knowledge_gaps.join('; ')}</p>}</>}{selectedTask.error&&<p role="alert">{selectedTask.error}</p>}</div>}
+      </section>
+      <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">EVIDENCE-BASED OUTCOME</span><h2>Result and next decisions</h2></div><span className="aw-chip">{result?.status||'AWAITING RESULTS'}</span></div>
+       {result?.answer?<p className="aw-answer">{result.answer}</p>:<p className="aw-muted">No verified final synthesis yet; individual specialist findings may still be available.</p>}
+-      <p className="aw-small-heading">CITED GRAPH RECORDS</p><CitationLinks ids={result?.citations||[]}/>
+-      <details className="aw-explore" onToggle={e=>setShowEvidence(e.currentTarget.open)}><summary>Explore cited evidence and graph relationships here</summary>{showEvidence&&<EvidenceExplorer ids={result?.citations||[]}/>}</details>
++      <p className="aw-small-heading">CITED GRAPH RECORDS</p><CitationLinks ids={result?.citations||[]} graphId={current.graph_id}/>
++      <details className="aw-explore" onToggle={e=>setShowEvidence(e.currentTarget.open)}><summary>Explore cited evidence and graph relationships here</summary>{showEvidence&&<EvidenceExplorer ids={result?.citations||[]} config={{...scopedConfig,graphId:current.graph_id}}/>}</details>
+       {!!result?.knowledge_gaps?.length&&<><p className="aw-small-heading">UNRESOLVED QUESTIONS</p><ul>{result.knowledge_gaps.map((text,i)=><li key={i}>{text}</li>)}</ul></>}
+       {!!result?.escalations?.length&&<><p className="aw-small-heading">HUMAN ESCALATION</p><ul>{result.escalations.map((e,i)=><li key={i}>{e.reason} — {e.task_ids.join(', ')} {e.detail||''}</li>)}</ul></>}
+       <p className="aw-footnote">An evidence-backed recommendation is never itself authorization to execute an action. Use the approval board below for separate governed operations.</p>
+diff --git a/backend/tests/test_company_brain_workspace_stage2.py b/backend/tests/test_company_brain_workspace_stage2.py
+new file mode 100644
+--- /dev/null
++++ b/backend/tests/test_company_brain_workspace_stage2.py
+@@ -0,0 +1,89 @@
++"""Offline tests for selected-graph authorization and Workspace binding."""
++from __future__ import annotations
++
++from dataclasses import replace
++from types import SimpleNamespace
++
++import pytest
++from fastapi.testclient import TestClient
++from backend.app.main import app
++from backend.app.api_v1 import router as workspace_api
++from backend.app.api_v1.security import Principal, client_for
++from backend.app.agent_runtime.workspace import WorkspaceStart
++from backend.app.graph.registry import GraphNotRegistered
++
++
++def _principal(graph: str | None = None) -> Principal:
++    return Principal('alice','asteria',('ADMIN',),frozenset({'ADMIN'}),graph)
++
++
++def test_header_can_only_select_tenant_registered_graph(monkeypatch):
++    from backend.app.graph import registry
++    def registered(self, *, tenant_id, graph_id):
++        if (tenant_id,graph_id) != ('asteria','asteria_company_brain_v1'):
++            raise GraphNotRegistered('Not authorized')
++        return {'tenant_id': tenant_id, 'graph_id':graph_id}
++    monkeypatch.setattr(registry.GraphRegistry, 'resolve', registered)
++    http=TestClient(app)
++    base={'Authorization':'Bearer test-asteria-admin-token'}
++    ok=http.get('/api/v1/session',headers={**base,'X-Company-Brain-ID':'asteria_company_brain_v1'})
++    assert ok.status_code==200
++    missing=http.get('/api/v1/session',headers={**base,'X-Company-Brain-ID':'verinex_neon_stage5_xyz'})
++    assert missing.status_code==404
++    cross=http.get('/api/v1/session',headers={'Authorization':'Bearer test-reader-token','X-Company-Brain-ID':'asteria_company_brain_v1'})
++    assert cross.status_code==404
++    wrong_tenant=http.get('/api/v1/session',headers={**base,'X-Tenant-ID':'northstar','X-Company-Brain-ID':'asteria_company_brain_v1'})
++    assert wrong_tenant.status_code==403
++
++
++def test_client_for_scopes_without_global_settings_mutation(monkeypatch):
++    from backend.app.graph import registry
++    received=[]
++    def select(self, *, tenant_id, graph_id, settings=None):
++        received.append((tenant_id,graph_id,settings.tenant_id,settings.falkordb_graph))
++        return SimpleNamespace(settings=settings.model_copy(update={'falkordb_graph':graph_id}))
++    monkeypatch.setattr(registry.GraphRegistry,'client_for_graph',select)
++    from backend.app.config import Settings
++    original=Settings.from_env().falkordb_graph
++    client=client_for(_principal('asteria_company_brain_v1'))
++    assert client.settings.falkordb_graph=='asteria_company_brain_v1'
++    assert received[0][:3]==('asteria','asteria_company_brain_v1','asteria')
++    assert Settings.from_env().falkordb_graph==original
++
++
++def test_workspace_refuses_body_header_graph_mismatch(monkeypatch):
++    monkeypatch.setattr(workspace_api, '_guard_rate',lambda *args,**kwargs:None)
++    with pytest.raises(Exception) as e:
++        workspace_api.workspace_start(
++            WorkspaceStart(goal='Investigate route outage and report facts',graph_id='company_brain',allow_external_model=True),
++            SimpleNamespace(),_principal('asteria_company_brain_v1'))
++    assert getattr(e.value,'code',None)=='GRAPH_SCOPE_MISMATCH'
++
++
++def test_workspace_run_stores_exact_selected_graph(monkeypatch):
++    monkeypatch.setattr(workspace_api, '_guard_rate',lambda *args,**kwargs:None)
++    monkeypatch.setattr(workspace_api,'OpenAICompatibleProvider',lambda:object())
++    fake_client=SimpleNamespace(settings=SimpleNamespace(falkordb_graph='asteria_company_brain_v1'))
++    monkeypatch.setattr(workspace_api,'client_for',lambda p:fake_client)
++    records=[]
++    class Store:
++        def create(self,item):records.append(item)
++        def update(self,*args,**kwargs):return {}
++    monkeypatch.setattr(workspace_api,'_workspace_store',lambda p:Store())
++    monkeypatch.setattr(workspace_api.workspace_runner,'submit',lambda **kwargs:None)
++    result=workspace_api.workspace_start(
++        WorkspaceStart(goal='Investigate route outage and report facts',graph_id='asteria_company_brain_v1',allow_external_model=True),
++        SimpleNamespace(),_principal('asteria_company_brain_v1'))
++    assert records[0]['graph_id']=='asteria_company_brain_v1'
++    assert result['graph_id']=='asteria_company_brain_v1'
++    assert records[0]['settings']['source_entity_id'] is None
++
++
++def test_workspace_run_cannot_cross_selected_graph(monkeypatch):
++    class Store:
++        def get(self,*args):return {'id':args[0], 'graph_id':'company_brain','owner':'alice'}
++    monkeypatch.setattr(workspace_api,'_workspace_store',lambda p:Store())
++    monkeypatch.setattr(workspace_api,'client_for',lambda p:SimpleNamespace(settings=SimpleNamespace(falkordb_graph=p.graph_id)))
++    with pytest.raises(Exception) as e:
++        workspace_api._workspace_owned(_principal('asteria_company_brain_v1'),'SRUN-'+'A'*32)
++    assert getattr(e.value,'status_code',None)==404

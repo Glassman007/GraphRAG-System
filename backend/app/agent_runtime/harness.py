@@ -23,6 +23,9 @@ class AgentSettings(BaseModel):
     max_tokens: int = Field(default=18000, ge=500, le=32000)
     max_seconds: int = Field(default=90, ge=10, le=180)
     allow_external_model: bool = False
+    # Explicit opt-in: only for a known, tenant-scoped Incident. The general
+    # iterative planner and tool-selection path is unchanged by default.
+    execution_mode: str = Field(default='general', pattern='^(general|incident_skill)$')
 
 
 class FinalResponse(BaseModel):
@@ -321,6 +324,9 @@ class AgentHarness:
     def run(self, settings: AgentSettings, *, subject: str) -> AgentRun:
         if not settings.allow_external_model:
             raise ValueError('Explicit model-data transmission consent is required')
+        if settings.execution_mode == 'incident_skill':
+            from backend.app.agent_runtime.incident_skill import run_incident_skill
+            return run_incident_skill(self, settings, subject=subject)
         started=time.monotonic()
         deadline=started + settings.max_seconds
         run_id='ARUN-' + uuid.uuid4().hex.upper()

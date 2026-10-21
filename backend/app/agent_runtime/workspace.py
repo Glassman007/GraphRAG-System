@@ -27,6 +27,7 @@ def now() -> str:
 class WorkspaceStart(BaseModel):
     model_config = ConfigDict(extra='forbid')
     goal: str = Field(min_length=12, max_length=1500)
+    graph_id: str | None = Field(default=None, min_length=1, max_length=96)
     source_entity_id: str | None = Field(default=None, min_length=3, max_length=150)
     max_parallel: int = Field(default=3, ge=1, le=4)
     allow_external_model: bool = False

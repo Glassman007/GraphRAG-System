@@ -20,6 +20,7 @@ from backend.app.ingestion.registry import ADAPTERS, SourceRegistry
 from backend.app.ingestion.resolution.service import IngestionEntityResolutionService
 from backend.app.retrieval.indexing import RetrievalIndexer
 from backend.app.retrieval.lexical import BM25LexicalIndex
+from backend.app.retrieval.paths import scoped_index_root
 from backend.app.retrieval.vector import LocalVectorIndex
 from backend.app.services.event_ledger_service import EventLedgerService
 from backend.app.services.phase4_graph import GraphSnapshot, has_label
@@ -299,6 +300,17 @@ class SourceControlService:
         snap = GraphSnapshot.load(self.client)
         if snap.node(sid):
             raise FileExistsError(sid)
+        # Enforce single-source ownership for graphs provisioned as dedicated.
+        # Legacy/multi-source Company Brains are left untouched.
+        anchors = self.client.read(
+            "MATCH (a:VERINEXGraphAnchor {tenant_id:$tenant_id, graph_id:$graph_id, dedicated:true}) "
+            "RETURN a.graph_id LIMIT 1",
+            {'tenant_id': self.client.settings.tenant_id,
+             'graph_id': self.client.settings.falkordb_graph},
+        ).result_set
+        if anchors and any(has_label(n, 'DataSource')
+                           for n in snap.nodes.values()):
+            raise ValueError('Dedicated Company Brain already has a source; create a new Company Brain')
         at = now_iso()
         connection_mode = str(payload.get("connection_mode") or "fixture").lower()
         if connection_mode not in {"fixture", "live"}:
@@ -374,7 +386,7 @@ class SourceControlService:
         import os
         source_registry = self._registry(source_id)
         artifact_root = Path(os.getenv("GRAPH_HACKS_ARTIFACT_ROOT") or self.root / ".graphhacks_artifacts")
-        retrieval_root = Path(os.getenv("GRAPH_HACKS_RETRIEVAL_ROOT") or self.root / ".graphhacks_retrieval") / self.client.settings.tenant_id
+        retrieval_root = scoped_index_root(tenant_id=self.client.settings.tenant_id, graph_id=self.client.settings.falkordb_graph, root=self.root)
         store = LocalArtifactStore(artifact_root)
         indexer = RetrievalIndexer(self.client, lexical=BM25LexicalIndex(retrieval_root / "lexical.json"), vector=LocalVectorIndex(path=retrieval_root / "vector.json"), artifact_store=store)
         return IngestionPipeline(self.client, registry=source_registry, artifact_store=store, retrieval_indexer=indexer, root=self.root)

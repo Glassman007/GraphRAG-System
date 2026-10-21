@@ -1,0 +1,515 @@
+--- a/backend/app/api_v1/router.py
++++ b/backend/app/api_v1/router.py
+@@ -62,7 +62,7 @@
+     format_workspace, build_replay, task_comparison, now as workspace_now)
+ from backend.app.services.phase4_graph import GraphSnapshot, has_label
+ from backend.app.ingestion.source_control import SourceControlService
+-from backend.app.ingestion.source_catalog import list_source_catalog
++from backend.app.ingestion.source_catalog import list_source_catalog, remove_source_from_catalog, inspect_source_removal
+ 
+ router = APIRouter(prefix="/api/v1", responses={400:{"model":ErrorResponse},401:{"model":ErrorResponse},403:{"model":ErrorResponse},404:{"model":ErrorResponse},409:{"model":ErrorResponse},422:{"model":ErrorResponse},429:{"model":ErrorResponse},503:{"model":ErrorResponse}})
+ 
+@@ -1469,6 +1469,36 @@
+     return list_source_catalog(tenant_id=principal.tenant_id)
+ 
+ 
++@router.get("/sources/catalog/{source_id}/removal-impact", tags=["Sources"],
++            summary="Inspect source lineage before disconnecting (read-only)")
++def source_removal_impact(source_id: str, principal: Principal = Depends(require("MANAGE_INGESTION"))):
++    if not principal.graph_id:
++        raise ApiError(422, "GRAPH_REQUIRED", "Select an authorized Company Brain to inspect this source")
++    try:
++        return inspect_source_removal(tenant_id=principal.tenant_id,
++                                      graph_id=principal.graph_id,
++                                      source_id=source_id)
++    except KeyError:
++        _not_found("Source", source_id)
++    except ValueError as exc:
++        raise ApiError(422, "VALIDATION_FAILED", str(exc)) from exc
++
++
++@router.delete("/sources/catalog/{source_id}", tags=["Sources"],
++               summary="Remove source from catalog; retain historical evidence")
++def remove_catalog_source(source_id: str, principal: Principal = Depends(require("MANAGE_INGESTION"))):
++    if not principal.graph_id:
++        raise ApiError(422, "GRAPH_REQUIRED", "Select an authorized Company Brain before removing a source")
++    try:
++        return remove_source_from_catalog(tenant_id=principal.tenant_id,
++                                          graph_id=principal.graph_id,
++                                          source_id=source_id, actor_id=principal.subject)
++    except KeyError as exc:
++        _not_found("Source", source_id)
++    except ValueError as exc:
++        raise ApiError(422, "VALIDATION_FAILED", str(exc)) from exc
++
++
+ @router.get("/sources/runs", tags=["Sources"], summary="List ingestion runs")
+ def list_ingestion_runs(source_id:str|None=None, principal:Principal=Depends(require("MANAGE_INGESTION"))):
+     return {"items": _sources(principal).list_runs(source_id=source_id)}
+--- a/backend/app/ingestion/source_catalog.py
++++ b/backend/app/ingestion/source_catalog.py
+@@ -6,6 +6,11 @@
+ from __future__ import annotations
+ 
+ from typing import Any
++
++from backend.app.graph.mutations import upsert_node
++from backend.app.services.phase6_utils import now_iso
++from backend.app.services.event_ledger_service import EventLedgerService
++from backend.app.ingestion.source_control import SourceControlService
+ 
+ from backend.app.graph.registry import GraphRegistry
+ from backend.app.services.phase4_graph import GraphSnapshot, has_label
+@@ -22,7 +27,7 @@
+         client = registry.client_for_graph(tenant_id=tenant_id, graph_id=graph_id)
+         snapshot = GraphSnapshot.load(client)
+         for node in snapshot.nodes.values():
+-            if not has_label(node, 'DataSource') or node.get('configuration_removed'):
++            if not has_label(node, 'DataSource') or node.get('configuration_removed') or node.get('catalog_hidden'):
+                 continue
+             source_id = str(node.get('id') or '')
+             if not source_id:
+@@ -43,3 +48,87 @@
+             })
+     items.sort(key=lambda item: (item['brain_name'].casefold(), item['display_name'].casefold(), item['source_id']))
+     return {'items': items, 'brains': brain_list['items']}
++
++
++def remove_source_from_catalog(*, tenant_id: str, graph_id: str, source_id: str,
++                               actor_id: str, registry: GraphRegistry | None = None) -> dict[str, Any]:
++    """Hide a source from selection without silently deleting organizational evidence.
++
++    The graph must be explicitly selected and authorized. Managed connectors use
++    the existing configuration-removal implementation (including credential removal).
++    Seeded/imported sources are only hidden from the catalog; their historical
++    DataSource and evidence nodes remain queryable for audit/provenance purposes.
++    """
++    if not graph_id or not source_id:
++        raise ValueError('Explicit Company Brain and source ID are required')
++    registry = registry or GraphRegistry()
++    client = registry.client_for_graph(tenant_id=tenant_id, graph_id=graph_id)
++    snapshot = GraphSnapshot.load(client)
++    node = snapshot.node(source_id)
++    if (not node or not has_label(node, 'DataSource') or
++            node.get('tenant_id') != tenant_id or
++            node.get('configuration_removed') or node.get('catalog_hidden')):
++        raise KeyError(source_id)
++    if node.get('managed_by') == 'phase13-source-control':
++        result = SourceControlService(client).delete_configuration(source_id, actor_id=actor_id)
++        return {**result, 'graph_id': graph_id, 'action': 'CONFIGURATION_REMOVED'}
++    # Read-only fixture provenance is retained; only catalog visibility changes.
++    upsert_node(client, 'DataSource', source_id, {
++        'catalog_hidden': True, 'catalog_hidden_at': now_iso(),
++        'catalog_hidden_by': actor_id,
++    })
++    EventLedgerService(client).record(
++        'SOURCE_CATALOG_HIDDEN', about_ids=[source_id], actor_id=actor_id,
++        summary=f'Catalog visibility removed for source {source_id}; provenance retained',
++    )
++    return {
++        'source_id': source_id, 'graph_id': graph_id,
++        'catalog_hidden': True, 'historical_provenance_retained': True,
++        'action': 'CATALOG_HIDDEN',
++    }
++
++
++def inspect_source_removal(*, tenant_id: str, graph_id: str, source_id: str,
++                           registry: GraphRegistry | None = None) -> dict[str, Any]:
++    """Read-only source footprint in a shared graph. Never authorizes a purge.
++
++    `NORMALIZED_TO` shows which canonical nodes source records produced, but
++    canonical nodes can also be used by other sources or manually authored.
++    This audit is intentionally conservative: it never claims deletability.
++    """
++    if not graph_id or not source_id:
++        raise ValueError('Explicit Company Brain and source ID are required')
++    registry = registry or GraphRegistry()
++    client = registry.client_for_graph(tenant_id=tenant_id, graph_id=graph_id)
++    snap = GraphSnapshot.load(client)
++    node = snap.node(source_id)
++    if not has_label(node, 'DataSource') or node.get('tenant_id') != tenant_id:
++        raise KeyError(source_id)
++    sources = [n for n in snap.nodes.values() if has_label(n, 'DataSource')]
++    records = [n for n in snap.nodes.values() if has_label(n, 'SourceRecord')
++               and (n.get('source_id') == source_id or n.get('source_ref_id') == source_id)]
++    record_ids = {str(n['id']) for n in records}
++    canonical_ids = {e.target for rid in record_ids for e in snap.edges_from(rid, {'NORMALIZED_TO'})}
++    other_records = {str(n['id']) for n in snap.nodes.values() if has_label(n, 'SourceRecord')
++                     and str(n['id']) not in record_ids}
++    other_canonical = {e.target for rid in other_records for e in snap.edges_from(rid, {'NORMALIZED_TO'})}
++    shared = canonical_ids & other_canonical
++    direct_nodes = [n for n in snap.nodes.values() if n.get('source_ref_id') == source_id
++                    or n.get('source_id') == source_id]
++    tagged_edges = [e for e in snap.edges if e.properties.get('source_ref_id') == source_id]
++    return {
++        'graph_id': graph_id, 'tenant_id': tenant_id, 'source_id': source_id,
++        'display_name': node.get('display_name') or node.get('name') or source_id,
++        'managed': node.get('managed_by') == 'phase13-source-control',
++        'source_records': len(record_ids),
++        'canonical_entities_reached': len(canonical_ids),
++        'canonical_entities_also_referenced_by_other_source_records': len(shared),
++        'direct_source_tagged_nodes': len(direct_nodes),
++        'source_tagged_edges': len(tagged_edges),
++        'data_sources_in_selected_graph': len(sources),
++        'graph_shared_by_multiple_sources': len(sources) > 1,
++        'supported_removal': 'DISCONNECT_AND_RETAIN_PROVENANCE',
++        'hard_purge_safe': False,
++        'warning': 'This is a lineage inventory, not a proof that unshared nodes are safe to delete. '
++                   'Full removal requires validated exclusive ownership and index/artifact cleanup.',
++    }
+--- a/backend/app/ingestion/source_control.py
++++ b/backend/app/ingestion/source_control.py
+@@ -300,6 +300,17 @@
+         snap = GraphSnapshot.load(self.client)
+         if snap.node(sid):
+             raise FileExistsError(sid)
++        # Enforce single-source ownership for graphs provisioned as dedicated.
++        # Legacy/multi-source Company Brains are left untouched.
++        anchors = self.client.read(
++            "MATCH (a:VERINEXGraphAnchor {tenant_id:$tenant_id, graph_id:$graph_id, dedicated:true}) "
++            "RETURN a.graph_id LIMIT 1",
++            {'tenant_id': self.client.settings.tenant_id,
++             'graph_id': self.client.settings.falkordb_graph},
++        ).result_set
++        if anchors and any(has_label(n, 'DataSource')
++                           for n in snap.nodes.values()):
++            raise ValueError('Dedicated Company Brain already has a source; create a new Company Brain')
+         at = now_iso()
+         connection_mode = str(payload.get("connection_mode") or "fixture").lower()
+         if connection_mode not in {"fixture", "live"}:
+--- a/backend/app/graph/registry.py
++++ b/backend/app/graph/registry.py
+@@ -11,6 +11,7 @@
+ import os
+ import re
+ import sqlite3
++import uuid
+ from datetime import datetime, timezone
+ from pathlib import Path
+ from typing import Any
+@@ -104,6 +105,44 @@
+                 (tenant_id, graph_id, display_name, at))
+         return self.resolve(tenant_id=tenant_id, graph_id=graph_id)
+ 
++    def create_dedicated(self, *, tenant_id: str, display_name: str,
++                         client: FalkorGraphClient | None = None) -> dict[str, Any]:
++        """Provision a *new* tenant Company Brain, never redirect or copy an existing one.
++
++        A technical anchor (not an Entity) makes an otherwise empty graph exist
++        in FalkorDB. No external source is ingested by provisioning.
++        """
++        name = display_name.strip()
++        if not 1 <= len(name) <= 100:
++            raise InvalidGraphRegistration('Display name must contain 1-100 characters')
++        if not _TENANT_ID.fullmatch(tenant_id):
++            raise InvalidGraphRegistration('Invalid tenant ID')
++        client = client or FalkorGraphClient()
++        available = self._available_names(client)
++        graph_id = ''
++        for _ in range(5):
++            proposed = 'source_' + uuid.uuid4().hex[:20]
++            if proposed not in available:
++                graph_id = proposed
++                break
++        if not graph_id:
++            raise InvalidGraphRegistration('Could not allocate a unique graph ID')
++        _validate(graph_id, tenant_id)
++        graph = client.db.select_graph(graph_id)
++        try:
++            graph.query('CREATE (:VERINEXGraphAnchor {tenant_id:$tenant_id, graph_id:$graph_id, dedicated:true})',
++                        {'tenant_id': tenant_id, 'graph_id': graph_id})
++            registered = self.register_existing(graph_id=graph_id, tenant_id=tenant_id,
++                                                display_name=name, client=client)
++        except Exception:
++            # Only ever delete the newly allocated graph, never an existing graph.
++            try:
++                graph.delete()
++            except Exception:
++                pass
++            raise
++        return {**registered, 'dedicated': True}
++
+     def resolve(self, *, tenant_id: str, graph_id: str) -> dict[str, Any]:
+         # Normalize untrusted IDs before any potential graph interaction.
+         _validate(graph_id, tenant_id)
+--- a/backend/app/graph/registry_api.py
++++ b/backend/app/graph/registry_api.py
+@@ -2,10 +2,11 @@
+ from __future__ import annotations
+ 
+ from fastapi import APIRouter, Depends
++from pydantic import BaseModel, Field
+ 
+ from backend.app.api_v1.errors import ApiError
+ from backend.app.api_v1.security import Principal, require
+-from backend.app.graph.registry import GraphRegistry, GraphNotRegistered
++from backend.app.graph.registry import GraphRegistry, GraphNotRegistered, InvalidGraphRegistration
+ 
+ registry_router = APIRouter(prefix="/api/v1/graphs", tags=["Company Brains"])
+ 
+@@ -29,3 +30,19 @@
+         raise ApiError(404, "NOT_FOUND", "Company Brain not found") from None
+     except Exception as exc:
+         raise ApiError(503, "GRAPH_REGISTRY_UNAVAILABLE", "Company Brain registry is unavailable") from exc
++
++
++class NewCompanyBrain(BaseModel):
++    display_name: str = Field(min_length=1, max_length=100)
++
++
++@registry_router.post('', status_code=201, summary='Create a dedicated Company Brain for a new source')
++def create_company_brain(body: NewCompanyBrain,
++                         principal: Principal = Depends(require('MANAGE_INGESTION'))):
++    try:
++        return GraphRegistry().create_dedicated(tenant_id=principal.tenant_id,
++                                                 display_name=body.display_name)
++    except InvalidGraphRegistration as exc:
++        raise ApiError(422, 'VALIDATION_FAILED', str(exc)) from exc
++    except Exception as exc:
++        raise ApiError(503, 'GRAPH_CREATION_FAILED', 'Could not create dedicated Company Brain') from exc
+--- a/frontend/src/api/sources.ts
++++ b/frontend/src/api/sources.ts
+@@ -3,6 +3,14 @@
+ export const listConnectors=(c:ApiConfig,s?:AbortSignal)=>apiRequest<{items:Dict[]}>(c,'/api/v1/connectors',{signal:s})
+ export const getConnector=(c:ApiConfig,t:string,s?:AbortSignal)=>apiRequest<Dict>(c,`/api/v1/connectors/${encodeURIComponent(t)}`,{signal:s})
+ export const listSourceCatalog=(c:ApiConfig,s?:AbortSignal)=>apiRequest<{items:Dict[];brains:Dict[]}>(c,'/api/v1/sources/catalog',{signal:s})
++export const inspectSourceRemoval=(c:ApiConfig,id:string,s?:AbortSignal)=>{
++ if(!c.graphId)throw new Error('Select a Company Brain before inspecting a source')
++ return apiRequest<Dict>(c,`/api/v1/sources/catalog/${encodeURIComponent(id)}/removal-impact`,{signal:s})
++}
++export const removeCatalogSource=(c:ApiConfig,id:string)=>{
++ if(!c.graphId)throw new Error('Select a Company Brain before removing a source')
++ return apiRequest<Dict>(c,`/api/v1/sources/catalog/${encodeURIComponent(id)}`,{method:'DELETE'})
++}
+ export const listSources=(c:ApiConfig,s?:AbortSignal)=>apiRequest<{items:Dict[]}>(c,'/api/v1/sources',{signal:s})
+ export const createSource=(c:ApiConfig,b:Dict)=>apiRequest<Dict>(c,'/api/v1/sources',{method:'POST',body:b})
+ export const getSource=(c:ApiConfig,id:string,s?:AbortSignal)=>apiRequest<Dict>(c,`/api/v1/sources/${encodeURIComponent(id)}`,{signal:s})
+--- a/frontend/src/pages/sources/SourcesPage.tsx
++++ b/frontend/src/pages/sources/SourcesPage.tsx
+@@ -1,11 +1,24 @@
++import { useState } from 'react'
+ import { Link } from 'react-router-dom'
+-import { useQuery } from '@tanstack/react-query'
++import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+ import { useAuth } from '../../auth/AuthContext'
+-import { listSourceCatalog } from '../../api/sources'
++import { listSourceCatalog, removeCatalogSource, inspectSourceRemoval } from '../../api/sources'
++import { ConfirmationDialog } from '../../components/ConfirmationDialog'
+ import { ErrorPanel, LoadingPanel } from '../../components/AsyncState'
+ 
+ export function SourcesPage() {
+- const {config}=useAuth()
++ const {config,hasPermission}=useAuth()
++ const qc=useQueryClient()
++ const [pendingRemoval,setPendingRemoval]=useState<{graph_id:string;source_id:string;display_name:string;managed:boolean}|null>(null)
++ const impact=useQuery({
++  queryKey:['source-removal-impact',config.tenantId,pendingRemoval?.graph_id,pendingRemoval?.source_id],
++  queryFn:({signal})=>inspectSourceRemoval({...config,graphId:pendingRemoval!.graph_id},pendingRemoval!.source_id,signal),
++  enabled:!!pendingRemoval,retry:false,
++ })
++ const removal=useMutation({
++  mutationFn:({graph_id,source_id}:{graph_id:string;source_id:string})=>removeCatalogSource({...config,graphId:graph_id},source_id),
++  onSuccess:()=>{setPendingRemoval(null);qc.invalidateQueries({queryKey:['source-catalog']});qc.invalidateQueries({queryKey:['workspace-source-catalog']});qc.invalidateQueries({queryKey:['sources']})},
++ })
+  const catalog=useQuery({queryKey:['source-catalog',config.baseUrl,config.tenantId],queryFn:({signal})=>listSourceCatalog(config,signal),retry:false})
+  if(catalog.isLoading)return <LoadingPanel label="Loading Company Brain sources…"/>
+  if(catalog.error)return <ErrorPanel error={catalog.error}/>
+@@ -21,7 +34,8 @@
+    <div className="metric"><strong>{fixture.length}</strong><span>Existing / seeded sources</span></div>
+    <div className="metric"><strong>{items.length}</strong><span>Visible sources</span></div>
+   </div>
+-  <p className="muted">Sources are inputs; Company Brains are the graphs containing them. A single graph can hold many sources. Only registered, authorized graphs are listed.</p>
++  <p className="muted">Each card is a distinct source. Sources shown under the same Company Brain currently share graph storage; source-exclusive agent retrieval is not yet enforced. To isolate a source as its own Company Brain, it must be ingested or migrated into a dedicated graph.</p>
++  {removal.error&&<p role="alert">Could not remove source: {String(removal.error)}</p>}
+   {!brains.length&&<p role="alert">No registered Company Brains. Register a graph before connecting sources.</p>}
+   {brains.map((brain:any)=>{const rows=items.filter((s:any)=>s.graph_id===brain.graph_id);return <section key={brain.graph_id} className="panel">
+    <h3>{brain.display_name}</h3><p className="muted">{brain.graph_id} · {rows.length} sources</p>
+@@ -30,8 +44,16 @@
+      <div className="panel source-card" key={s.source_id}>
+       <h3>{s.display_name}</h3><p className="muted">{s.source_id}</p>
+       <dl className="kv"><dt>Type</dt><dd>{s.connector_type}</dd><dt>Status</dt><dd>{s.status}</dd><dt>Origin</dt><dd>{s.managed?'Managed connector':s.fixture_pack?'Imported Asteria fixture':'Existing graph record'}</dd></dl>
+-      {s.managed?<Link to={`/sources/${encodeURIComponent(s.source_id)}?graph=${encodeURIComponent(brain.graph_id)}`}>Manage source →</Link>:<span className="badge">Existing / read-only provenance</span>}
++      {s.managed?<Link to={`/sources/${encodeURIComponent(s.source_id)}?graph=${encodeURIComponent(brain.graph_id)}`}>Manage source →</Link>:<span className="badge">Imported provenance</span>}
++      {hasPermission('MANAGE_INGESTION')&&<button type="button" className="danger" disabled={removal.isPending} onClick={()=>setPendingRemoval({graph_id:brain.graph_id,source_id:s.source_id,display_name:s.display_name,managed:!!s.managed})}>{s.managed?'Remove source':'Hide imported source'}</button>}
+      </div>)}</div>}
+   </section>})}
++  <ConfirmationDialog open={!!pendingRemoval} title={pendingRemoval?.managed?'Remove managed source?':'Hide imported source?'} confirmLabel={pendingRemoval?.managed?'Remove connector':'Hide source'} onCancel={()=>setPendingRemoval(null)} onConfirm={()=>{if(pendingRemoval&&impact.data&&!removal.isPending)removal.mutate({graph_id:pendingRemoval.graph_id,source_id:pendingRemoval.source_id})}}>
++   <p><strong>{pendingRemoval?.display_name}</strong> ({pendingRemoval?.source_id})</p>
++   <p>{pendingRemoval?.managed?'This disables the connector configuration and removes stored credentials.':'This hides the imported fixture from the source catalog.'} Historical graph entities, ingestion evidence, and provenance are retained. This does not purge data from FalkorDB.</p>
++   {impact.isLoading&&<p>Inspecting source lineage before removal…</p>}
++   {impact.error&&<p role="alert">Could not assess source footprint. Removal is blocked.</p>}
++   {impact.data&&<p>Source records: {String(impact.data.source_records)} · Canonical entities reached: {String(impact.data.canonical_entities_reached)} · Shared canonical entities: {String(impact.data.canonical_entities_also_referenced_by_other_source_records)} · Other sources in graph: {Number(impact.data.data_sources_in_selected_graph)-1}. <strong>Permanent data purge is NOT performed by this action.</strong></p>}
++  </ConfirmationDialog>
+  </section>
+ }
+--- a/frontend/src/pages/sources/AddSourcePage.tsx
++++ b/frontend/src/pages/sources/AddSourcePage.tsx
+@@ -1,4 +1,4 @@
+-import { useMemo,useState } from 'react'
++import { useMemo,useRef,useState } from 'react'
+ import { useNavigate } from 'react-router-dom'
+ import { useMutation,useQuery } from '@tanstack/react-query'
+ import { useAuth } from '../../auth/AuthContext'
+@@ -8,4 +8,12 @@
+ import { apiRequest } from '../../api/client'
+ 
+ const steps=['Choose connector','Connection details','Authentication','Scope','Mapping','Test connection','Preview ingestion','Connect & sync']
+-export function AddSourcePage(){const {config}=useAuth();const [targetGraph,setTargetGraph]=useState('');const brains=useQuery({queryKey:['source-destination-brains',config.tenantId],queryFn:()=>apiRequest<{items:{graph_id:string;display_name:string;available:boolean}[]}>(config,'/api/v1/graphs'),retry:false});const sourceConfig={...config,graphId:targetGraph||undefined};const nav=useNavigate();const [step,setStep]=useState(0);const [connector,setConnector]=useState('github');const [displayName,setDisplayName]=useState('');const [mode,setMode]=useState<'fixture'|'live'>('fixture');const [org,setOrg]=useState('');const [repository,setRepository]=useState('');const [ref,setRef]=useState('');const [files,setFiles]=useState('');const [baseUrl,setBaseUrl]=useState('');const [registeredView,setRegisteredView]=useState('');const [registeredEndpoint,setRegisteredEndpoint]=useState('');const [username,setUsername]=useState('');const [scope,setScope]=useState('');const [token,setToken]=useState('');const [sourceId,setSourceId]=useState('');const [testResult,setTestResult]=useState<any>();const [preview,setPreview]=useState<any>();const connectors=useQuery({queryKey:['connectors'],queryFn:({signal})=>listConnectors(config,signal)});const definition=useQuery({queryKey:['connector',connector],queryFn:({signal})=>getConnector(config,connector,signal),enabled:!!connector});const draft=useMutation({mutationFn:()=>{if(!targetGraph)throw new Error('Select a destination Company Brain');return createSource(sourceConfig,{display_name:displayName||`My ${connector}`,connector_type:connector,connection_mode:mode,connection_config:{settings:connector==='github'&&mode==='live'?{...(repository?{repository}:{}),...(org&&!repository?{org}:{}),...(ref?{ref}:{}),...(!token?{anonymous:true}:{})}:{org},...(baseUrl?{base_url:baseUrl}:{}),...(registeredView?{registered_view:registeredView}:{}),...(registeredEndpoint?{registered_endpoint:registeredEndpoint}:{})},credentials:{...(token?{token}:{}),...(username?{username}:{})},scope_config:{selected:scope.split(',').map(x=>x.trim()).filter(Boolean),...(connector==='github'&&mode==='live'?{files:files.split(',').map(x=>x.trim()).filter(Boolean)}:{})},mapping_profile:`${connector}-default-v1`,expected_sync_interval_minutes:60})},onSuccess:r=>setSourceId(String(r.source_id))});const test=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}const r=await testSource(sourceConfig,id);setTestResult(r);return r}});const previewMut=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}const r=await previewSource(sourceConfig,id);setPreview(r);return r}});const sync=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}await updateSource(sourceConfig,id,{scope_config:{selected:scope.split(',').map(x=>x.trim()).filter(Boolean),...(connector==='github'&&mode==='live'?{files:files.split(',').map(x=>x.trim()).filter(Boolean)}:{})}});const r=await syncSource(sourceConfig,id,'full');return {id,result:r}},onSuccess:r=>nav(`/sources/${r.id}`)});const error=draft.error||test.error||previewMut.error||sync.error;const connectorOptions=connectors.data?.items||[];const canNext=step===0?!!connector:step===1?!!displayName&&!!targetGraph:true;return <section><div className="page-header"><div><h2>Connect an organizational source</h2><p>GraphHacks will test and preview before anything is written to the Company Brain.</p></div></div><ol className="wizard-steps">{steps.map((s,i)=><li key={s} className={i===step?'active':i<step?'done':''}>{i+1}. {s}</li>)}</ol>{error&&<ErrorPanel error={error}/>}<section className="panel wizard-panel">{step===0&&<div><h3>Choose connector</h3>{connectors.isLoading?<LoadingPanel/>:<div className="card-grid">{connectorOptions.map((c:any)=><button className={`connector-card ${connector===c.connector_type?'selected':''}`} key={c.connector_type} onClick={()=>setConnector(c.connector_type)}><strong>{c.display_name}</strong><span>{c.description}</span><small>{c.supports_live_mode?'Live + fixture':'Fixture/demo currently'}</small></button>)}</div>}</div>}{step===1&&<div><h3>Connection details</h3><label className="field"><span>Destination Company Brain</span><select aria-label="Destination Company Brain" value={targetGraph} disabled={!!sourceId} onChange={e=>setTargetGraph(e.target.value)}><option value="">Select registered Company Brain</option>{(brains.data?.items||[]).filter(b=>b.available).map(b=><option key={b.graph_id} value={b.graph_id}>{b.display_name} ({b.graph_id})</option>)}</select></label>{brains.error&&<ErrorPanel error={brains.error}/>}<p className="muted">This selects the existing destination graph for this source. Selecting a graph does not clone, merge or create another Company Brain.</p><label className="field"><span>Source name</span><input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Northstar Engineering GitHub"/></label><label className="field"><span>Mode</span><select value={mode} onChange={e=>setMode(e.target.value as any)}><option value="fixture">Fixture / demo</option><option value="live" disabled={!definition.data?.supports_live_mode}>Live connected</option></select></label>{connector==='github'&&<>{mode==='live'&&<><label className="field"><span>Public repository URL or owner/repo</span><input value={repository} onChange={e=>setRepository(e.target.value)} placeholder="https://github.com/owner/repository"/></label><label className="field"><span>Branch or commit SHA (optional)</span><input value={ref} onChange={e=>setRef(e.target.value)} placeholder="Default branch"/></label></>}<label className="field"><span>Organization (alternative to a repository)</span><input value={org} onChange={e=>setOrg(e.target.value)}/></label>{mode==='live'&&<label className="field"><span>GitHub API base URL (optional for github.com)</span><input value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} placeholder="https://api.github.com"/></label>}</>}{connector==='jira'&&<label className="field"><span>Jira base URL</span><input value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} placeholder="https://jira.example.com"/></label>}{connector==='database'&&mode==='live'&&<label className="field"><span>Registered database view</span><input value={registeredView} onChange={e=>setRegisteredView(e.target.value)} placeholder="service_catalog"/></label>}{connector==='internal_api'&&mode==='live'&&<label className="field"><span>Registered internal endpoint</span><input value={registeredEndpoint} onChange={e=>setRegisteredEndpoint(e.target.value)} placeholder="service-catalog"/></label>}<p className="muted">Live connector endpoints remain bounded by server allowlists/registries; arbitrary URLs and SQL are rejected.</p></div>}{step===2&&<div><h3>Authentication</h3>{mode==='fixture'?<p>Fixture mode uses server-side deterministic test data and requires no real credential.</p>:<>{connector==='github'&&<p>Public GitHub repositories can connect without a token.</p>}{connector==='jira'&&<label className="field"><span>Username / email</span><input value={username} onChange={e=>setUsername(e.target.value)}/></label>}<label className="field"><span>API token / service credential</span><input type="password" value={token} onChange={e=>setToken(e.target.value)}/></label></>}<p className="muted">Secrets are stored server-side. The browser receives only configured/not-configured status after saving.</p></div>}{step===3&&<div><h3>Choose source scope</h3>{connector==='github'&&mode==='live'&&<label className="field"><span>Selected file paths (comma-separated)</span><input value={files} onChange={e=>setFiles(e.target.value)} placeholder="dvdrental.sql"/></label>}<label className="field"><span>{(definition.data?.supported_scopes||['scope']).join(' / ')}</span><input value={scope} onChange={e=>setScope(e.target.value)} placeholder={connector==='github'&&mode==='live'?'Optional repository filter for organization mode':'Comma-separated repositories / projects / channels'}/></label></div>}{step===4&&<div><h3>How GraphHacks will interpret this source</h3>{(definition.data?.mapping_preview||[]).map((m:any)=><div className="mapping-row" key={`${m.external}-${m.canonical}`}><strong>{m.external}</strong><span>→</span><strong>{m.canonical}</strong><span>{m.meaning}</span></div>)}<TechnicalDetails><pre>{JSON.stringify({mapping_profile:`${connector}-default-v1`,mapping_version:'phase13-v1'},null,2)}</pre></TechnicalDetails></div>}{step===5&&<div><h3>Test connection</h3><button disabled={test.isPending} onClick={()=>test.mutate()}>{test.isPending?'Testing…':'Test connection'}</button>{testResult&&<div className="check-grid">{Object.entries(testResult.checks||{}).map(([k,v])=><div key={k}><strong>{k.replace(/_/g,' ')}</strong><span>{String(v)}</span></div>)}</div>}<p className="muted">Connection testing does not write organizational facts into the Company Brain.</p></div>}{step===6&&<div><h3>Preview ingestion</h3><button disabled={previewMut.isPending} onClick={()=>previewMut.mutate()}>{previewMut.isPending?'Previewing…':'Preview ingestion'}</button>{preview&&<div className="summary-grid"><div className="metric"><strong>{preview.records_fetched}</strong><span>Fetched</span></div><div className="metric"><strong>{preview.records_normalized}</strong><span>Normalized</span></div><div className="metric"><strong>{preview.candidate_entities}</strong><span>Entities recognized</span></div><div className="metric"><strong>{preview.candidate_relationships}</strong><span>Relationships</span></div><div className="metric"><strong>{preview.ambiguous_identities}</strong><span>Need review</span></div><div className="metric"><strong>{preview.errors}</strong><span>Errors</span></div></div>} {preview&&<p className={preview.canonical_graph_mutated?'danger-text':'success-text'}>{preview.canonical_graph_mutated?'Unexpected mutation detected':'Preview made no canonical graph writes.'}</p>}</div>}{step===7&&<div><h3>Connect and ingest</h3><p>GraphHacks will persist this source instance and run the initial synchronization. You can inspect the ingestion run, identity issues and provenance afterward.</p><button disabled={sync.isPending} onClick={()=>sync.mutate()}>{sync.isPending?'Synchronizing…':'Connect & sync'}</button></div>}</section><div className="wizard-actions"><button disabled={step===0} onClick={()=>setStep(v=>Math.max(0,v-1))}>Back</button>{step<7&&<button disabled={!canNext} onClick={()=>setStep(v=>Math.min(7,v+1))}>Continue</button>}</div></section>}
++export function AddSourcePage(){const {config}=useAuth();const [targetGraph,setTargetGraph]=useState('__new__');const newGraphRef=useRef('');const brains=useQuery({queryKey:['source-destination-brains',config.tenantId],queryFn:()=>apiRequest<{items:{graph_id:string;display_name:string;available:boolean}[]}>(config,'/api/v1/graphs'),retry:false});const activeConfig=async()=>{
++ if(!targetGraph)throw new Error('Select a destination Company Brain')
++ if(targetGraph==='__new__'&&!newGraphRef.current){
++  const result=await apiRequest<{graph_id:string}>(config,'/api/v1/graphs',{
++   method:'POST',body:{display_name:`${displayName.trim()||'New repository'} Company Brain`}
++  });newGraphRef.current=result.graph_id
++ }
++ return {...config,graphId:targetGraph==='__new__'?newGraphRef.current:targetGraph}
++};const nav=useNavigate();const [step,setStep]=useState(0);const [connector,setConnector]=useState('github');const [displayName,setDisplayName]=useState('');const [mode,setMode]=useState<'fixture'|'live'>('fixture');const [org,setOrg]=useState('');const [repository,setRepository]=useState('');const [ref,setRef]=useState('');const [files,setFiles]=useState('');const [baseUrl,setBaseUrl]=useState('');const [registeredView,setRegisteredView]=useState('');const [registeredEndpoint,setRegisteredEndpoint]=useState('');const [username,setUsername]=useState('');const [scope,setScope]=useState('');const [token,setToken]=useState('');const [sourceId,setSourceId]=useState('');const [testResult,setTestResult]=useState<any>();const [preview,setPreview]=useState<any>();const connectors=useQuery({queryKey:['connectors'],queryFn:({signal})=>listConnectors(config,signal)});const definition=useQuery({queryKey:['connector',connector],queryFn:({signal})=>getConnector(config,connector,signal),enabled:!!connector});const draft=useMutation({mutationFn:async()=>{const sourceConfig=await activeConfig();return createSource(sourceConfig,{display_name:displayName||`My ${connector}`,connector_type:connector,connection_mode:mode,connection_config:{settings:connector==='github'&&mode==='live'?{...(repository?{repository}:{}),...(org&&!repository?{org}:{}),...(ref?{ref}:{}),...(!token?{anonymous:true}:{})}:{org},...(baseUrl?{base_url:baseUrl}:{}),...(registeredView?{registered_view:registeredView}:{}),...(registeredEndpoint?{registered_endpoint:registeredEndpoint}:{})},credentials:{...(token?{token}:{}),...(username?{username}:{})},scope_config:{selected:scope.split(',').map(x=>x.trim()).filter(Boolean),...(connector==='github'&&mode==='live'?{files:files.split(',').map(x=>x.trim()).filter(Boolean)}:{})},mapping_profile:`${connector}-default-v1`,expected_sync_interval_minutes:60})},onSuccess:r=>setSourceId(String(r.source_id))});const test=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}const r=await testSource(await activeConfig(),id);setTestResult(r);return r}});const previewMut=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}const r=await previewSource(await activeConfig(),id);setPreview(r);return r}});const sync=useMutation({mutationFn:async()=>{let id=sourceId;if(!id){const r=await draft.mutateAsync();id=String(r.source_id)}await updateSource(await activeConfig(),id,{scope_config:{selected:scope.split(',').map(x=>x.trim()).filter(Boolean),...(connector==='github'&&mode==='live'?{files:files.split(',').map(x=>x.trim()).filter(Boolean)}:{})}});const r=await syncSource(await activeConfig(),id,'full');return {id,result:r}},onSuccess:r=>nav(`/sources/${r.id}?graph=${encodeURIComponent(targetGraph==='__new__'?newGraphRef.current:targetGraph)}`)});const error=draft.error||test.error||previewMut.error||sync.error;const connectorOptions=connectors.data?.items||[];const canNext=step===0?!!connector:step===1?!!displayName&&!!targetGraph:true;return <section><div className="page-header"><div><h2>Connect an organizational source</h2><p>GraphHacks will test and preview before anything is written to the Company Brain.</p></div></div><ol className="wizard-steps">{steps.map((s,i)=><li key={s} className={i===step?'active':i<step?'done':''}>{i+1}. {s}</li>)}</ol>{error&&<ErrorPanel error={error}/>}<section className="panel wizard-panel">{step===0&&<div><h3>Choose connector</h3>{connectors.isLoading?<LoadingPanel/>:<div className="card-grid">{connectorOptions.map((c:any)=><button className={`connector-card ${connector===c.connector_type?'selected':''}`} key={c.connector_type} onClick={()=>setConnector(c.connector_type)}><strong>{c.display_name}</strong><span>{c.description}</span><small>{c.supports_live_mode?'Live + fixture':'Fixture/demo currently'}</small></button>)}</div>}</div>}{step===1&&<div><h3>Connection details</h3><label className="field"><span>Destination Company Brain</span><select aria-label="Destination Company Brain" value={targetGraph} disabled={!!sourceId} onChange={e=>{setTargetGraph(e.target.value);newGraphRef.current=''}}><option value="">Select destination</option><option value="__new__">Create dedicated Company Brain (recommended for independent repository)</option>{(brains.data?.items||[]).filter(b=>b.available).map(b=><option key={b.graph_id} value={b.graph_id}>{b.display_name} ({b.graph_id})</option>)}</select></label>{brains.error&&<ErrorPanel error={brains.error}/>}<p className="muted">New repositories default to their own Company Brain. Choose an existing brain only when you intentionally want multiple sources linked in one organizational knowledge graph. Existing data is never moved automatically.</p><label className="field"><span>Source name</span><input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Northstar Engineering GitHub"/></label><label className="field"><span>Mode</span><select value={mode} onChange={e=>setMode(e.target.value as any)}><option value="fixture">Fixture / demo</option><option value="live" disabled={!definition.data?.supports_live_mode}>Live connected</option></select></label>{connector==='github'&&<>{mode==='live'&&<><label className="field"><span>Public repository URL or owner/repo</span><input value={repository} onChange={e=>setRepository(e.target.value)} placeholder="https://github.com/owner/repository"/></label><label className="field"><span>Branch or commit SHA (optional)</span><input value={ref} onChange={e=>setRef(e.target.value)} placeholder="Default branch"/></label></>}<label className="field"><span>Organization (alternative to a repository)</span><input value={org} onChange={e=>setOrg(e.target.value)}/></label>{mode==='live'&&<label className="field"><span>GitHub API base URL (optional for github.com)</span><input value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} placeholder="https://api.github.com"/></label>}</>}{connector==='jira'&&<label className="field"><span>Jira base URL</span><input value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} placeholder="https://jira.example.com"/></label>}{connector==='database'&&mode==='live'&&<label className="field"><span>Registered database view</span><input value={registeredView} onChange={e=>setRegisteredView(e.target.value)} placeholder="service_catalog"/></label>}{connector==='internal_api'&&mode==='live'&&<label className="field"><span>Registered internal endpoint</span><input value={registeredEndpoint} onChange={e=>setRegisteredEndpoint(e.target.value)} placeholder="service-catalog"/></label>}<p className="muted">Live connector endpoints remain bounded by server allowlists/registries; arbitrary URLs and SQL are rejected.</p></div>}{step===2&&<div><h3>Authentication</h3>{mode==='fixture'?<p>Fixture mode uses server-side deterministic test data and requires no real credential.</p>:<>{connector==='github'&&<p>Public GitHub repositories can connect without a token.</p>}{connector==='jira'&&<label className="field"><span>Username / email</span><input value={username} onChange={e=>setUsername(e.target.value)}/></label>}<label className="field"><span>API token / service credential</span><input type="password" value={token} onChange={e=>setToken(e.target.value)}/></label></>}<p className="muted">Secrets are stored server-side. The browser receives only configured/not-configured status after saving.</p></div>}{step===3&&<div><h3>Choose source scope</h3>{connector==='github'&&mode==='live'&&<label className="field"><span>Selected file paths (comma-separated)</span><input value={files} onChange={e=>setFiles(e.target.value)} placeholder="dvdrental.sql"/></label>}<label className="field"><span>{(definition.data?.supported_scopes||['scope']).join(' / ')}</span><input value={scope} onChange={e=>setScope(e.target.value)} placeholder={connector==='github'&&mode==='live'?'Optional repository filter for organization mode':'Comma-separated repositories / projects / channels'}/></label></div>}{step===4&&<div><h3>How GraphHacks will interpret this source</h3>{(definition.data?.mapping_preview||[]).map((m:any)=><div className="mapping-row" key={`${m.external}-${m.canonical}`}><strong>{m.external}</strong><span>→</span><strong>{m.canonical}</strong><span>{m.meaning}</span></div>)}<TechnicalDetails><pre>{JSON.stringify({mapping_profile:`${connector}-default-v1`,mapping_version:'phase13-v1'},null,2)}</pre></TechnicalDetails></div>}{step===5&&<div><h3>Test connection</h3><button disabled={test.isPending} onClick={()=>test.mutate()}>{test.isPending?'Testing…':'Test connection'}</button>{testResult&&<div className="check-grid">{Object.entries(testResult.checks||{}).map(([k,v])=><div key={k}><strong>{k.replace(/_/g,' ')}</strong><span>{String(v)}</span></div>)}</div>}<p className="muted">Connection testing does not write organizational facts into the Company Brain.</p></div>}{step===6&&<div><h3>Preview ingestion</h3><button disabled={previewMut.isPending} onClick={()=>previewMut.mutate()}>{previewMut.isPending?'Previewing…':'Preview ingestion'}</button>{preview&&<div className="summary-grid"><div className="metric"><strong>{preview.records_fetched}</strong><span>Fetched</span></div><div className="metric"><strong>{preview.records_normalized}</strong><span>Normalized</span></div><div className="metric"><strong>{preview.candidate_entities}</strong><span>Entities recognized</span></div><div className="metric"><strong>{preview.candidate_relationships}</strong><span>Relationships</span></div><div className="metric"><strong>{preview.ambiguous_identities}</strong><span>Need review</span></div><div className="metric"><strong>{preview.errors}</strong><span>Errors</span></div></div>} {preview&&<p className={preview.canonical_graph_mutated?'danger-text':'success-text'}>{preview.canonical_graph_mutated?'Unexpected mutation detected':'Preview made no canonical graph writes.'}</p>}</div>}{step===7&&<div><h3>Connect and ingest</h3><p>GraphHacks will persist this source instance and run the initial synchronization. You can inspect the ingestion run, identity issues and provenance afterward.</p><button disabled={sync.isPending} onClick={()=>sync.mutate()}>{sync.isPending?'Synchronizing…':'Connect & sync'}</button></div>}</section><div className="wizard-actions"><button disabled={step===0} onClick={()=>setStep(v=>Math.max(0,v-1))}>Back</button>{step<7&&<button disabled={!canNext} onClick={()=>setStep(v=>Math.min(7,v+1))}>Continue</button>}</div></section>}
+--- /dev/null
++++ b/backend/tests/test_source_removal_stage4.py
+@@ -0,0 +1,146 @@
++"""Source-management safety regression tests (no live graph, no Groq calls)."""
++from types import SimpleNamespace
++
++import pytest
++from fastapi.testclient import TestClient
++
++from backend.app.ingestion import source_catalog as catalog
++from backend.app.services.phase4_graph import GraphSnapshot
++
++
++def node(sid, tenant='asteria', managed=False):
++    return {'id':sid,'tenant_id':tenant,'name':sid,'_labels':['Entity','DataSource'],
++            **({'managed_by':'phase13-source-control'} if managed else {'fixture_pack':'asteria-v1'})}
++
++
++class StubRegistry:
++    def __init__(self, data):
++        self.data=data
++
++    def client_for_graph(self, *,tenant_id,graph_id):
++        if tenant_id!='asteria' or graph_id!='allowed':
++            raise RuntimeError('Unauthorized graph')
++        return SimpleNamespace(settings=SimpleNamespace(tenant_id=tenant_id,falkordb_graph=graph_id))
++
++
++def test_imported_source_hidden_preserves_graph_history(monkeypatch):
++    state={'source':node('DS-FOO')}
++    monkeypatch.setattr(catalog.GraphSnapshot,'load',lambda c: GraphSnapshot({'DS-FOO':state['source']},[]))
++    def fake_upsert(client,label,sid,props):
++        assert label=='DataSource' and sid=='DS-FOO'
++        assert 'configuration_removed' not in props
++        state['source'].update(props)
++    events=[]
++    monkeypatch.setattr(catalog,'upsert_node',fake_upsert)
++    monkeypatch.setattr(catalog,'EventLedgerService',lambda client:SimpleNamespace(record=lambda event,**kwargs:events.append(event)))
++    result=catalog.remove_source_from_catalog(tenant_id='asteria',graph_id='allowed',source_id='DS-FOO',actor_id='admin',registry=StubRegistry(state))
++    assert result['catalog_hidden'] and result['historical_provenance_retained']
++    assert state['source']['catalog_hidden'] is True
++    assert events==['SOURCE_CATALOG_HIDDEN']
++    with pytest.raises(KeyError):
++        catalog.remove_source_from_catalog(tenant_id='asteria',graph_id='allowed',source_id='DS-FOO',actor_id='admin',registry=StubRegistry(state))
++
++
++def test_managed_source_reuses_existing_credential_cleanup(monkeypatch):
++    monkeypatch.setattr(catalog.GraphSnapshot,'load',lambda c:GraphSnapshot({'SRC-X':node('SRC-X',managed=True)},[]))
++    calls=[]
++    class StubService:
++        def __init__(self,client): pass
++        def delete_configuration(self,source_id,*,actor_id):
++            calls.append((source_id,actor_id))
++            return {'source_id':source_id,'configuration_removed':True,'historical_provenance_retained':True}
++    monkeypatch.setattr(catalog,'SourceControlService',StubService)
++    monkeypatch.setattr(catalog,'upsert_node',lambda *a,**k: (_ for _ in ()).throw(AssertionError('managed path must not use fixture mutation')))
++    result=catalog.remove_source_from_catalog(tenant_id='asteria',graph_id='allowed',source_id='SRC-X',actor_id='admin',registry=StubRegistry({}))
++    assert result['action']=='CONFIGURATION_REMOVED'
++    assert calls==[('SRC-X','admin')]
++
++
++def test_reject_missing_source_and_wrong_tenant(monkeypatch):
++    monkeypatch.setattr(catalog.GraphSnapshot,'load',lambda c:GraphSnapshot({'DS-OTHER':node('DS-OTHER',tenant='northstar')},[]))
++    monkeypatch.setattr(catalog,'upsert_node',lambda *args,**kwargs: (_ for _ in ()).throw(AssertionError('unauthorized write')))
++    for sid in ('DS-OTHER','NOT-FOUND'):
++        with pytest.raises(KeyError):
++            catalog.remove_source_from_catalog(tenant_id='asteria',graph_id='allowed',source_id=sid,actor_id='admin',registry=StubRegistry({}))
++
++
++def test_removal_endpoint_requires_explicit_graph_and_permission():
++    from backend.app.main import app
++    c=TestClient(app)
++    endpoint='/api/v1/sources/catalog/DS-FOO'
++    no_graph=c.delete(endpoint,headers={'Authorization':'Bearer test-asteria-admin-token'})
++    assert no_graph.status_code==422
++    non_admin=c.delete(endpoint,headers={'Authorization':'Bearer test-reader-token'})
++    assert non_admin.status_code==403
++    assert any(r.path==endpoint.replace('DS-FOO','{source_id}') and 'DELETE' in r.methods for r in app.routes)
++
++
++def test_removal_impact_conservatively_identifies_shared_canonical_nodes(monkeypatch):
++    from backend.app.services.phase4_graph import GraphEdge
++    nodes = {
++        'SRC-X': node('SRC-X', managed=True),
++        'SRC-Y': node('SRC-Y', managed=True),
++        'R-X': {'id':'R-X','_labels':['Entity','SourceRecord'],'source_id':'SRC-X','tenant_id':'asteria'},
++        'R-Y': {'id':'R-Y','_labels':['Entity','SourceRecord'],'source_id':'SRC-Y','tenant_id':'asteria'},
++        'ENTITY-1': {'id':'ENTITY-1','_labels':['Entity','System'],'tenant_id':'asteria'},
++    }
++    edges=[GraphEdge('R-X','NORMALIZED_TO','ENTITY-1',{'source_ref_id':'SRC-X'}),
++           GraphEdge('R-Y','NORMALIZED_TO','ENTITY-1',{'source_ref_id':'SRC-Y'})]
++    monkeypatch.setattr(catalog.GraphSnapshot,'load',lambda c:GraphSnapshot(nodes,edges))
++    result=catalog.inspect_source_removal(tenant_id='asteria',graph_id='allowed',
++                                         source_id='SRC-X',registry=StubRegistry({}))
++    assert result['source_records']==1
++    assert result['canonical_entities_reached']==1
++    assert result['canonical_entities_also_referenced_by_other_source_records']==1
++    assert result['graph_shared_by_multiple_sources']
++    assert not result['hard_purge_safe']
++
++
++def test_removal_impact_no_writes_and_never_claims_hard_purge_safe(monkeypatch):
++    monkeypatch.setattr(catalog.GraphSnapshot,'load',lambda c: GraphSnapshot({'DS-FOO':node('DS-FOO')}, []))
++    monkeypatch.setattr(catalog,'upsert_node',lambda *args,**kwargs: (_ for _ in ()).throw(AssertionError('no writes')))
++    result=catalog.inspect_source_removal(tenant_id='asteria',graph_id='allowed',
++                                         source_id='DS-FOO',registry=StubRegistry({}))
++    assert result['source_records']==0
++    assert not result['hard_purge_safe']
++
++
++def test_removal_impact_requires_graph_header():
++    from backend.app.main import app
++    c=TestClient(app)
++    resp=c.get('/api/v1/sources/catalog/SRC-X/removal-impact',headers={'Authorization':'Bearer test-asteria-admin-token'})
++    assert resp.status_code==422
++
++
++def test_new_dedicated_company_brain_uses_fresh_graph_and_existing_registration(tmp_path,monkeypatch):
++    from backend.app.graph.registry import GraphRegistry
++    from types import SimpleNamespace
++    names=[]
++    writes=[]
++    class Graph:
++        def query(self,cypher,params):
++            assert cypher.startswith('CREATE (:VERINEXGraphAnchor')
++            writes.append(params)
++            return SimpleNamespace(result_set=[])
++        def ro_query(self,cypher,params):
++            return SimpleNamespace(result_set=[['ok']] if writes and params['tenant']==writes[0]['tenant_id'] else [])
++        def delete(self): raise AssertionError('Must not delete successful graph')
++    class DB:
++        def list_graphs(self):return names
++        def select_graph(self,graph_id):
++            if graph_id not in names:names.append(graph_id)
++            return Graph()
++    registry=GraphRegistry(tmp_path/'catalog.sqlite3')
++    result=registry.create_dedicated(tenant_id='asteria',display_name='Independent repository',
++                                     client=SimpleNamespace(db=DB()))
++    assert result['graph_id'].startswith('source_')
++    assert result['dedicated'] is True
++    assert writes[0]['graph_id']==result['graph_id']
++    assert registry.resolve(tenant_id='asteria',graph_id=result['graph_id'])['display_name']=='Independent repository'
++
++
++def test_new_graph_api_requires_management_permission():
++    from backend.app.main import app
++    c=TestClient(app)
++    assert c.post('/api/v1/graphs',json={'display_name':'New repo'},
++                  headers={'Authorization':'Bearer test-reader-token'}).status_code==403

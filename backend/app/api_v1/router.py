@@ -20,6 +20,7 @@ from backend.app.api_v1.models import (
 from backend.app.api_v1.security import Principal, authenticate, client_for, require
 from backend.app.retrieval.models import RetrievalMode, RetrievalRequest
 from backend.app.retrieval.service import RetrievalService
+from backend.app.retrieval.paths import scoped_index_root
 from backend.app.services.action_coordination_service import ActionCoordinationService
 from backend.app.services.anomaly_service import GraphAnomalyService
 from backend.app.services.authority_resolution_service import AuthorityResolutionService
@@ -61,6 +62,7 @@ from backend.app.agent_runtime.workspace import (WorkspaceStart, WorkspaceStore,
     format_workspace, build_replay, task_comparison, now as workspace_now)
 from backend.app.services.phase4_graph import GraphSnapshot, has_label
 from backend.app.ingestion.source_control import SourceControlService
+from backend.app.ingestion.source_catalog import list_source_catalog, remove_source_from_catalog, inspect_source_removal
 
 router = APIRouter(prefix="/api/v1", responses={400:{"model":ErrorResponse},401:{"model":ErrorResponse},403:{"model":ErrorResponse},404:{"model":ErrorResponse},409:{"model":ErrorResponse},422:{"model":ErrorResponse},429:{"model":ErrorResponse},503:{"model":ErrorResponse}})
 
@@ -86,7 +88,7 @@ def _retrieval_service_for(principal: Principal) -> RetrievalService:
     client=client_for(principal)
     repo_root=Path(__file__).resolve().parents[3]
     artifact_root=Path(os.getenv("GRAPH_HACKS_ARTIFACT_ROOT") or repo_root/".graphhacks_artifacts")
-    retrieval_root=Path(os.getenv("GRAPH_HACKS_RETRIEVAL_ROOT") or repo_root/".graphhacks_retrieval")/principal.tenant_id
+    retrieval_root=scoped_index_root(tenant_id=principal.tenant_id,graph_id=client.settings.falkordb_graph,root=repo_root)
     return RetrievalService(client,lexical=BM25LexicalIndex(retrieval_root/"lexical.json"),vector=LocalVectorIndex(path=retrieval_root/"vector.json"),artifact_store=LocalArtifactStore(artifact_root))
 
 
@@ -188,6 +190,11 @@ def _workspace_owned(principal: Principal, run_id: str) -> dict:
     record = _workspace_store(principal).get(run_id, principal.subject)
     if record is None:
         _not_found('Owned workspace run', run_id)
+    # A run is permanently bound to its creation graph. Do not permit a different
+    # graph selection to resume, inspect or control an unrelated run.
+    expected = principal.graph_id or client_for(principal).settings.falkordb_graph
+    if record.get('graph_id', expected) != expected:
+        _not_found('Owned workspace run', run_id)
     return record
 
 
@@ -265,6 +272,10 @@ def workspace_start(body:WorkspaceStart, request:Request,
     _guard_rate(request,principal,limit=6)
     if not body.allow_external_model:
         raise ApiError(422,'CONSENT_REQUIRED','Authorize transmission of selected organizational evidence to the model.')
+    # Explicit graph selection must match the authenticated, registry-validated scope.
+    # No graph requested preserves legacy default behavior.
+    if body.graph_id != principal.graph_id:
+        raise ApiError(422, 'GRAPH_SCOPE_MISMATCH', 'Selected graph must match the authenticated Company Brain header.')
     # Validate provider before committing a QUEUED record.
     try:
         OpenAICompatibleProvider()
@@ -272,6 +283,7 @@ def workspace_start(body:WorkspaceStart, request:Request,
         raise ApiError(503,'AGENT_PROVIDER_UNAVAILABLE',str(exc)) from exc
     run_id='SRUN-'+_workspace_uuid.uuid4().hex.upper()
     entry={'id':run_id,'owner':principal.subject,'tenant':principal.tenant_id,
+           'graph_id':principal.graph_id or client_for(principal).settings.falkordb_graph,
            'goal':body.goal,'source_entity_id':body.source_entity_id,'status':'QUEUED',
            'command':'','allow_external_model':True,'created_at':workspace_now(),
            'updated_at':workspace_now(),'settings':body.settings().model_dump(),'error':''}
@@ -282,7 +294,7 @@ def workspace_start(body:WorkspaceStart, request:Request,
     except Exception as exc:
         _workspace_store(principal).update(run_id,principal.subject,status='FAILED',error=type(exc).__name__)
         raise ApiError(503,'WORKER_UNAVAILABLE','Workspace worker could not start') from exc
-    return {'id':run_id,'status':'QUEUED','execution_mode':'LIVE_MODEL','side_effects':'NONE_READ_ONLY'}
+    return {'id':run_id,'graph_id':entry['graph_id'],'status':'QUEUED','execution_mode':'LIVE_MODEL','side_effects':'NONE_READ_ONLY'}
 
 
 @router.get('/agent-runtime/workspace/runs/{run_id}', tags=['Agent Workspace'])
@@ -1450,6 +1462,42 @@ def create_source(body:SourceCreateExternal, principal:Principal=Depends(require
     try:return _sources(principal).create_source(body.model_dump(exclude_none=True), actor_id=principal.subject)
     except FileExistsError as exc: raise ApiError(409,"CONFLICT","A source with this ID already exists.",details={"source_id":str(exc)}) from exc
     except ValueError as exc: raise ApiError(422,"VALIDATION_FAILED",str(exc)) from exc
+
+@router.get("/sources/catalog", tags=["Sources"], summary="List sources in authorized Company Brains")
+def source_catalog(principal: Principal = Depends(require("READ_GRAPH"))):
+    # Includes read-only Asteria fixture sources. Never treats them as active connectors.
+    return list_source_catalog(tenant_id=principal.tenant_id)
+
+
+@router.get("/sources/catalog/{source_id}/removal-impact", tags=["Sources"],
+            summary="Inspect source lineage before disconnecting (read-only)")
+def source_removal_impact(source_id: str, principal: Principal = Depends(require("MANAGE_INGESTION"))):
+    if not principal.graph_id:
+        raise ApiError(422, "GRAPH_REQUIRED", "Select an authorized Company Brain to inspect this source")
+    try:
+        return inspect_source_removal(tenant_id=principal.tenant_id,
+                                      graph_id=principal.graph_id,
+                                      source_id=source_id)
+    except KeyError:
+        _not_found("Source", source_id)
+    except ValueError as exc:
+        raise ApiError(422, "VALIDATION_FAILED", str(exc)) from exc
+
+
+@router.delete("/sources/catalog/{source_id}", tags=["Sources"],
+               summary="Remove source from catalog; retain historical evidence")
+def remove_catalog_source(source_id: str, principal: Principal = Depends(require("MANAGE_INGESTION"))):
+    if not principal.graph_id:
+        raise ApiError(422, "GRAPH_REQUIRED", "Select an authorized Company Brain before removing a source")
+    try:
+        return remove_source_from_catalog(tenant_id=principal.tenant_id,
+                                          graph_id=principal.graph_id,
+                                          source_id=source_id, actor_id=principal.subject)
+    except KeyError as exc:
+        _not_found("Source", source_id)
+    except ValueError as exc:
+        raise ApiError(422, "VALIDATION_FAILED", str(exc)) from exc
+
 
 @router.get("/sources/runs", tags=["Sources"], summary="List ingestion runs")
 def list_ingestion_runs(source_id:str|None=None, principal:Principal=Depends(require("MANAGE_INGESTION"))):
