@@ -12,6 +12,7 @@ NODE_LABELS = {
     "Outcome", "ExpertiseEvidence", "AgentRun", "AgentStep",
     "ExternalIdentity", "IngestionRun", "Artifact", "IngestionQuarantineRecord",
     "Chunk", "RetrievalExecution", "Investigation",
+    "SqlTable", "SqlColumn", "SqlConstraint",
 }
 
 RELATIONSHIP_TYPES = {
@@ -28,6 +29,7 @@ RELATIONSHIP_TYPES = {
     "CAUSE", "MADE_BY", "SATISFIED_BY", "BREACHED_BY", "COLLABORATES_WITH",
     "INGESTED", "NORMALIZED_TO", "RESOLVES_TO", "REFERENCES",
     "DOCUMENTED_BY", "HAS_AGENT_STEP", "HAS_ARTIFACT", "REQUESTED_BY", "FOR_TASK", "USED_SOURCE", "RETURNED", "HAS_RETRIEVAL",
+    "DEFINES", "HAS_COLUMN", "HAS_CONSTRAINT", "FOREIGN_KEY_TO",
 }
 
 
@@ -77,6 +79,7 @@ def apply_schema(client: FalkorGraphClient) -> None:
         ("Policy", ("_ts_valid_from_us",)),
         ("Commitment", ("due_at",)),
         ("ExternalIdentity", ("source_type", "external_id")),
+        ("SqlTable", ("name",)),
         ("IngestionRun", ("status",)),
         ("SourceRecord", ("source_key",)),
         ("SourceRecord", ("checksum",)),

@@ -41,7 +41,16 @@ class InternalApiAdapter(FixtureJsonAdapter):
             headers.setdefault("Authorization", f"Bearer {creds["token"]}")
         client = ConfiguredJsonHttpClient(base_url=self.config.base_url, headers=headers)
         payload = client.get_json(path, query={"cursor": cursor, "limit": min(limit, 500)})
-        rows = payload.get("records", payload if isinstance(payload, list) else [])
+        # The configured endpoint may return either a bare list or a
+        # {"records": [...], "next_cursor": ...} pagination envelope.
+        if isinstance(payload, list):
+            rows = payload
+        elif isinstance(payload, dict):
+            rows = payload.get("records", [])
+        else:
+            raise ValueError("Internal API response must be a list or records envelope")
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            raise ValueError("Internal API response records must be JSON objects")
         fetched = now_iso()
         records = []
         for row in rows[:limit]:

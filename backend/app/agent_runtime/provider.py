@@ -65,8 +65,8 @@ class TokenPacer:
             raise ProviderRateLimited('Groq projected request exceeds per-minute safety budget; reduce context or output', 60.0)
         start = time.monotonic()
         deadline = start + max(0.0, available_seconds - 3.0)
-        with self.lock:
-            while True:
+        while True:
+            with self.lock:
                 now = time.monotonic()
                 while self.records and now - self.records[0][0] >= 60:
                     self.records.popleft()
@@ -83,7 +83,9 @@ class TokenPacer:
                     return token
                 if now + delay > deadline:
                     raise ProviderRateLimited('Groq TPM pacing would exceed the remaining agent deadline; wait and retry later', round(delay, 1))
-                time.sleep(delay + 0.02)
+            # Critical for Component 2: a waiting parallel specialist must not
+            # hold the pacing lock while other model calls settle their tokens.
+            time.sleep(delay + 0.02)
 
     def defer(self, retry_after: float | None) -> None:
         if retry_after is None:

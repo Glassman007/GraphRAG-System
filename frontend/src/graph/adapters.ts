@@ -4,6 +4,20 @@ export type UiGraphNode = { id: string; type: string; label: string; status?: st
 export type UiGraphEdge = { id: string; source: string; target: string; type: string; data: Dict }
 export type UiGraph = { nodes: UiGraphNode[]; edges: UiGraphEdge[] }
 
+export function sqlSchemaToGraph(payload: Dict): UiGraph {
+  const nodes: UiGraphNode[] = (payload.tables || []).map((table: Dict) => ({
+    id: String(table.id), type: 'SqlTable', label: String(table.name || table.id), data: table,
+  }))
+  const known = new Set(nodes.map(node => node.id))
+  const edges: UiGraphEdge[] = (payload.foreign_keys || [])
+    .filter((fk: Dict) => known.has(String(fk.source_id)) && known.has(String(fk.target_id)))
+    .map((fk: Dict) => ({
+      id: String(fk.properties?.edge_id || `${fk.source_id}:${fk.properties?.constraint_id}:${fk.target_id}`),
+      source: String(fk.source_id), target: String(fk.target_id), type: 'FOREIGN_KEY_TO', data: fk.properties || {},
+    }))
+  return {nodes, edges}
+}
+
 function labels(n: Dict) { return Array.isArray(n?._labels) ? n._labels : [] }
 function nodeType(n: Dict) { return String(labels(n).find((x:string) => x !== 'Entity') || n?.type || n?.kind || 'Entity') }
 function labelFor(n: Dict) { return String(n?.name || n?.title || n?.statement || n?.description || n?.id || 'unknown') }

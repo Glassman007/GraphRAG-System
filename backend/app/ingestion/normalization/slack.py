@@ -22,7 +22,7 @@ class SlackNormalizer(SourceNormalizer):
             entities.append(person_candidate("author", name=author.get("display_name") or author.get("name") or raw.get("user_id"), email=author.get("email"), username=author.get("user_id") or raw.get("user_id"), team_name=author.get("team"), canonical_hint=author.get("canonical_id")))
             msg_name = f"Slack message {record.external_id}"
             entities.append(simple_entity("message", "Document", msg_name, identity={"external_id": record.external_id}, document_type="slack_message", uri=record.canonical_source_uri, created_at=observed, excerpt=str(raw.get("text") or "")[:500]))
-            relations.append(relation("message", "PRODUCED", "author", valid_from=observed, confidence=1.0)) if False else None
+            relations.append(relation("author", "PRODUCED", "message", valid_from=observed, confidence=1.0))
             assertion = raw.get("assertion")
             if assertion:
                 claim_key = stable_id("CLAIM-ING-", self.config.source_instance, record.external_id, assertion)

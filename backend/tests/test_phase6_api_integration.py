@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 import backend.app.main as main_module
 from backend.app.graph.mutations import upsert_node
+from backend.app.services.coordination_service import CoordinationService
 from backend.app.services.phase6_utils import now_iso
 
 
@@ -67,6 +68,14 @@ def test_phase6_fastapi_success_flow_persists_claim_checkpoint_transfer_action_a
         },
     )
     assert checkpoint.status_code == 200
+
+    # The legacy API exposes resume but not pause. Persist the pause through the
+    # coordination service, then use the HTTP API to prove checkpointed resume.
+    paused = CoordinationService(integration_client).pause_execution(execution_id, REMEDIATION)
+    assert paused["status"] == "PAUSED"
+    persisted_pause = api.get(f"/tasks/{task_id}/execution")
+    assert persisted_pause.status_code == 200
+    assert persisted_pause.json()["execution"]["status"] == "PAUSED"
 
     resumed = api.post(f"/tasks/{task_id}/resume", json={"agent_id": REMEDIATION, "execution_id": execution_id})
     assert resumed.status_code == 200 and resumed.json()["resume_from_step"] == 2

@@ -76,8 +76,11 @@ class RetrievalIndexer:
         if source_record_id:
             for e in snapshot.edges_from(str(source_record_id),{"NORMALIZED_TO"}):entity_ids.add(e.target)
         chunks=self.chunker.chunk(document_id=artifact_id,text=text,tenant_id=self.client.settings.tenant_id,artifact_id=artifact_id,source_record_id=str(source_record_id) if source_record_id else None,data_source_id=dsids[0] if dsids else None,entity_ids=sorted(entity_ids),document_type=str(node.get("artifact_type") or "DOCUMENT"),observed_at=source_record.get("observed_at") or node.get("observed_at"),metadata={"artifact_uri":node.get("uri")})
+        superseded_at=self._superseded_at(snapshot,str(source_record_id)) if source_record_id else None
         at=now_iso()
         for chunk in chunks:
+            if superseded_at:
+                chunk=chunk.model_copy(update={"valid_until":superseded_at})
             self.index_document(chunk)
             upsert_node(self.client,"Chunk",chunk.document_id,{"artifact_id":artifact_id,"source_record_id":chunk.source_record_id,"sequence":chunk.metadata.get("sequence"),"heading":chunk.metadata.get("heading"),"char_start":chunk.metadata.get("char_start"),"char_end":chunk.metadata.get("char_end"),"content_hash":chunk.content_hash,"chunking_version":chunk.metadata.get("chunking_version"),"observed_at":chunk.observed_at,"valid_from":chunk.valid_from or chunk.observed_at,"valid_until":chunk.valid_until,"created_at":at})
             upsert_relationship(self.client,chunk.document_id,"PART_OF",artifact_id,{"valid_from":at})

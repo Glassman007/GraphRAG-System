@@ -12,7 +12,7 @@ from backend.app.config import Settings
 from backend.app.graph.client import FalkorGraphClient
 
 READ_PERMISSIONS = {"READ_GRAPH", "READ_EVIDENCE", "READ_ORG_ANALYTICS"}
-ALL_PERMISSIONS = READ_PERMISSIONS | {"CREATE_INVESTIGATION", "CREATE_PLAN", "CLAIM_TASK", "WRITE_FINDING", "PROPOSE_ACTION", "EXECUTE_ACTION", "MANAGE_INGESTION", "ADMIN"}
+ALL_PERMISSIONS = READ_PERMISSIONS | {"CREATE_INVESTIGATION", "CREATE_PLAN", "CLAIM_TASK", "WRITE_FINDING", "PROPOSE_ACTION", "EXECUTE_ACTION", "APPROVE_ACTION", "MANAGE_INGESTION", "ADMIN"}
 
 
 @dataclass(frozen=True)
@@ -27,7 +27,7 @@ def _builtins() -> dict[str, Principal]:
     return {
         "test-admin-token": Principal("test-admin", "northstar", ("ADMIN",), frozenset(ALL_PERMISSIONS)),
         "test-reader-token": Principal("test-reader", "northstar", ("READER",), frozenset(READ_PERMISSIONS)),
-        "test-operator-token": Principal("test-operator", "northstar", ("OPERATOR",), frozenset(ALL_PERMISSIONS - {"ADMIN", "MANAGE_INGESTION"})),
+        "test-operator-token": Principal("test-operator", "northstar", ("OPERATOR",), frozenset(ALL_PERMISSIONS - {"ADMIN", "APPROVE_ACTION", "MANAGE_INGESTION"})),
         "test-asteria-admin-token": Principal("asteria-demo-admin", "asteria", ("ADMIN",), frozenset(ALL_PERMISSIONS)),
         "test-other-admin-token": Principal("other-admin", "other-tenant", ("ADMIN",), frozenset(ALL_PERMISSIONS)),
     }

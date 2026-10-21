@@ -355,7 +355,7 @@ python scripts/apply_schema.py
 ## 5. Run the backend
 
 ```bash
-uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn backend.app.main:app --env-file .env --reload --host 127.0.0.1 --port 8000
 ```
 
 Useful URLs:
@@ -737,3 +737,36 @@ Use the supplied `.gitignore` and `.env.example` files.
 No license is included by default.
 
 If you intend to make the repository publicly reusable, add an explicit license such as MIT, Apache-2.0, or another license appropriate for your project.
+
+## VERINEX merged agent stack (Components 1–6)
+
+This repository integrates Component 1's improved Groq/OpenAI-compatible model provider (including token pacing, bounded observations, evidence grounding, request deduplication and rate-limit handling) with Components 2–6 below. The model settings are illustrated in `.env.example`; **no actual API key is bundled**. Copy the example to a private `.env`, set `GROQ_API_KEY` privately and launch with `uvicorn ... --env-file .env` so those settings are loaded. Do not expose `.env` through the frontend.
+
+Start with `python -m pytest -q -m "not integration"`; see `MERGE_REPORT.md` for the tested scope, unresolved live checks and safe follow-up commands. An actual FalkorDB instance, Node dependencies and Groq access are needed for complete end-to-end validation.
+
+## Component 2 — Supervisor & Task Scheduler
+
+The Demo & Scenario Explorer now includes an optional **Component 2 / Supervisor & Task Scheduler** panel below the existing single-agent runtime. It decomposes organizational investigations, schedules read-only specialists in parallel when their prerequisites permit, passes evidence-checked handoffs, persists supervisor task and event state in FalkorDB, and flags conflicting/high-risk conclusions for human review. Incident records use a deterministic dependency/evidence/verification/remediation-proposal DAG; other objectives use schema-validated model-generated plans.
+
+Use `GET /api/v1/agent-runtime/supervisor/registry` to inspect specialist tools, `POST /api/v1/agent-runtime/supervisor/runs` to start a consented run, and `GET /api/v1/agent-runtime/supervisor/runs/{id}` to reopen it. Requires the existing provider setup plus authenticated graph/evidence/investigation permissions. No specialist can execute external business actions; remediation is a proposal only. See [Component 2 implementation, demo and limitations](docs/component2_supervisor_scheduler.md).
+
+### Component 3 — Persistent Agent Memory (verified cross-session knowledge)
+
+The supervisor now stores private agent discoveries and owner-scoped workflow checkpoints in a **separate tenant-scoped FalkorDB memory graph**, promotes only corroborated graph-checkable assertions, and injects current verified knowledge into later specialist runs. The Demo & Scenario Explorer includes a searchable memory/provenance panel, validity reviews, and a run-resume action. Model statements are not blindly treated as facts; completed tasks are reused on restart, but interrupted in-flight read-only tool calls may repeat. See [`docs/component3_persistent_agent_memory.md`](docs/component3_persistent_agent_memory.md) for supported predicates, HTTP APIs, acceptance tests, and production caveats.
+
+### Component 4 — Reactive Organizational Learning
+
+Confirmed ingested changes propagate through a persisted event inbox to verified agent memory and affected supervisor plans. Re-verification is targeted, and further LLM work requires fresh consent. See [`docs/component4_reactive_organizational_learning.md`](docs/component4_reactive_organizational_learning.md).
+
+### Component 5 — Governed Tool Execution (disabled externally by default)
+
+The Demo & Scenario Explorer includes a **Governed Tool Execution** panel. Evidence-grounded proposals are stored in a separate tenant-scoped action ledger, checked against authoritative policies and read-only blast-radius simulation, and require an independent authenticated human approver before a configured HTTPS adapter can dispatch a real external action. Tool execution uses a durable CAS claim and a stable operation key; ambiguous failures never trigger automatic replays. A remote acknowledgment is not completion: the trusted adapter must independently confirm success or failure through an authenticated GET readback. Failed/uncertain actions can be escalated, and verified outcomes are made available to the Component 4 learning store.
+
+Nothing in this repository enables an external action connector until its explicit environment URL and secret are set. Do **not** use a live deployment receiver without validating its idempotency/authorization implementation. See [`docs/component5_governed_tool_execution.md`](docs/component5_governed_tool_execution.md).
+
+## Component 6 — Live Agent Workspace
+
+Go to **`/agent-workspace`** for a unified read-only multi-agent investigation UI. It launches real, explicitly authorized bounded supervisor work, displays graph-persisted specialist activity, supports cooperative pause/cancel and checkpoint resume, inspects verified agent memory, provides graph evidence links, and embeds independently governed action approvals. Scenarios are starting inputs, not computed results.
+
+See [Component 6 deployment and API guide](docs/component6_live_agent_workspace.md) for the single-worker deployment requirement, test instructions and remaining production limitations.
+

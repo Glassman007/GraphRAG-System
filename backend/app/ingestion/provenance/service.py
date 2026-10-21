@@ -1,12 +1,30 @@
 from __future__ import annotations
 
 from typing import Any
+from datetime import datetime, timezone
+import json
 
 from backend.app.graph.client import FalkorGraphClient
 from backend.app.graph.mutations import upsert_node, upsert_relationship
 from backend.app.ingestion.models import ArtifactMetadata, SourceConfig, SourceRecordEnvelope
 from backend.app.services.phase4_graph import GraphSnapshot
 from backend.app.services.phase6_utils import now_iso, stable_id
+
+
+def _source_version_time(value: Any) -> tuple[int, float | str]:
+    """Order source revisions by actual upstream time (UTC), not ingestion order."""
+    if value is None or value == "":
+        return (0, "")
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (2, dt.timestamp())
+    except (ValueError, TypeError, OverflowError):
+        try:
+            return (2, float(value))  # e.g. Slack Unix timestamps
+        except (ValueError, TypeError, OverflowError):
+            return (1, str(value))
 
 
 class IngestionProvenanceService:
@@ -80,22 +98,36 @@ class IngestionProvenanceService:
             "deleted": record.deleted,
             "schema_version": record.schema_version,
             "status": "TOMBSTONED" if record.deleted else "ACTIVE",
-            "raw_metadata": str(record.raw_metadata),
-            "created_at": record.fetched_at,
+            "raw_metadata": json.dumps(record.raw_metadata, sort_keys=True, default=str),
+            "created_at": snapshot.node(source_record_id).get("created_at", record.fetched_at) if existed else record.fetched_at,
             "candidate_label": candidate_label,
             "adapter_version": config.adapter_version,
             "mapping_version": config.mapping_version,
             "trust_class": config.trust_class.value,
             "authoritative_domains": list(config.authoritative_domains),
-            **(identity or {}),
         }
+        # Never allow data extracted from an external record to spoof the
+        # connector-maintained source, checksum, timestamp, or trust fields.
+        props.update({k: v for k, v in (identity or {}).items()
+                      if k not in props and k not in {"id", "_labels"}})
         upsert_node(self.client, "SourceRecord", source_record_id, props)
-        upsert_relationship(self.client, source_record_id, "DERIVED_FROM", config.id, {"valid_from": record.fetched_at, "confidence": 1.0, "source_ref_id": config.id})
+        upsert_relationship(self.client, source_record_id, "DERIVED_FROM", config.id, {
+            "edge_id": stable_id("ING-SOURCE-LINEAGE-", self.client.settings.tenant_id, source_record_id, config.id, length=24),
+            "valid_from": record.fetched_at, "confidence": 1.0, "source_ref_id": config.id})
         upsert_relationship(self.client, run_id, "INGESTED", source_record_id, {"valid_from": record.fetched_at, "confidence": 1.0, "source_ref_id": config.id})
-        if previous:
-            # Updated source records create a version chain; old SourceRecords remain queryable.
-            prev = sorted(previous, key=lambda x: str(x.get("source_updated_at") or x.get("fetched_at") or ""))[-1]
-            upsert_relationship(self.client, source_record_id, "SUPERSEDES", str(prev["id"]), {"valid_from": record.source_updated_at or record.fetched_at, "confidence": 1.0, "source_ref_id": config.id})
+        if previous and not existed:
+            # Source version ordering must never be reversed by replay or late backfill.
+            # Strict comparisons avoid fabricating order between equal/unknown times.
+            version_time = _source_version_time(record.source_updated_at or record.observed_at or record.fetched_at)
+            dated = [(n, _source_version_time(n.get("source_updated_at") or n.get("observed_at") or n.get("fetched_at"))) for n in previous]
+            older = [item for item in dated if item[1] < version_time]
+            newer = [item for item in dated if item[1] > version_time]
+            if older:
+                predecessor = max(older, key=lambda item: item[1])[0]
+                upsert_relationship(self.client, source_record_id, "SUPERSEDES", str(predecessor["id"]), {"valid_from": record.source_updated_at or record.fetched_at, "confidence": 1.0, "source_ref_id": config.id})
+            if newer:
+                successor = min(newer, key=lambda item: item[1])[0]
+                upsert_relationship(self.client, str(successor["id"]), "SUPERSEDES", source_record_id, {"valid_from": successor.get("source_updated_at") or successor.get("fetched_at") or record.fetched_at, "confidence": 1.0, "source_ref_id": config.id})
         return source_record_id, existed
 
     def external_identity(self, config: SourceConfig, source_record_id: str, *, entity_key: str, identity: dict[str, Any]) -> str:
@@ -131,4 +163,7 @@ class IngestionProvenanceService:
 
     def link_artifact(self, source_record_id: str, artifact: ArtifactMetadata, *, source_id: str) -> None:
         upsert_node(self.client, "Artifact", artifact.artifact_id, artifact.model_dump(mode="json"))
-        upsert_relationship(self.client, source_record_id, "REFERENCES", artifact.artifact_id, {"valid_from": artifact.created_at, "confidence": 1.0, "source_ref_id": source_id})
+        upsert_relationship(self.client, source_record_id, "REFERENCES", artifact.artifact_id, {
+            "edge_id": stable_id("ING-ARTIFACT-LINEAGE-", self.client.settings.tenant_id,
+                                 source_record_id, artifact.artifact_id, length=24),
+            "valid_from": artifact.created_at, "confidence": 1.0, "source_ref_id": source_id})

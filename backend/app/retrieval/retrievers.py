@@ -74,7 +74,7 @@ class ConfiguredSourceRetriever:
         return str(candidates[0].get("id"))
 
     def _fresh(self,request,scope,allowed_ds:set[str])->list[RetrievalResult]:
-        if not self.source_registry or not bool(request.metadata_filters.get("refresh_external")):
+        if request.as_of is not None or not self.source_registry or not bool(request.metadata_filters.get("refresh_external")):
             return []
         rows=[]
         cursor=request.metadata_filters.get("cursor")

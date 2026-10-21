@@ -48,9 +48,10 @@ export const capabilityRegister:{name:string;track:Track;level:CapabilityLevel;s
  {name:'Temporal ownership and sourced claims',track:'COMPANY_BRAIN',level:'IMPLEMENTED',scope:'Recorded graph history; answer quality depends on evidence'},
  {name:'Graph-first retrieval',track:'CONNECTED_AGENTS',level:'IMPLEMENTED',scope:'On-demand retrieval in an explicitly created investigation'},
  {name:'Governed action proposals and attempts',track:'CONNECTED_AGENTS',level:'IMPLEMENTED',scope:'Backend approvals and permissions; not automatic execution'},
- {name:'Automatic end-to-end agent autonomy',track:'CONNECTED_AGENTS',level:'PROPOSED',scope:'No continuous multi-agent scheduler is installed'},
+ {name:'Continuous autonomous model execution',track:'CONNECTED_AGENTS',level:'PARTIAL',scope:'Multi-agent DAG runs exist; source-change reactivation requires fresh model consent'},
  {name:'Task/checkpoint persistence and formal handoffs',track:'AGENT_MEMORY_COORDINATION',level:'IMPLEMENTED',scope:'Graph-backed states, contract validation and task coordination'},
- {name:'Agent conversational recall',track:'AGENT_MEMORY_COORDINATION',level:'PROPOSED',scope:'Persisted artifacts do not equal model long-term conversation recall'},
+ {name:'Verified cross-session agent knowledge',track:'AGENT_MEMORY_COORDINATION',level:'IMPLEMENTED',scope:'FalkorDB source-backed facts; private drafts not reusable'},
+ {name:'Reactive fact verification and targeted replan',track:'AGENT_MEMORY_COORDINATION',level:'PARTIAL',scope:'Authoritative ingestion events recheck memory and flag only affected tasks; automatic model calls require consent'},
  {name:'Self-running cross-agent conflict resolution',track:'AGENT_MEMORY_COORDINATION',level:'PARTIAL',scope:'Explicit conflicts and verifier controls; resolution is user-guided'},
 ]
 export function contextComparison(entity:any,neighbors:any){

@@ -51,7 +51,7 @@ CONNECTORS: dict[str, ConnectorDefinition] = {
     "jira": ConnectorDefinition("jira", "Jira", "Projects, issues, assignees and delivery work.", "Work tracking", ("api_token", "username_password"), ("projects",)),
     "slack": ConnectorDefinition("slack", "Slack", "Selected engineering channels and incident conversations.", "Communication", ("api_token",), ("channels",)),
     "teams": ConnectorDefinition("teams", "Microsoft Teams", "Selected Teams conversations through the existing adapter boundary.", "Communication", ("service_credential",), ("teams", "channels"), supports_live_mode=False),
-    "database": ConnectorDefinition("database", "Database", "Read-only registered relational views/tables.", "Structured data", ("service_credential", "username_password"), ("registered_views",)),
+    "database": ConnectorDefinition("database", "Database", "Read-only registered relational views and PostgreSQL schemas.", "Structured data", ("service_credential", "username_password"), ("registered_views", "schemas")),
     "internal_api": ConnectorDefinition("internal_api", "Internal API", "Server-registered internal JSON API source.", "Structured data", ("api_token", "service_credential"), ("registered_endpoint",)),
     "documents": ConnectorDefinition("documents", "Documents", "Document collections used as organizational evidence.", "Knowledge", ("service_credential", "none"), ("collections",), supports_live_mode=False),
     "telemetry": ConnectorDefinition("telemetry", "Telemetry", "Runtime observations, logs and operational telemetry.", "Operations", ("api_token", "service_credential", "none"), ("services", "namespaces"), supports_live_mode=False),
@@ -206,6 +206,27 @@ class SourceControlService:
 
     def _safe_connection_config(self, connector: str, mode: str, raw: dict[str, Any]) -> dict[str, Any]:
         cfg = dict(raw or {})
+        # Public connection configuration is persisted on a graph node. Credentials
+        # belong exclusively in CredentialStore (payload["credentials"]). Inspect
+        # nested mappings as well as settings; previously only settings was checked.
+        sensitive_parts = ("token", "password", "secret", "authorization", "private_key", "api_key", "credential", "dsn", "cookie")
+        def forbidden_keys(value: Any, prefix: str = "") -> list[str]:
+            if not isinstance(value, dict):
+                return []
+            bad = []
+            for key, child in value.items():
+                full_key = f"{prefix}.{key}" if prefix else str(key)
+                if any(term in str(key).lower() for term in sensitive_parts):
+                    bad.append(full_key)
+                elif isinstance(child, dict):
+                    bad.extend(forbidden_keys(child, full_key))
+                elif isinstance(child, list):
+                    for idx, item in enumerate(child):
+                        bad.extend(forbidden_keys(item, f"{full_key}[{idx}]"))
+            return bad
+        forbidden_config = forbidden_keys(cfg)
+        if forbidden_config:
+            raise ValueError("Connection configuration contains forbidden fields: " + ", ".join(sorted(forbidden_config)))
         settings = dict(cfg.get("settings") or {})
         forbidden = {k for k in settings if any(x in k.lower() for x in ("query","sql","token","password","secret","authorization","private_key"))}
         if forbidden:
@@ -217,11 +238,25 @@ class SourceControlService:
                 raise ValueError("Internal API live sources must use a server-registered endpoint")
             item = dict(registry[key]); cfg = {"base_url": item.get("base_url"), "settings": {"path": item.get("path", "/records"), "registered_endpoint": key}}
         if connector == "database" and mode == "live":
-            key = str(cfg.get("registered_view") or settings.get("registered_view") or "")
-            registry = _parse_jsonish(os.getenv("GRAPH_HACKS_REGISTERED_DATABASE_VIEWS_JSON"), {})
-            if not key or key not in registry:
-                raise ValueError("Database live sources must use a server-registered read-only view")
-            item = dict(registry[key]); cfg = {"settings": {"query": item.get("query"), "cursor_column": item.get("cursor_column", "id"), "registered_view": key}}
+            schema_key = str(cfg.get("registered_schema") or settings.get("registered_schema") or "")
+            if schema_key:
+                registry = _parse_jsonish(os.getenv("GRAPH_HACKS_REGISTERED_DATABASE_SCHEMAS_JSON"), {})
+                if schema_key not in registry:
+                    raise ValueError("Database schema source must use a server-registered schema")
+                item = dict(registry[schema_key])
+                schemas = item.get("schemas") or ["public"]
+                if not isinstance(schemas, list) or not schemas or not all(isinstance(s, str) and s for s in schemas):
+                    raise ValueError("Registered database schema scope is invalid")
+                cfg = {"settings": {"mode": "schema", "registered_schema": schema_key,
+                                    "dsn_env": item.get("dsn_env") or "INGESTION_DATABASE_DSN",
+                                    "schemas": schemas}}
+            else:
+                key = str(cfg.get("registered_view") or settings.get("registered_view") or "")
+                registry = _parse_jsonish(os.getenv("GRAPH_HACKS_REGISTERED_DATABASE_VIEWS_JSON"), {})
+                if not key or key not in registry:
+                    raise ValueError("Database live sources must use a server-registered read-only view or schema")
+                item = dict(registry[key]); cfg = {"settings": {"query": item.get("query"), "cursor_column": item.get("cursor_column", "id"), "registered_view": key,
+                                                      "dsn_env": item.get("dsn_env") or "INGESTION_DATABASE_DSN"}}
         if mode == "live" and connector == "github" and not cfg.get("base_url"):
             cfg["base_url"] = "https://api.github.com"
         if mode == "live" and connector == "github":
@@ -238,6 +273,12 @@ class SourceControlService:
         if mode == "live" and connector == "slack" and not cfg.get("base_url"):
             cfg["base_url"] = "https://slack.com/api"
         base_url = cfg.get("base_url")
+        if base_url:
+            parts = urlparse(str(base_url))
+            # Even a permitted HTTPS host must not embed a username/password
+            # or query-string tokens that would be stored as public graph data.
+            if parts.username or parts.password or parts.query or parts.fragment:
+                raise ValueError("Connection base_url must not contain credentials, query or fragment")
         if base_url and connector in {"github","jira","slack"}:
             parsed=urlparse(str(base_url))
             allowed={x.strip().lower() for x in os.getenv("GRAPH_HACKS_ALLOWED_CONNECTOR_HOSTS","api.github.com,github.com,slack.com").split(",") if x.strip()}
@@ -252,11 +293,12 @@ class SourceControlService:
         if not display_name:
             raise ValueError("display_name is required")
         sid = str(payload.get("source_id") or stable_id("SRC-", self.client.settings.tenant_id, connector, display_name, length=18))
+        # A newly selected FalkorDB graph has no key yet; its read-only snapshot
+        # query fails until the graph has been initialized by a write query.
+        self.client.health_check()
         snap = GraphSnapshot.load(self.client)
         if snap.node(sid):
             raise FileExistsError(sid)
-        credentials = dict(payload.get("credentials") or {})
-        credential_ref = self.credentials.put(self.client.settings.tenant_id, sid, credentials) if credentials else None
         at = now_iso()
         connection_mode = str(payload.get("connection_mode") or "fixture").lower()
         if connection_mode not in {"fixture", "live"}:
@@ -264,6 +306,9 @@ class SourceControlService:
         if connection_mode == "live" and not CONNECTORS[connector].supports_live_mode:
             raise ValueError(f"{connector} live mode is not implemented")
         safe_connection = self._safe_connection_config(connector, connection_mode, dict(payload.get("connection_config") or {}))
+        # Only create a secret after every deterministic request validation passes.
+        credentials = dict(payload.get("credentials") or {})
+        credential_ref = self.credentials.put(self.client.settings.tenant_id, sid, credentials) if credentials else None
         props = {
             "name": display_name, "display_name": display_name, "description": str(payload.get("description") or ""),
             "source_type": connector, "connector_type": connector, "source_instance": str(payload.get("source_instance") or sid.lower()),
@@ -340,8 +385,24 @@ class SourceControlService:
         try:
             health = adapter.health_check()
             ok = bool(health.get("ok"))
-            status = "HEALTHY" if ok else str(health.get("status") or ("AUTH_FAILED" if config.credential_ref and not self.credentials.exists(config.credential_ref) else "UNREACHABLE"))
-            message = str(health.get("message") or ("Connection test passed." if ok else "Connector could not verify required configuration or reachability."))
+            live = bool(health.get("live", False))
+            declared_checks = health.get("checks") if isinstance(health.get("checks"), dict) else {}
+            # Some adapters report ok=True solely because configuration exists,
+            # without contacting the remote service. Never claim authentication
+            # or permissions passed in that case.
+            verified_live = bool(health.get("verified_live")) or bool(live and all(
+                declared_checks.get(item) == "PASS"
+                for item in ("authentication", "reachability", "required_permission", "api_access")
+            ))
+            status = ("HEALTHY" if (not live or verified_live) else "UNVERIFIED") if ok else str(
+                health.get("status") or ("AUTH_FAILED" if config.credential_ref and not self.credentials.exists(config.credential_ref) else "UNREACHABLE")
+            )
+            message = str(health.get("message") or (
+                "Connector configuration is present; live authentication and permissions were not verified."
+                if status == "UNVERIFIED" else
+                "Connection test passed." if ok else
+                "Connector could not verify required configuration or reachability."
+            ))
         except PermissionError as exc:
             status, message, health = "PERMISSION_ERROR", str(exc), {"ok": False}
         except Exception as exc:
@@ -349,8 +410,12 @@ class SourceControlService:
         at = now_iso()
         upsert_node(self.client, "DataSource", source_id, {"connection_status": status, "last_connection_test": at, "connection_message": message, "lifecycle_status": "CONNECTED" if status == "HEALTHY" else "DEGRADED", "updated_at": at})
         self.events.record("CONNECTION_TESTED", about_ids=[source_id], actor_id=actor_id, summary=f"Connection test {status} for {source_id}", properties={"phase": "13", "status": status})
-        checks = health.get("checks") or {"authentication": "PASS" if status == "HEALTHY" else "FAIL", "reachability": "PASS" if health.get("ok") else "FAIL", "required_permission": "PASS" if health.get("ok") else "UNKNOWN", "api_access": "PASS" if health.get("ok") else "FAIL"}
-        details = {key: health[key] for key in ("repository", "branch", "ref", "commit_sha", "http_status", "retry_after", "rate_limit_reset") if key in health}
+        checks = health.get("checks") or (
+            {"authentication": "NOT_APPLICABLE", "reachability": "PASS" if health.get("ok") else "FAIL", "required_permission": "NOT_APPLICABLE", "api_access": "NOT_APPLICABLE"}
+            if not health.get("live", False) else
+            {"authentication": "PASS" if status == "HEALTHY" else "UNKNOWN", "reachability": "PASS" if status == "HEALTHY" else "UNKNOWN", "required_permission": "PASS" if status == "HEALTHY" else "UNKNOWN", "api_access": "PASS" if status == "HEALTHY" else "UNKNOWN"}
+        )
+        details = {key: health[key] for key in ("repository", "branch", "ref", "commit_sha", "database", "http_status", "retry_after", "rate_limit_reset") if key in health}
         return {"source_id": source_id, "status": status, "checks": checks, "message": message, "live": bool(health.get("live", False)), "fixture": not bool(health.get("live", False)), "connection_details": details}
 
     def mapping_preview(self, source_id: str) -> dict[str, Any]:
@@ -371,7 +436,19 @@ class SourceControlService:
         at = now_iso()
         upsert_node(self.client, "DataSource", source_id, {"last_attempted_sync": at, "last_ingestion_status": "RUNNING", "updated_at": at})
         self.events.record("SYNC_STARTED", about_ids=[source_id], actor_id=actor_id, summary=f"Manual synchronization requested for {source_id}", properties={"phase": "13"})
-        report = self._pipeline(source_id).sync(source_id, mode=mode, max_records=max_records, batch_size=min(max_records, 50), dry_run=False)
+        try:
+            report = self._pipeline(source_id).sync(source_id, mode=mode, max_records=max_records, batch_size=min(max_records, 50), dry_run=False)
+        except Exception as exc:
+            # Preflight and pipeline setup failures can escape before the pipeline
+            # creates an IngestionRun. Do not leave the source stuck in RUNNING.
+            failure = f"SYNC_ERROR:{type(exc).__name__}"
+            upsert_node(self.client, "DataSource", source_id, {
+                "last_ingestion_status": "FAILED", "last_failure": failure, "updated_at": now_iso()
+            })
+            self.events.record("SYNC_FAILED", about_ids=[source_id], actor_id=actor_id,
+                               summary=f"Synchronization setup failed for {source_id}: {failure}",
+                               properties={"phase": "13", "error_type": type(exc).__name__})
+            raise
         success = report.status.value in {"SUCCEEDED", "SUCCESS"}
         props = {"last_ingestion_status": "SUCCESS" if success else report.status.value, "last_failure": None if success else "; ".join(report.warnings[-3:]), "last_successful_sync": now_iso() if success else self._source_node(source_id).get("last_successful_sync"), "updated_at": now_iso()}
         upsert_node(self.client, "DataSource", source_id, props)

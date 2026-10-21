@@ -51,6 +51,9 @@ class LocalVectorIndex(VectorIndex):
         self.vectors: dict[str,list[float]]={}
         if self.path and self.path.exists():
             payload=json.loads(self.path.read_text(encoding="utf-8"))
+            for item in payload.values():
+                if item.get("model_id") != self.provider.model_id or len(item.get("vector", [])) != self.provider.dimensions:
+                    raise ValueError("Persisted vector index embedding model or dimensions do not match provider")
             self.documents={k:IndexedDocument.model_validate(v["document"]) for k,v in payload.items()}
             self.vectors={k:list(v["vector"]) for k,v in payload.items()}
     def _persist(self):
@@ -68,7 +71,10 @@ class LocalVectorIndex(VectorIndex):
         # A metadata-only update (valid_until/provenance/etc.) must be persisted
         # without paying for a redundant embedding computation.
         if not same_body:
-            self.vectors[document.document_id]=self.provider.embed(document.text)
+            vector=self.provider.embed(document.text)
+            if len(vector)!=self.provider.dimensions:
+                raise ValueError("Embedding provider returned unexpected dimensions")
+            self.vectors[document.document_id]=vector
         self._persist()
     def delete_document(self,document_id:str)->None:
         self.documents.pop(document_id,None);self.vectors.pop(document_id,None);self._persist()

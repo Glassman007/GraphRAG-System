@@ -1,0 +1,44 @@
+{
+  "graph": "verinex_neon_stage5_2ded2df6",
+  "tenant": "neon-stage5-2ded2df6",
+  "source_id": "SRC-NEON-STAGE5-2DED2DF6",
+  "source_repository": "neondatabase/postgres-sample-dbs",
+  "source_path": "dvdrental.sql",
+  "pinned_commit": "b54cb67534bf20775803b181b7a1c6f573422161",
+  "create": {
+    "http": 201,
+    "body": {
+      "source_id": "SRC-NEON-STAGE5-2DED2DF6",
+      "scope": {
+        "files": [
+          "dvdrental.sql"
+        ]
+      },
+      "credential": {
+        "configured": false,
+        "provider": "local-protected"
+      }
+    }
+  },
+  "connection_test": {
+    "http": 200,
+    "body": {
+      "source_id": "SRC-NEON-STAGE5-2DED2DF6",
+      "status": "RATE_LIMITED",
+      "checks": {
+        "authentication": "UNKNOWN",
+        "reachability": "PASS",
+        "required_permission": "UNKNOWN",
+        "api_access": "FAIL"
+      },
+      "message": "GitHub rate limit reached; retry after the indicated reset.",
+      "live": true,
+      "fixture": false,
+      "connection_details": {
+        "http_status": 403,
+        "retry_after": null,
+        "rate_limit_reset": "1792601891"
+      }
+    }
+  }
+}

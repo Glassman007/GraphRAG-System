@@ -6,7 +6,7 @@ import { getReady } from '../api/system'
 import { useTechnicalMode } from '../presentation/TechnicalModeContext'
 import { RainLayer, readRainPreference, writeRainPreference } from './RainLayer'
 
-const primary=[['Demo Lab','/demo'],['Organization','/organization'],['Scenarios','/scenarios'],['Situations','/situations'],['Investigations','/investigations'],['Work','/work'],['Knowledge','/knowledge'],['Company Brain','/company-brain'],['Sources','/sources']]
+const primary=[['Agent Workspace','/agent-workspace'],['Demo Lab','/demo'],['Organization','/organization'],['Scenarios','/scenarios'],['Situations','/situations'],['Investigations','/investigations'],['Work','/work'],['Knowledge','/knowledge'],['Company Brain','/company-brain'],['Sources','/sources']]
 const advanced=[['Entities','/entities'],['Decisions','/decisions'],['Simulations','/simulations'],['Anomalies','/anomalies']]
 export function AppShell(){
   const auth=useAuth(); const tech=useTechnicalMode(); const [editing,setEditing]=useState(false); const [token,setToken]=useState(auth.config.token); const [tenant,setTenant]=useState(auth.config.tenantId); const [base,setBase]=useState(auth.config.baseUrl)

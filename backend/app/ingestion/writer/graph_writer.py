@@ -132,8 +132,7 @@ class IngestionGraphWriter:
             entity_map[entity.key] = cid
             # Newly created/non-identity entities receive normalized content. Existing identity nodes
             # are not blindly overwritten by lower-trust source fields.
-            snapshot = GraphSnapshot.load(self.client)
-            existing = snapshot.node(cid)
+            existing = None if entity.ontology_type in {"SqlTable", "SqlColumn", "SqlConstraint"} else GraphSnapshot.load(self.client).node(cid)
             if existing is None or decision.status.value == "CREATED" or not entity.requires_resolution:
                 props = dict(entity.properties)
                 props.setdefault("created_at", record.observed_at or record.fetched_at)
@@ -167,7 +166,14 @@ class IngestionGraphWriter:
                 warnings.append(f"NON_AUTHORITATIVE_RELATION_SKIPPED:{sid}:{rel.rel_type}:{tid}")
                 continue
             props = self._relationship_props(config=config, run_id=run_id, source_record_id=source_record_id, record=record, normalized=normalized, candidate_props=rel.properties, confidence=rel.confidence)
-            if rel.rel_type in {"OWNS", "RESPONSIBLE_FOR"} and config.trust_class == TrustClass.AUTHORITATIVE:
+            if normalized.mapping_rule in {"github:sql_file", "database:database_schema"}:
+                # The constraint identity separates distinct FKs between the same
+                # pair of tables. MERGE reuses these edges on a repeated sync.
+                props["edge_id"] = stable_id("ING-SQL-EDGE-", self.client.settings.tenant_id,
+                                             sid, rel.rel_type, tid,
+                                             str(rel.properties.get("constraint_id") or ""), length=24)
+                upsert_relationship(self.client, sid, rel.rel_type, tid, props)
+            elif rel.rel_type in {"OWNS", "RESPONSIBLE_FOR"} and config.trust_class == TrustClass.AUTHORITATIVE:
                 if not bool(config.settings.get("auto_validate_ownership", False)):
                     claim_id = self._write_structural_assertion_claim(config=config, source_record_id=source_record_id, actor_id=sid, rel_type=rel.rel_type, target_id=tid, observed_at=record.observed_at or record.fetched_at)
                     warnings.append(f"STRUCTURAL_ASSERTION_REQUIRES_PHASE7_VALIDATION:{claim_id}")
@@ -199,6 +205,9 @@ class IngestionGraphWriter:
                 if rel.rel_type == "DEPENDS_ON" and config.trust_class == TrustClass.AUTHORITATIVE and not previous_active:
                     self.invalidation.dependency_changed(sid, tid, change_type="ADDED", timestamp=str(props["valid_from"]))
             upsert_relationship(self.client, source_record_id, "NORMALIZED_TO", tid, {
+                "edge_id": stable_id("ING-FACT-LINEAGE-", self.client.settings.tenant_id,
+                                     source_record_id, sid, rel.rel_type, tid,
+                                     str(rel.properties.get("constraint_id") or ""), length=24),
                 "valid_from": record.fetched_at,
                 "confidence": rel.confidence,
                 "source_ref_id": config.id,
@@ -214,7 +223,10 @@ class IngestionGraphWriter:
                 cid = entity_map.get(entity.key)
                 if cid and entity.ontology_type in {"Evidence", "Document", "Policy", "Incident"}:
                     rel_type = "DERIVED_FROM" if entity.ontology_type in {"Evidence", "Document"} else "REFERENCES"
-                    upsert_relationship(self.client, cid, rel_type, artifact.artifact_id, {"valid_from": artifact.created_at, "confidence": 1.0, "source_ref_id": config.id})
+                    upsert_relationship(self.client, cid, rel_type, artifact.artifact_id, {
+                        "edge_id": stable_id("ING-ENTITY-ARTIFACT-", self.client.settings.tenant_id,
+                                             cid, rel_type, artifact.artifact_id, length=24),
+                        "valid_from": artifact.created_at, "confidence": 1.0, "source_ref_id": config.id})
 
         return {"entity_map": entity_map, "written_nodes": sorted(set(written_nodes)), "written_relationships": written_relationships, "warnings": warnings}
 

@@ -24,6 +24,7 @@ from backend.app.services.action_coordination_service import ActionCoordinationS
 from backend.app.services.anomaly_service import GraphAnomalyService
 from backend.app.services.authority_resolution_service import AuthorityResolutionService
 from backend.app.services.company_brain_expertise_service import CompanyBrainExpertiseService
+from backend.app.services.company_brain_schema_service import CompanyBrainSchemaService
 from backend.app.services.agent_registry_service import AgentRegistryService
 from backend.app.services.blast_radius_service import BlastRadiusService
 from backend.app.services.bus_factor_service import BusFactorService
@@ -47,7 +48,17 @@ from backend.app.services.work_insights_service import task_dependency_analysis,
 from backend.app.agent_runtime.harness import AgentHarness, AgentSettings
 from backend.app.agent_runtime.provider import OpenAICompatibleProvider, ProviderError
 from backend.app.agent_runtime.store import GraphRunStore
+from backend.app.agent_runtime.supervisor import Supervisor, SupervisorSettings, DEFAULT_AGENTS
+from backend.app.agent_runtime.supervisor_store import GraphSupervisorStore
+from backend.app.agent_runtime.memory import AgentMemory, MemorySearch
+from backend.app.agent_runtime.memory_store import GraphMemoryStore
+from backend.app.agent_runtime.reactive import ReactiveLearning
+from backend.app.agent_runtime.reactive_store import GraphReactiveStore
 from backend.app.agent_runtime.tools import ToolRegistry
+from backend.app.agent_runtime.governed import GovernedActions, ActionProposal, Decision, Execution, ConnectorRegistry, RISK_CLASSES
+from backend.app.agent_runtime.governed_store import GraphGovernedActionStore
+from backend.app.agent_runtime.workspace import (WorkspaceStart, WorkspaceStore, runner as workspace_runner,
+    format_workspace, build_replay, task_comparison, now as workspace_now)
 from backend.app.services.phase4_graph import GraphSnapshot, has_label
 from backend.app.ingestion.source_control import SourceControlService
 
@@ -122,7 +133,9 @@ def agent_runtime_status(principal:Principal=Depends(require("READ_GRAPH"))):
     key={'groq':'GROQ_API_KEY','openai':'OPENAI_API_KEY','compatible':'GRAPH_HACKS_AGENT_API_KEY'}.get(provider)
     return {'provider':provider,'configured':bool(key is not None and os.getenv(key)) or (provider=='compatible' and bool(os.getenv('GRAPH_HACKS_AGENT_BASE_URL'))),
             'mode':'MODEL_TOOL_LOOP','business_tools':'READ_ONLY','requires_explicit_model_data_consent':True,
-            'supports_autonomous_multi_agent_coordination':False,'supports_external_action_execution':False}
+            'supports_autonomous_multi_agent_coordination':False,'supervisor_task_scheduler_available':True,
+            'persistent_verified_agent_memory_available':True,'memory_requires_verification':True,
+            'supports_external_action_execution':False,'governed_action_execution_available':True,'governed_external_connectors_disabled_by_default':True}
 
 @router.post("/agent-runtime/runs", tags=["Agent Runtime"], summary="Start a bounded, graph-grounded independent investigation")
 def start_agent_runtime(request:Request, body:AgentSettings, principal:Principal=Depends(require("READ_GRAPH","READ_EVIDENCE","CREATE_INVESTIGATION"))):
@@ -149,6 +162,484 @@ def get_agent_runtime(run_id:str,principal:Principal=Depends(require("READ_GRAPH
     result=GraphRunStore(client_for(principal)).get(run_id)
     if result is None:_not_found('AgentRun',run_id)
     return result
+
+
+# -------------------- Component 6: Live Agent Workspace --------------------
+# Development deployment: one API process. Worker handles are process-local while
+# supervisory DAGs, checkpoints, workspace commands and events are graph persisted.
+# No business-side-effect connector can be invoked by this workspace runner.
+import uuid as _workspace_uuid
+from typing import Literal
+from pydantic import BaseModel as _WorkspaceBaseModel
+
+class WorkspaceControl(_WorkspaceBaseModel):
+    operation: Literal['pause', 'cancel', 'resume', 'retry']
+    allow_external_model: bool = False
+
+
+def _workspace_store(principal: Principal) -> WorkspaceStore:
+    return WorkspaceStore(client_for(principal))
+
+
+def _workspace_owned(principal: Principal, run_id: str) -> dict:
+    import re
+    if not re.fullmatch(r'SRUN-[0-9A-F]{32}', run_id):
+        raise ApiError(422, 'INVALID_RUN_ID', 'Invalid workspace run ID')
+    record = _workspace_store(principal).get(run_id, principal.subject)
+    if record is None:
+        _not_found('Owned workspace run', run_id)
+    return record
+
+
+def _workspace_worker(principal: Principal, run_id: str, *, resume: bool = False,
+                      retry_failed: bool = False) -> None:
+    # Construct new clients in the worker thread; never reuse request-scoped state.
+    store = _workspace_store(principal)
+    try:
+        entry = store.get(run_id, principal.subject)
+        if not entry:
+            return
+        store.update(run_id, principal.subject, status='RUNNING')
+        client = client_for(principal)
+        memory = AgentMemory(backend=GraphMemoryStore(client),
+                             snapshot_factory=lambda: GraphSnapshot.load(client), tenant=principal.tenant_id)
+        supervisor = Supervisor(provider=OpenAICompatibleProvider(),
+                                tools=ToolRegistry(lambda: GraphSnapshot.load(client)),
+                                store=GraphSupervisorStore(client), tenant=principal.tenant_id,
+                                permissions=principal.permissions, memory=memory)
+        def command():
+            current = store.get(run_id, principal.subject)
+            return str((current or {}).get('command') or '')
+        result = supervisor.run(SupervisorSettings.model_validate(entry['settings']),
+                                subject=principal.subject, resume_id=run_id if resume else None,
+                                run_id=None if resume else run_id, control_check=command,
+                                retry_failed=retry_failed)
+        store.capture(run_id, principal.subject, {'created_at':workspace_now(),'status':result.status,
+                      'answer':result.answer,'citations':result.citations,
+                      'tasks':[{'id':t['id'],'status':t['status'],'result':t.get('result')} for t in result.tasks],
+                      'knowledge_gaps':result.knowledge_gaps})
+        store.update(run_id, principal.subject, status=result.status, command='', error=result.error or '')
+    except Exception as exc:
+        # No raw prompts, credentials or untrusted model responses in error records.
+        try:
+            store.update(run_id, principal.subject, status='FAILED', command='',
+                         error=f'{type(exc).__name__}: {str(exc)[:150]}')
+        except Exception:
+            pass
+
+
+@router.get('/agent-runtime/workspace/capabilities', tags=['Agent Workspace'])
+def workspace_capabilities(principal:Principal=Depends(require('READ_GRAPH'))):
+    import os
+    provider = (os.getenv('GRAPH_HACKS_AGENT_PROVIDER') or 'groq').strip().lower()
+    key = {'groq':'GROQ_API_KEY','openai':'OPENAI_API_KEY','compatible':'GRAPH_HACKS_AGENT_API_KEY'}.get(provider)
+    try:
+        OpenAICompatibleProvider()
+        configured = True
+    except ProviderError:
+        configured = False
+    return {'status': 'LIVE_MODEL_AVAILABLE' if configured else 'MODEL_NOT_CONFIGURED',
+            'provider':provider, 'model_configured':configured,
+            'multi_agent': 'REAL_READ_ONLY_WITH_EXPLICIT_CONSENT',
+            'live_activity': 'POLL_PERSISTED_OPERATIONAL_EVENTS',
+            'controls': 'COOPERATIVE_AT_SCHEDULER_BOUNDARIES',
+            'event_replay': 'PERSISTED_OPERATIONAL_EVENTS',
+            'before_after': 'RECORDED_WORKSPACE_RUN_REVISIONS',
+            'governed_actions': 'SEPARATE_APPROVAL_AND_EXECUTION_REQUIRED',
+            'seeded_scenarios': 'CATALOG_ONLY_NOT_LIVE_RESULT',
+            'worker_durability': 'SINGLE_PROCESS_BACKGROUND_WITH_EXPLICIT_CHECKPOINT_RECOVERY',
+            'external_action_auto_execution':False}
+
+
+@router.get('/agent-runtime/workspace/runs', tags=['Agent Workspace'])
+def workspace_runs(limit:int=Query(default=30,ge=1,le=100),
+                   principal:Principal=Depends(require('READ_GRAPH','READ_EVIDENCE'))):
+    records=_workspace_store(principal).list(principal.subject,limit)
+    return {'items':[format_workspace(r,is_live=workspace_runner.live(principal.tenant_id,r['id']))
+                     for r in records]}
+
+
+@router.post('/agent-runtime/workspace/runs',tags=['Agent Workspace'],status_code=202)
+def workspace_start(body:WorkspaceStart, request:Request,
+                    principal:Principal=Depends(require('READ_GRAPH','READ_EVIDENCE','CREATE_INVESTIGATION'))):
+    _guard_rate(request,principal,limit=6)
+    if not body.allow_external_model:
+        raise ApiError(422,'CONSENT_REQUIRED','Authorize transmission of selected organizational evidence to the model.')
+    # Validate provider before committing a QUEUED record.
+    try:
+        OpenAICompatibleProvider()
+    except ProviderError as exc:
+        raise ApiError(503,'AGENT_PROVIDER_UNAVAILABLE',str(exc)) from exc
+    run_id='SRUN-'+_workspace_uuid.uuid4().hex.upper()
+    entry={'id':run_id,'owner':principal.subject,'tenant':principal.tenant_id,
+           'goal':body.goal,'source_entity_id':body.source_entity_id,'status':'QUEUED',
+           'command':'','allow_external_model':True,'created_at':workspace_now(),
+           'updated_at':workspace_now(),'settings':body.settings().model_dump(),'error':''}
+    _workspace_store(principal).create(entry)
+    try:
+        workspace_runner.submit(tenant=principal.tenant_id,run_id=run_id,
+            execute=lambda:_workspace_worker(principal,run_id))
+    except Exception as exc:
+        _workspace_store(principal).update(run_id,principal.subject,status='FAILED',error=type(exc).__name__)
+        raise ApiError(503,'WORKER_UNAVAILABLE','Workspace worker could not start') from exc
+    return {'id':run_id,'status':'QUEUED','execution_mode':'LIVE_MODEL','side_effects':'NONE_READ_ONLY'}
+
+
+@router.get('/agent-runtime/workspace/runs/{run_id}', tags=['Agent Workspace'])
+def workspace_detail(run_id:str,principal:Principal=Depends(require('READ_GRAPH','READ_EVIDENCE'))):
+    record=_workspace_owned(principal,run_id)
+    client=client_for(principal)
+    supervision=GraphSupervisorStore(client).get(run_id)
+    checkpoint=GraphMemoryStore(client).load_checkpoint(run_id,owner=principal.subject)
+    result=format_workspace(record,is_live=workspace_runner.live(principal.tenant_id,run_id))
+    return {'workspace':result,'supervisor':supervision,'checkpoint':{
+        'revision':(checkpoint or {}).get('revision'),
+        'status':(checkpoint or {}).get('status'),
+        'updated_at':(checkpoint or {}).get('updated_at'),
+        'reactive_affected_tasks':(checkpoint or {}).get('reactive_affected_tasks') or []},
+        'comparison':task_comparison(checkpoint,supervision),
+        'snapshots':_workspace_store(principal).snapshots(run_id,principal.subject),
+        'classification':'LIVE_MODEL' if supervision else 'QUEUED_OR_INTERRUPTED'}
+
+
+@router.get('/agent-runtime/workspace/runs/{run_id}/events',tags=['Agent Workspace'])
+def workspace_events(run_id:str,after:int=Query(default=-1,ge=-1),
+                     principal:Principal=Depends(require('READ_GRAPH','READ_EVIDENCE'))):
+    _workspace_owned(principal,run_id)
+    record=GraphSupervisorStore(client_for(principal)).get(run_id)
+    items=[e for e in (record or {}).get('events',[]) if int(e.get('event_index',e.get('index',0)))>after]
+    return {'items':items[:250],'next_cursor':int(items[min(len(items),250)-1].get('event_index',
+            items[min(len(items),250)-1].get('index',0))) if items else after,
+            'mode':'PERSISTED_OPERATIONAL_EVENTS_NOT_PRIVATE_REASONING'}
+
+
+@router.get('/agent-runtime/workspace/runs/{run_id}/replay',tags=['Agent Workspace'])
+def workspace_replay(run_id:str,principal:Principal=Depends(require('READ_GRAPH','READ_EVIDENCE'))):
+    _workspace_owned(principal,run_id)
+    client=client_for(principal)
+    return build_replay(GraphSupervisorStore(client).get(run_id),
+                        GraphMemoryStore(client).load_checkpoint(run_id,owner=principal.subject))
+
+
+@router.post('/agent-runtime/workspace/runs/{run_id}/control',tags=['Agent Workspace'])
+def workspace_control(run_id:str,body:WorkspaceControl,request:Request,
+                      principal:Principal=Depends(require('READ_GRAPH','READ_EVIDENCE','CREATE_INVESTIGATION'))):
+    _guard_rate(request,principal,limit=20)
+    record=_workspace_owned(principal,run_id)
+    store=_workspace_store(principal)
+    live=workspace_runner.live(principal.tenant_id,run_id)
+    if body.operation in {'pause','cancel'}:
+        if not live or record['status'] not in {'QUEUED','RUNNING','PAUSING','CANCELLING'}:
+            raise ApiError(409,'NOT_ACTIVE','Only actively executing runs can be paused or cancelled.')
+        return store.update(run_id,principal.subject,
+                           status='PAUSING' if body.operation=='pause' else 'CANCELLING',
+                           command=body.operation.upper())
+    if not body.allow_external_model:
+        raise ApiError(422,'CONSENT_REQUIRED','Fresh model-data transmission consent is required.')
+    if live:
+        raise ApiError(409,'ALREADY_RUNNING','Run already has an active worker.')
+    visible=format_workspace(record,is_live=False)
+    if body.operation=='resume' and visible['status'] not in {'PAUSED','INTERRUPTED'}:
+        raise ApiError(409,'NOT_RESUMABLE','Only paused or interrupted runs can resume.')
+    if body.operation=='retry' and visible['status'] not in {'FAILED','PARTIAL','NEEDS_REVIEW'}:
+        raise ApiError(409,'NOT_RETRYABLE','Only failed, partial or review-required runs can retry.')
+    cp=GraphMemoryStore(client_for(principal)).load_checkpoint(run_id,owner=principal.subject)
+    if not cp or not cp.get('tasks'):
+        raise ApiError(409,'CHECKPOINT_UNAVAILABLE','No planned checkpoint exists for safe resume; launch a new run.')
+    if cp.get('status')=='COMPLETED' and not cp.get('reactive_affected_tasks'):
+        raise ApiError(409,'ALREADY_COMPLETED','Cannot re-run a completed DAG without changed evidence.')
+    previous_status=record['status']
+    record=store.update(run_id,principal.subject,status='QUEUED',command='')
+    try:
+        workspace_runner.submit(tenant=principal.tenant_id,run_id=run_id,
+            execute=lambda:_workspace_worker(principal,run_id,resume=True,retry_failed=body.operation=='retry'))
+    except ValueError as exc:
+        store.update(run_id,principal.subject,status=previous_status,command='')
+        raise ApiError(409,'WORKER_UNAVAILABLE',str(exc)) from exc
+    return {'id':run_id,'status':'QUEUED','mode':body.operation.upper()}
+
+
+@router.get('/agent-runtime/workspace/changes',tags=['Agent Workspace'])
+def workspace_changes(limit:int=Query(default=30,ge=1,le=100),
+                      principal:Principal=Depends(require('READ_GRAPH','READ_EVIDENCE'))):
+    events=_reactive_service(principal).store.list_events(limit)
+    owned=_workspace_store(principal)
+    scoped=[]
+    for event in events:
+        item=dict(event)
+        item['workflow_impacts']=[impact for impact in item.get('workflow_impacts',[])
+           if owned.get(str(impact.get('run_id') or ''),principal.subject)]
+        scoped.append(item)
+    return {'items':scoped,'mode':'PERSISTED_VERIFICATION_EVENTS','count':len(scoped)}
+
+
+# -------------------- Component 5: fail-closed governed tool execution --------------------
+def _governed(principal: Principal) -> GovernedActions:
+    client = client_for(principal)
+    return GovernedActions(store=GraphGovernedActionStore(client),
+                           snapshot_factory=lambda: GraphSnapshot.load(client),
+                           tenant=principal.tenant_id,
+                           run_lookup=lambda run_id:GraphSupervisorStore(client).get(run_id),
+                           outcome_sink=lambda outcome:GraphReactiveStore(client).save_outcome(outcome))
+
+
+def _governed_call(fn):
+    try:
+        return fn()
+    except LookupError as exc:
+        raise ApiError(404, 'NOT_FOUND', str(exc)) from exc
+    except PermissionError as exc:
+        raise ApiError(403, 'FORBIDDEN', str(exc)) from exc
+    except ValueError as exc:
+        raise ApiError(409, 'GOVERNED_ACTION_BLOCKED', str(exc)) from exc
+    except RuntimeError as exc:
+        raise ApiError(409, 'GOVERNED_STATE_CONFLICT', str(exc)) from exc
+
+
+@router.get('/agent-runtime/governed/tools', tags=['Governed Actions'])
+def governed_tools(principal: Principal = Depends(require('READ_GRAPH'))):
+    return {'tools':ConnectorRegistry().list_tools(), 'risk_classes':RISK_CLASSES,
+            'policy':'Explicit allow policy, evidence, independent human approval and fresh preconditions required; no model can approve'}
+
+
+@router.get('/agent-runtime/governed/actions', tags=['Governed Actions'])
+def governed_actions(limit:int=Query(30,ge=1,le=100),principal:Principal=Depends(require('READ_GRAPH'))):
+    return {'items':GraphGovernedActionStore(client_for(principal)).list_actions(limit)}
+
+
+@router.post('/agent-runtime/governed/actions', tags=['Governed Actions'], status_code=201)
+def governed_propose(body:ActionProposal,request:Request,principal:Principal=Depends(require('PROPOSE_ACTION','READ_GRAPH','READ_EVIDENCE'))):
+    _guard_rate(request,principal,limit=20)
+    return _governed_call(lambda:_governed(principal).propose(body,subject=principal.subject))
+
+
+@router.get('/agent-runtime/governed/actions/{action_id}', tags=['Governed Actions'])
+def governed_detail(action_id:str, principal:Principal=Depends(require('READ_GRAPH'))):
+    return _governed_call(lambda:_governed(principal).detail(action_id))
+
+
+@router.get('/agent-runtime/governed/actions/{action_id}/preview', tags=['Governed Actions'])
+def governed_preview(action_id:str, principal:Principal=Depends(require('READ_GRAPH','READ_ORG_ANALYTICS'))):
+    return _governed_call(lambda:_governed(principal).preview(action_id))
+
+
+@router.post('/agent-runtime/governed/actions/{action_id}/request-approval', tags=['Governed Actions'])
+def governed_request_approval(action_id:str, request:Request,principal:Principal=Depends(require('PROPOSE_ACTION'))):
+    _guard_rate(request,principal,limit=20)
+    return _governed_call(lambda:_governed(principal).request_approval(action_id,subject=principal.subject))
+
+
+@router.post('/agent-runtime/governed/actions/{action_id}/approve', tags=['Governed Actions'])
+def governed_approve(action_id:str,body:Decision,request:Request,principal:Principal=Depends(require('APPROVE_ACTION'))):
+    _guard_rate(request,principal,limit=20)
+    return _governed_call(lambda:_governed(principal).decide(action_id,subject=principal.subject,
+                             approve=True,reason=body.reason,approver_permissions=principal.permissions,
+                             approver_roles=principal.roles))
+
+
+@router.post('/agent-runtime/governed/actions/{action_id}/reject', tags=['Governed Actions'])
+def governed_reject(action_id:str,body:Decision,request:Request,principal:Principal=Depends(require('APPROVE_ACTION'))):
+    _guard_rate(request,principal,limit=20)
+    return _governed_call(lambda:_governed(principal).decide(action_id,subject=principal.subject,
+                             approve=False,reason=body.reason,approver_permissions=principal.permissions,
+                             approver_roles=principal.roles))
+
+
+@router.post('/agent-runtime/governed/actions/{action_id}/execute', tags=['Governed Actions'])
+def governed_execute(action_id:str,body:Execution,request:Request,principal:Principal=Depends(require('EXECUTE_ACTION'))):
+    _guard_rate(request,principal,limit=10)
+    return _governed_call(lambda:_governed(principal).execute(action_id,subject=principal.subject,
+                         permissions=principal.permissions,confirmed=body.acknowledge_external_side_effect))
+
+
+@router.post('/agent-runtime/governed/actions/{action_id}/verify', tags=['Governed Actions'])
+def governed_verify(action_id:str,request:Request,principal:Principal=Depends(require('EXECUTE_ACTION'))):
+    _guard_rate(request,principal,limit=20)
+    return _governed_call(lambda:_governed(principal).verify(action_id,subject=principal.subject))
+
+
+@router.post('/agent-runtime/governed/actions/{action_id}/escalate', tags=['Governed Actions'])
+def governed_escalate(action_id:str,body:Decision,request:Request,principal:Principal=Depends(require('EXECUTE_ACTION'))):
+    _guard_rate(request,principal,limit=20)
+    return _governed_call(lambda:_governed(principal).escalate(action_id,subject=principal.subject,
+                                       reason=body.reason,permissions=principal.permissions))
+
+
+@router.post('/agent-runtime/governed/actions/{action_id}/learn-outcome', tags=['Governed Actions'])
+def governed_reconcile_learning(action_id:str,request:Request,principal:Principal=Depends(require('EXECUTE_ACTION'))):
+    _guard_rate(request,principal,limit=15)
+    return _governed_call(lambda:_governed(principal).learn_verified_outcome(action_id))
+
+
+# -------------------- Component 2: autonomous specialist coordination --------------------
+@router.get("/agent-runtime/supervisor/registry", tags=["Agent Runtime"], summary="Discover scoped specialist agent capabilities")
+def supervisor_registry(principal: Principal = Depends(require("READ_GRAPH", "READ_EVIDENCE"))):
+    return {'agents': Supervisor(provider=None, tools=None, store=None, tenant=principal.tenant_id,
+                                 permissions=principal.permissions).registry(),
+            'business_tools': 'READ_ONLY', 'human_approval_required_for_actions': True}
+
+
+@router.post("/agent-runtime/supervisor/runs", tags=["Agent Runtime"], summary="Run bounded, evidence-checked multi-agent supervisor")
+def start_supervisor_run(request: Request, body: SupervisorSettings,
+                         principal: Principal = Depends(require("READ_GRAPH", "READ_EVIDENCE", "CREATE_INVESTIGATION"))):
+    _guard_rate(request, principal, limit=6)
+    if not body.allow_external_model:
+        raise ApiError(422, 'CONSENT_REQUIRED', 'Explicit permission to transmit organizational context to the model is required.')
+    try:
+        provider = OpenAICompatibleProvider()
+    except ProviderError as exc:
+        raise ApiError(503, 'AGENT_PROVIDER_UNAVAILABLE', str(exc)) from exc
+    client = client_for(principal)
+    memory = AgentMemory(backend=GraphMemoryStore(client), snapshot_factory=lambda: GraphSnapshot.load(client),
+                         tenant=principal.tenant_id)
+    supervisor = Supervisor(provider=provider, tools=ToolRegistry(lambda: GraphSnapshot.load(client)),
+                            store=GraphSupervisorStore(client), tenant=principal.tenant_id,
+                            permissions=principal.permissions, memory=memory)
+    try:
+        return supervisor.run(body, subject=principal.subject).__dict__
+    except ValueError as exc:
+        raise ApiError(422, 'AGENT_INPUT_INVALID', str(exc)) from exc
+
+
+
+# -------------------- Component 4: reactive organizational learning --------------------
+def _reactive_service(principal: Principal) -> ReactiveLearning:
+    client = client_for(principal)
+    return ReactiveLearning(store=GraphReactiveStore(client), memory=AgentMemory(
+        backend=GraphMemoryStore(client), snapshot_factory=lambda: GraphSnapshot.load(client),
+        tenant=principal.tenant_id), snapshot_factory=lambda: GraphSnapshot.load(client),
+        tenant=principal.tenant_id)
+
+
+@router.get('/agent-runtime/reactive/events', tags=['Agent Runtime'],
+            summary='Inspect tenant-scoped change events, affected findings and escalations')
+def reactive_events(limit: int = Query(default=30, ge=1, le=100),
+                    principal: Principal = Depends(require('READ_GRAPH', 'READ_EVIDENCE'))):
+    events = _reactive_service(principal).store.list_events(limit)
+    return {'items': events, 'count': len(events), 'mode': 'VERIFIED_CHANGES_ONLY_AUTOMATED',
+            'note': 'External model execution requires fresh consent on reactive resume.'}
+
+
+@router.post('/agent-runtime/reactive/process', tags=['Agent Runtime'],
+             summary='Retry durable pending organizational changes without full investigation replay')
+def process_reactive_events(request: Request, limit: int = Query(default=12, ge=1, le=50),
+                            principal: Principal = Depends(require('READ_GRAPH', 'READ_EVIDENCE', 'CREATE_INVESTIGATION'))):
+    _guard_rate(request, principal, limit=12)
+    applied = _reactive_service(principal).process(limit=limit)
+    return {'processed': len(applied), 'events': applied,
+            'note': 'Only deterministic propagation runs here; no external model or business action.'}
+
+
+@router.get('/agent-runtime/reactive/runs/{run_id}/impact', tags=['Agent Runtime'],
+            summary='Read scoped source-change replan instructions for the owner')
+def reactive_run_impact(run_id: str,
+                        principal: Principal = Depends(require('READ_GRAPH', 'READ_EVIDENCE'))):
+    import re
+    if not re.fullmatch(r'SRUN-[0-9A-F]{32}', run_id):
+        raise ApiError(422, 'INVALID_RUN_ID', 'Invalid supervisor run ID')
+    cp = GraphMemoryStore(client_for(principal)).load_checkpoint(run_id, owner=principal.subject)
+    if not cp: _not_found('Owned supervisor checkpoint', run_id)
+    return {'run_id': run_id, 'status': cp.get('status'),
+            'affected_task_ids': cp.get('reactive_affected_tasks') or [],
+            'change_event_ids': cp.get('reactive_change_event_ids') or [],
+            'requires_fresh_model_consent': bool(cp.get('reactive_affected_tasks'))}
+
+
+@router.post('/agent-runtime/reactive/outcomes/{action_id}/learn', tags=['Agent Runtime'],
+             summary='Persist only graph-confirmed action outcomes for future organizational reasoning')
+def reactive_learn_outcome(action_id: str, request: Request,
+                           principal: Principal = Depends(require('READ_GRAPH', 'READ_EVIDENCE', 'CREATE_INVESTIGATION'))):
+    _guard_rate(request, principal, limit=20)
+    try:
+        return _reactive_service(principal).learn_action_outcome(action_id=action_id)
+    except ValueError as exc:
+        raise ApiError(422, 'ACTION_OUTCOME_UNVERIFIED', str(exc)) from exc
+
+
+
+# -------------------- Component 3: durable, evidence-backed agent memory --------------------
+def _memory_service(principal: Principal) -> AgentMemory:
+    client = client_for(principal)
+    return AgentMemory(backend=GraphMemoryStore(client),
+                       snapshot_factory=lambda: GraphSnapshot.load(client), tenant=principal.tenant_id)
+
+
+@router.post('/agent-runtime/memory/search', tags=['Agent Runtime'],
+             summary='Search currently verified agent knowledge with provenance and permissions')
+def search_agent_memory(body: MemorySearch,
+                        principal: Principal = Depends(require('READ_GRAPH', 'READ_EVIDENCE'))):
+    memory = _memory_service(principal)
+    if not body.entity_ids and not body.query.strip():
+        raise ApiError(422, 'INVALID_SEARCH', 'Provide entity_ids or a contextual query.')
+    results = memory.retrieve(requester=principal.subject, agent_id='external_reader',
+                               permissions=principal.permissions, search=body)
+    return {'items': results, 'count': len(results), 'policy': 'VERIFIED_SHARED_CURRENT_ONLY',
+            'note': 'Archived or private agent observations are excluded.'}
+
+
+class MemoryReview(BaseModel):
+    status: str
+    reason: str = Field(min_length=10, max_length=500)
+
+
+@router.post('/agent-runtime/memory/{memory_id}/validity', tags=['Agent Runtime'],
+             summary='Explicitly invalidate, supersede or flag shared memory for recheck')
+def mark_agent_memory(memory_id: str, body: MemoryReview,
+                      principal: Principal = Depends(require('READ_GRAPH', 'READ_EVIDENCE', 'CREATE_INVESTIGATION'))):
+    import re
+    if not re.fullmatch(r'MEM-[0-9A-F]{32}', memory_id):
+        raise ApiError(422, 'INVALID_MEMORY_ID', 'Invalid agent memory ID')
+    try:
+        result = _memory_service(principal).set_validity(memory_id, actor=principal.subject,
+                                                         permission=principal.permissions,
+                                                         status=body.status, reason=body.reason)
+    except PermissionError as exc:
+        raise ApiError(404, 'NOT_FOUND', 'Memory not found in tenant') from exc
+    except ValueError as exc:
+        raise ApiError(409, 'MEMORY_INVALID_STATE', str(exc)) from exc
+    return {'id': result['id'], 'status': result['status'], 'reviewed_by': result['reviewed_by']}
+
+
+@router.post('/agent-runtime/supervisor/runs/{run_id}/resume', tags=['Agent Runtime'],
+             summary='Resume persisted incomplete supervisor DAG without rerunning completed tasks')
+def resume_supervisor_run(request: Request, run_id: str,
+                          allow_external_model: bool = Query(default=False),
+                          principal: Principal = Depends(require('READ_GRAPH', 'READ_EVIDENCE', 'CREATE_INVESTIGATION'))):
+    import re
+    _guard_rate(request, principal, limit=4)
+    if not re.fullmatch(r'SRUN-[0-9A-F]{32}', run_id):
+        raise ApiError(422, 'INVALID_RUN_ID', 'Invalid supervisor run ID')
+    if not allow_external_model:
+        raise ApiError(422, 'CONSENT_REQUIRED', 'Fresh consent is required to resume model execution')
+    try:
+        provider = OpenAICompatibleProvider()
+    except ProviderError as exc:
+        raise ApiError(503, 'AGENT_PROVIDER_UNAVAILABLE', str(exc)) from exc
+    client = client_for(principal)
+    memory = AgentMemory(backend=GraphMemoryStore(client), snapshot_factory=lambda: GraphSnapshot.load(client),
+                         tenant=principal.tenant_id)
+    supervisor = Supervisor(provider=provider, tools=ToolRegistry(lambda: GraphSnapshot.load(client)),
+                            store=GraphSupervisorStore(client), tenant=principal.tenant_id,
+                            permissions=principal.permissions, memory=memory)
+    try:
+        # Settings are discarded in favour of the persisted original plan and constraints.
+        return supervisor.run(SupervisorSettings(goal='Resume saved organizational investigation',
+                                                allow_external_model=True),
+                              subject=principal.subject, resume_id=run_id).__dict__
+    except ValueError as exc:
+        raise ApiError(409, 'RESUME_UNAVAILABLE', str(exc)) from exc
+
+
+@router.get("/agent-runtime/supervisor/runs/{run_id}", tags=["Agent Runtime"], summary="Read tenant-isolated supervisor run DAG, trace and results")
+def get_supervisor_run(run_id: str, principal: Principal = Depends(require("READ_GRAPH", "READ_EVIDENCE"))):
+    import re
+    if not re.fullmatch(r'SRUN-[0-9A-F]{32}', run_id):
+        raise ApiError(422, 'INVALID_RUN_ID', 'Invalid supervisor run ID')
+    result = GraphSupervisorStore(client_for(principal)).get(run_id)
+    if result is None:
+        _not_found('SupervisorRun', run_id)
+    return result
+
 
 @router.get("/capabilities", tags=["System"], summary="List public capabilities")
 def capabilities():
@@ -850,6 +1341,18 @@ def conflict_authority_resolution(entity_id:str,as_of:str|None=None,principal:Pr
     app=_app(principal)
     if app.get_node(entity_id,as_of=as_of) is None:_not_found("Entity",entity_id)
     return AuthorityResolutionService(app.client).resolve_subject_conflicts(entity_id,as_of=as_of)
+
+@router.get("/company-brain/sql-schema", tags=["Graph"], summary="Browse persisted SQL tables and foreign keys")
+def company_brain_sql_schema(source_id:str|None=None,limit:int=Query(200,ge=1,le=200),principal:Principal=Depends(require("READ_GRAPH"))):
+    return CompanyBrainSchemaService(client_for(principal)).list_tables(source_id=source_id,limit=limit)
+
+
+@router.get("/company-brain/sql-schema/{table_id}", tags=["Graph"], summary="Inspect a persisted SQL table and source evidence")
+def company_brain_sql_table(table_id:str,principal:Principal=Depends(require("READ_GRAPH"))):
+    value=CompanyBrainSchemaService(client_for(principal)).table_detail(table_id)
+    if value is None:_not_found("SQL table",table_id)
+    return value
+
 
 @router.get("/company-brain/expertise", tags=["Risks"], summary="List bounded organizational expertise coverage")
 def company_brain_expertise(as_of:str|None=None,limit:int=Query(200,ge=1,le=500),principal:Principal=Depends(require("READ_ORG_ANALYTICS"))):

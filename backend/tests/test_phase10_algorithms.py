@@ -129,6 +129,15 @@ def test_vector_same_content_updates_temporal_metadata_without_reembedding():
 def test_vector_persists_and_reloads(tmp_path):
     p=tmp_path/"vec.json";a=LocalVectorIndex(path=p);a.index_document(doc("A","schema migration"));b=LocalVectorIndex(path=p);assert b.search("schema migration",tenant_id="northstar")[0].document_id=="A"
 
+def test_vector_reload_rejects_model_and_dimension_mismatch(tmp_path):
+    p=tmp_path/"vec.json";idx=LocalVectorIndex(path=p);idx.index_document(doc("A","schema migration"))
+    with pytest.raises(ValueError,match="model or dimensions"):
+        LocalVectorIndex(HashingEmbeddingProvider(64),path=p)
+    class Other(HashingEmbeddingProvider):
+        model_id="other-model"
+    with pytest.raises(ValueError,match="model or dimensions"):
+        LocalVectorIndex(Other(),path=p)
+
 def test_vector_unchanged_document_not_reembedded():
     class P(HashingEmbeddingProvider):
         def __init__(self):super().__init__();self.calls=0
@@ -317,6 +326,18 @@ def test_configured_specialized_retriever_can_refresh_only_graph_selected_server
     assert out and out[0].source_id=="DS-CONFIGURED"
     assert out[0].metadata["external_refresh"] is True
     assert "pricing compatibility evidence" in out[0].text
+
+@pytest.mark.parametrize("mode,source_type",[(RetrievalMode.SQL,"database"),(RetrievalMode.API,"internal_api")])
+def test_historical_configured_retriever_never_refreshes_live_adapter(mode,source_type):
+    from backend.app.retrieval.retrievers import ConfiguredSourceRetriever
+    class Registry:
+        def get(self,source_id):
+            raise AssertionError("historical query accessed live adapter")
+    sid="DS-CONFIGURED"
+    snap=GraphSnapshot({sid:node(sid,"DataSource",source_type=source_type)},[])
+    scope=GraphScope(seed_entities=[sid],entities=[sid],data_sources=[sid],source_types={sid:source_type})
+    req=request(seed_entity_ids=[sid],as_of="2026-10-16T14:30:00+05:30",metadata_filters={"refresh_external":True})
+    assert ConfiguredSourceRetriever(snap,mode,{source_type},Registry()).retrieve(req,scope)==[]
 
 def test_direct_document_lookup_reads_only_graph_selected_artifact():
     from backend.app.retrieval.document import DocumentRetriever

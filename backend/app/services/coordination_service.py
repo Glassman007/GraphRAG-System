@@ -584,6 +584,33 @@ class CoordinationService:
         checkpoints = [snapshot.node(edge.target) for edge in snapshot.edges_from(task_id, {"HAS_CHECKPOINT"}) if snapshot.node(edge.target) and str(snapshot.node(edge.target).get("status") or "ACTIVE").upper() != "ARCHIVED"]
         evidence = [snapshot.node(edge.source) for edge in snapshot.edges_to(task_id, {"ABOUT"}) if has_label(snapshot.node(edge.source), "Evidence")]
         handoffs = [snapshot.node(edge.source) for edge in snapshot.edges_to(task_id, {"HANDOFF_FOR"}) if has_label(snapshot.node(edge.source), "Handoff")]
+        # Recipients need the evidence and the originating finding, not only a contract ID.
+        # Expose this context only for ACCEPTED handoffs explicitly destined for this task.
+        accepted_context = []
+        for handoff in handoffs:
+            if str(handoff.get("status") or "").upper() != "ACCEPTED":
+                continue
+            handoff_id = str(handoff["id"])
+            destination = str(handoff.get("destination_task_id") or handoff.get("source_task_id") or "")
+            if destination != task_id:
+                continue
+            artifacts = [snapshot.node(edge.target) for edge in snapshot.edges_from(handoff_id, {"REQUIRES"})]
+            artifact_ids = {str(a["id"]) for a in artifacts if a}
+            evidence_links = [
+                {"finding_id": item_id, "evidence_id": edge.target, "relationship": "DERIVED_FROM"}
+                for item_id in sorted(artifact_ids)
+                if has_label(snapshot.node(item_id), "Finding")
+                for edge in snapshot.edges_from(item_id, {"DERIVED_FROM"})
+                if edge.target in artifact_ids
+            ]
+            accepted_context.append({
+                "handoff": handoff,
+                "source_task": snapshot.node(str(handoff.get("source_task_id") or "")),
+                "source_agent": snapshot.node(str(handoff.get("from_agent_id") or "")),
+                "receiver": snapshot.node(str(handoff.get("to_agent_id") or "")),
+                "artifacts": [artifact for artifact in artifacts if artifact],
+                "evidence_links": evidence_links,
+            })
         branches = [snapshot.node(edge.target) for edge in snapshot.edges_from(task_id, {"HAS_BRANCH"}) if has_label(snapshot.node(edge.target), "WorkBranch")]
         actions = [snapshot.node(edge.target) for edge in snapshot.edges_from(task_id, {"PROPOSED_ACTION"}) if has_label(snapshot.node(edge.target), "Action")]
         return {
@@ -596,6 +623,7 @@ class CoordinationService:
             "blockers": self.get_unresolved_blockers(task_id),
             "shared_evidence": [x for x in evidence if x],
             "handoffs": [x for x in handoffs if x],
+            "accepted_handoff_context": accepted_context,
             "branches": [x for x in branches if x],
             "proposed_actions": [x for x in actions if x],
             "graph_required": True,

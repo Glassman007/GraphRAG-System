@@ -139,8 +139,18 @@ def test_mock_executor_executes_distinct_keys_separately():
     assert executor.invocation_count() == 2
 
 
+def mock_handoff_provenance(monkeypatch):
+    """The hardened handoff contract requires real graph provenance, not only labels."""
+    snap = GraphSnapshot(
+        {"F1": node("F1", "Finding", task_id="T1", created_by="A", scope="SHARED")},
+        [edge("F1", "ABOUT", "T1"), edge("A", "PRODUCED", "F1"), edge("F1", "DERIVED_FROM", "E1")],
+    )
+    monkeypatch.setattr("backend.app.services.handoff_service.GraphSnapshot.load", lambda _client: snap)
+
+
 def test_handoff_validation_rejects_missing_evidence(monkeypatch):
     service = HandoffService(dummy_client())
+    mock_handoff_provenance(monkeypatch)
     monkeypatch.setattr(service, "get_handoff", lambda _id: {
         "handoff": {
             "id": _id,
@@ -155,7 +165,7 @@ def test_handoff_validation_rejects_missing_evidence(monkeypatch):
         },
         "tasks": [{"task": node("T1", "Task"), "role": "SOURCE"}],
         "receiver": node("B", "Agent"),
-        "artifacts": [node("F1", "Finding", confidence=0.9)],
+        "artifacts": [node("F1", "Finding", task_id="T1", created_by="A", confidence=0.9)],
     })
     monkeypatch.setattr(service.coordination, "get_unresolved_blockers", lambda _tid: [])
     result = service.validate_handoff("H")
@@ -165,6 +175,7 @@ def test_handoff_validation_rejects_missing_evidence(monkeypatch):
 
 def test_handoff_validation_rejects_low_confidence(monkeypatch):
     service = HandoffService(dummy_client())
+    mock_handoff_provenance(monkeypatch)
     monkeypatch.setattr(service, "get_handoff", lambda _id: {
         "handoff": {
             "id": _id,
@@ -179,7 +190,7 @@ def test_handoff_validation_rejects_low_confidence(monkeypatch):
         },
         "tasks": [],
         "receiver": node("B", "Agent"),
-        "artifacts": [node("F1", "Finding", confidence=0.5), node("E1", "Evidence")],
+        "artifacts": [node("F1", "Finding", task_id="T1", created_by="A", confidence=0.5), node("E1", "Evidence")],
     })
     monkeypatch.setattr(service.coordination, "get_unresolved_blockers", lambda _tid: [])
     result = service.validate_handoff("H")
@@ -189,6 +200,7 @@ def test_handoff_validation_rejects_low_confidence(monkeypatch):
 
 def test_handoff_validation_reports_unresolved_blocker(monkeypatch):
     service = HandoffService(dummy_client())
+    mock_handoff_provenance(monkeypatch)
     monkeypatch.setattr(service, "get_handoff", lambda _id: {
         "handoff": {
             "id": _id, "source_task_id": "T1", "from_agent_id": "A", "to_agent_id": "B",
@@ -197,7 +209,7 @@ def test_handoff_validation_reports_unresolved_blocker(monkeypatch):
             "contradictory_evidence_disclosed": True,
         },
         "tasks": [], "receiver": node("B", "Agent"),
-        "artifacts": [node("F1", "Finding", confidence=0.9), node("E1", "Evidence")],
+        "artifacts": [node("F1", "Finding", task_id="T1", created_by="A", confidence=0.9), node("E1", "Evidence")],
     })
     monkeypatch.setattr(service.coordination, "get_unresolved_blockers", lambda _tid: [node("BL", "Blocker", status="OPEN")])
     result = service.validate_handoff("H")
@@ -206,6 +218,7 @@ def test_handoff_validation_reports_unresolved_blocker(monkeypatch):
 
 def test_handoff_validation_accepts_complete_contract(monkeypatch):
     service = HandoffService(dummy_client())
+    mock_handoff_provenance(monkeypatch)
     monkeypatch.setattr(service, "get_handoff", lambda _id: {
         "handoff": {
             "id": _id, "source_task_id": "T1", "from_agent_id": "A", "to_agent_id": "B",
@@ -214,7 +227,7 @@ def test_handoff_validation_accepts_complete_contract(monkeypatch):
             "contradictory_evidence_disclosed": True,
         },
         "tasks": [], "receiver": node("B", "Agent"),
-        "artifacts": [node("F1", "Finding", confidence=0.9), node("E1", "Evidence")],
+        "artifacts": [node("F1", "Finding", task_id="T1", created_by="A", confidence=0.9), node("E1", "Evidence")],
     })
     monkeypatch.setattr(service.coordination, "get_unresolved_blockers", lambda _tid: [])
     assert service.validate_handoff("H")["valid"] is True

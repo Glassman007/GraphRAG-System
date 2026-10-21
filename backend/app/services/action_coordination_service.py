@@ -10,6 +10,10 @@ from backend.app.graph.temporal import to_epoch_us
 from backend.app.services.agent_registry_service import AgentRegistryService
 from backend.app.services.coordination_service import CoordinationService
 from backend.app.services.event_ledger_service import EventLedgerService
+from backend.app.agent_runtime.reactive import ReactiveLearning
+from backend.app.agent_runtime.reactive_store import GraphReactiveStore
+from backend.app.agent_runtime.memory import AgentMemory
+from backend.app.agent_runtime.memory_store import GraphMemoryStore
 from backend.app.services.governance_service import GovernanceService
 from backend.app.services.phase4_graph import GraphSnapshot, has_label
 from backend.app.services.phase6_utils import add_seconds, now_iso, stable_id
@@ -93,6 +97,24 @@ class ActionCoordinationService:
         self.coordination = CoordinationService(client)
         self.governance = GovernanceService(client)
         self.events = EventLedgerService(client)
+
+    def _capture_action_learning(self, action_id: str) -> str | None:
+        """Best effort after canonical business outcome commit; NEVER redo an action on error.
+
+        The explicit /reactive/outcomes/{id}/learn endpoint can reconcile a failed
+        post-commit capture. The caller sees a warning rather than a false failure.
+        """
+        try:
+            memory = AgentMemory(backend=GraphMemoryStore(self.client),
+                                 snapshot_factory=lambda: GraphSnapshot.load(self.client),
+                                 tenant=self.client.settings.tenant_id)
+            reactive = ReactiveLearning(store=GraphReactiveStore(self.client), memory=memory,
+                                        snapshot_factory=lambda: GraphSnapshot.load(self.client),
+                                        tenant=self.client.settings.tenant_id)
+            reactive.learn_action_outcome(action_id=action_id)
+            return None
+        except Exception as exc:
+            return 'Verified outcome capture pending reconciliation: ' + type(exc).__name__
 
     def propose_action(
         self,
@@ -378,7 +400,9 @@ class ActionCoordinationService:
         for lock_id in lock_ids:
             self._release_lock(lock_id, agent_id, timestamp=finished)
         self.events.record("ACTION_SUCCEEDED", about_ids=[action_id, attempt_id], actor_id=agent_id, summary=f"Succeeded {action_id}", occurred_at=finished)
-        return {"status": "SUCCEEDED", "attempt": GraphSnapshot.load(self.client).node(attempt_id), "mock_result": result_payload, "governance": governance}
+        learning_warning = self._capture_action_learning(action_id)
+        return {"status": "SUCCEEDED", "attempt": GraphSnapshot.load(self.client).node(attempt_id), "mock_result": result_payload, "governance": governance,
+                "learning_warning": learning_warning}
 
     def recover_action(self, action_id: str, agent_id: str, *, as_of: str | None = None, reconcile_external: bool = False) -> dict[str, Any]:
         as_of = as_of or now_iso()
@@ -405,7 +429,9 @@ class ActionCoordinationService:
                 if external:
                     upsert_node(self.client, "ActionAttempt", str(attempt.get("id")), {"execution_state": "SUCCEEDED", "finished_at": as_of, "result_reference": external.get("external_request_id"), "reconciled": True})
                     upsert_node(self.client, "Action", action_id, {"status": "SUCCEEDED", "executed_at": as_of})
-                    return {"status": "SUCCEEDED", "attempt": GraphSnapshot.load(self.client).node(str(attempt.get("id"))), "reconciled": True}
+                    learning_warning = self._capture_action_learning(action_id)
+                    return {"status": "SUCCEEDED", "attempt": GraphSnapshot.load(self.client).node(str(attempt.get("id"))), "reconciled": True,
+                            "learning_warning": learning_warning}
             upsert_node(self.client, "ActionAttempt", str(attempt.get("id")), {"execution_state": "UNKNOWN", "finished_at": as_of, "error": "EXTERNAL_RESULT_UNCERTAIN"})
             upsert_node(self.client, "Action", action_id, {"status": "UNKNOWN"})
             return {"status": "UNKNOWN", "attempt": GraphSnapshot.load(self.client).node(str(attempt.get("id"))), "message": "External call may have occurred; blind retry is prohibited."}

@@ -40,10 +40,11 @@ class SourceRegistry:
     def register(self, config: SourceConfig, *, adapter: SourceAdapter | None = None, persist: bool = True) -> None:
         if config.source_type not in ADAPTERS:
             raise ValueError(f"Unsupported source type: {config.source_type}")
-        self._configs[config.id] = config
-        self._adapters[config.id] = adapter or ADAPTERS[config.source_type](config)
+        resolved_adapter = adapter if adapter is not None else ADAPTERS[config.source_type](config)
         if persist and self.client is not None:
             self.persist_source(config)
+        self._configs[config.id] = config
+        self._adapters[config.id] = resolved_adapter
 
     def persist_source(self, config: SourceConfig) -> None:
         if self.client is None:
@@ -61,9 +62,15 @@ class SourceRegistry:
             "sync_mode": config.sync_mode,
             "adapter_version": config.adapter_version,
             "mapping_version": config.mapping_version,
-            "created_at": now_iso(),
             "config_public": str(public),
         })
+        # The upsert above also runs on every ingestion. Preserve the original
+        # creation timestamp instead of resetting it for each synchronization.
+        self.client.query(
+            "MATCH (n:Entity:DataSource {tenant_id: $tenant_id, id: $id}) "
+            "SET n.created_at = coalesce(n.created_at, $created_at) RETURN n",
+            {"tenant_id": self.client.settings.tenant_id, "id": config.id, "created_at": now_iso()},
+        )
 
     def get(self, source_id: str) -> tuple[SourceConfig, SourceAdapter]:
         config = self._configs.get(source_id)

@@ -74,6 +74,12 @@ class IngestionEntityResolutionService:
         rid = self._identity_record_id(source_record_id, entity)
         now = now_iso()
         identity = dict(entity.identity)
+        # Candidate data is untrusted source content; do not allow it to replace
+        # connector-controlled audit/provenance properties below.
+        reserved = {"id", "_labels", "name", "source_entity_id", "source_kind", "source_id",
+                    "source_instance", "record_type", "candidate_label", "parent_source_record_id",
+                    "status", "created_at"}
+        identity_props = {k: v for k, v in identity.items() if v is not None and k not in reserved}
         upsert_node(self.client, "SourceRecord", rid, {
             "name": entity.properties.get("name") or identity.get("name") or entity.key,
             "source_entity_id": identity.get("external_id") or identity.get("username") or identity.get("email") or f"{source_record_id}:{entity.key}",
@@ -85,7 +91,7 @@ class IngestionEntityResolutionService:
             "parent_source_record_id": source_record_id,
             "status": "ACTIVE",
             "created_at": now,
-            **{k: v for k, v in identity.items() if v is not None},
+            **identity_props,
         })
         upsert_relationship(self.client, rid, "DERIVED_FROM", config.id, {"valid_from": now, "confidence": 1.0, "source_ref_id": config.id})
         upsert_relationship(self.client, source_record_id, "REFERENCES", rid, {"valid_from": now, "confidence": 1.0, "source_ref_id": config.id, "reference_kind": "identity_projection"})
@@ -93,6 +99,15 @@ class IngestionEntityResolutionService:
 
     def resolve(self, source_record_id: str, entity: EntityCandidate, config: SourceConfig) -> ResolutionDecision:
         snapshot = GraphSnapshot.load(self.client)
+        if entity.ontology_type in {"SqlTable", "SqlColumn", "SqlConstraint"} and entity.canonical_hint:
+            # Source-qualified schema identities bypass fuzzy matching, but must still
+            # report MATCHED when the exact canonical graph node already exists.
+            canonical_id = str(entity.canonical_hint)
+            existed = snapshot.node(canonical_id) is not None
+            return ResolutionDecision(entity_key=entity.key,
+                                      status=ResolutionStatus.MATCHED if existed else ResolutionStatus.CREATED,
+                                      canonical_id=canonical_id, confidence=1.0,
+                                      reasons=["SOURCE_QUALIFIED_SCHEMA_IDENTITY"])
         if entity.canonical_hint and snapshot.node(str(entity.canonical_hint)) is not None:
             cid = str(entity.canonical_hint)
             if entity.requires_resolution:
@@ -168,6 +183,7 @@ class IngestionEntityResolutionService:
             "source_record_id": source_record_id,
             "entity_key": entity.key,
             "candidate_label": entity.ontology_type,
+            "identity_projection_id": self._identity_record_id(source_record_id, entity),
             "status": "OPEN",
             "reason": reason,
             "proposed_entity": json.dumps(entity.model_dump(mode="json"), sort_keys=True),
@@ -195,13 +211,24 @@ class IngestionEntityResolutionService:
         q = snapshot.node(quarantine_id)
         if q is None or not has_label(q, "IngestionQuarantineRecord"):
             raise ValueError("Quarantine record not found")
-        if snapshot.node(canonical_id) is None:
+        canonical = snapshot.node(canonical_id)
+        if canonical is None:
             raise ValueError("Canonical entity not found")
+        expected_label = str(q.get("candidate_label"))
+        if not has_label(canonical, expected_label):
+            raise ValueError("Canonical entity has the wrong ontology type for this quarantine")
         source_record_id = str(q.get("source_record_id"))
-        # Identity projection is deterministic from source + entity key; find it through REFERENCES.
-        projections = [e.target for e in snapshot.edges_from(source_record_id, {"REFERENCES"}) if has_label(snapshot.node(e.target), "SourceRecord") and snapshot.node(e.target).get("record_type") == "identity_projection" and snapshot.node(e.target).get("candidate_label") == q.get("candidate_label")]
-        if not projections:
-            raise ValueError("No identity projection found for quarantine record")
-        self.phase4.confirm_match(projections[0], canonical_id, confidence=1.0, reviewer_ref=reviewer_ref)
+        # A record may contain multiple candidates with the same ontology label.
+        # Resolve the exact identity projection, never the first same-label projection.
+        projection_id = str(q.get("identity_projection_id") or stable_id(
+            "SRCID-", self.client.settings.tenant_id, source_record_id,
+            q.get("entity_key"), expected_label, length=20))
+        projection = snapshot.node(projection_id)
+        referenced = any(e.target == projection_id for e in snapshot.edges_from(source_record_id, {"REFERENCES"}))
+        if not (referenced and has_label(projection, "SourceRecord")
+                and projection.get("record_type") == "identity_projection"
+                and projection.get("candidate_label") == expected_label):
+            raise ValueError("Exact identity projection not found for quarantine record")
+        self.phase4.confirm_match(projection_id, canonical_id, confidence=1.0, reviewer_ref=reviewer_ref)
         upsert_node(self.client, "IngestionQuarantineRecord", quarantine_id, {"status": "RESOLVED", "resolved_at": now_iso(), "resolved_to": canonical_id, "reviewer_ref": reviewer_ref})
         return self.get_quarantine(quarantine_id) or {}

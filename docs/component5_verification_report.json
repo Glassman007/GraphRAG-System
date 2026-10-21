@@ -1,0 +1,14 @@
+{
+  "component": "5 \u2014 Governed Tool Execution",
+  "backend_tests": {
+    "passed": 508,
+    "skipped": 299,
+    "failures": 0
+  },
+  "component5_adversarial_tests": 20,
+  "frontend_modified_tsx_syntax": "passed using TypeScript transpileModule",
+  "frontend_full_build": "not verified \u2014 frontend dependencies not installed",
+  "live_falkordb": "not verified \u2014 integration tests skipped",
+  "real_connector": "disabled by default; no live outbound side effect tested",
+  "other_components": "retained Components 1\u20134"
+}

@@ -5,6 +5,10 @@ from pathlib import Path
 from typing import Any
 
 from backend.app.graph.client import FalkorGraphClient
+from backend.app.agent_runtime.reactive import ReactiveLearning, graph_delta
+from backend.app.agent_runtime.reactive_store import GraphReactiveStore
+from backend.app.agent_runtime.memory import AgentMemory
+from backend.app.agent_runtime.memory_store import GraphMemoryStore
 from backend.app.graph.mutations import upsert_node, upsert_relationship
 from backend.app.ingestion.artifacts.local import LocalArtifactStore
 from backend.app.ingestion.models import IngestionReport, IngestionRunStatus, ProposedMutation, ResolutionStatus
@@ -38,7 +42,19 @@ class IngestionPipeline:
         self.resolution = IngestionEntityResolutionService(client)
         self.writer = IngestionGraphWriter(client)
         self.events = EventLedgerService(client)
+        self._reactive = None  # Do not touch FalkorDB on dry-run or metadata-only reads.
         self.retrieval_indexer = retrieval_indexer
+
+    @property
+    def reactive(self) -> ReactiveLearning:
+        if self._reactive is None:
+            client = self.client
+            self._reactive = ReactiveLearning(store=GraphReactiveStore(client),
+                memory=AgentMemory(backend=GraphMemoryStore(client),
+                                   snapshot_factory=lambda: GraphSnapshot.load(client),
+                                   tenant=client.settings.tenant_id),
+                snapshot_factory=lambda: GraphSnapshot.load(client), tenant=client.settings.tenant_id)
+        return self._reactive
 
     def _source_cursor(self, source_id: str) -> str | None:
         node = GraphSnapshot.load(self.client).node(source_id)
@@ -88,6 +104,8 @@ class IngestionPipeline:
         dry_run: bool = False,
         fail_after_committed: int | None = None,
     ) -> IngestionReport:
+        if mode not in {"incremental", "full"}:
+            raise ValueError("mode must be 'incremental' or 'full'")
         if max_records < 1 or max_records > 10_000:
             raise ValueError("max_records must be between 1 and 10000")
         if batch_size < 1 or batch_size > 500:
@@ -116,6 +134,12 @@ class IngestionPipeline:
                 page = adapter.fetch_incremental(cursor=cursor, limit=min(batch_size, max_records - processed)) if mode == "incremental" else adapter.fetch(cursor=cursor, limit=min(batch_size, max_records - processed))
                 if not page.records:
                     break
+                # GitHub/Slack may attach the next-page cursor to every record.
+                # Such cursors are committed only after the whole page completes.
+                page_cursor_is_page_level = bool(
+                    len(page.records) > 1 and page.next_cursor is not None
+                    and all(r.cursor == page.next_cursor for r in page.records)
+                )
                 report.fetched += len(page.records)
                 for record in page.records:
                     source_record_id = self.provenance.source_record_id(config.id, record, tenant_id=self.client.settings.tenant_id)
@@ -127,7 +151,8 @@ class IngestionPipeline:
                         report.resolved += resolved_count
                         report.quarantined += 1 if quarantined_count or (not normalized.entities and normalized.warnings) else 0
                         report.warnings.extend(normalized.warnings)
-                        cursor = record.cursor or cursor
+                        if not page_cursor_is_page_level:
+                            cursor = record.cursor or cursor
                         processed += 1
                         continue
 
@@ -143,12 +168,26 @@ class IngestionPipeline:
                         self.events.record(event_type, about_ids=[source_record_id, run_id], summary=f"{event_type}: {record.record_type} {record.external_id}", event_id=stable_id("EVT-P9-", event_type, source_record_id), occurred_at=record.fetched_at, properties={"phase": "9", "source_id": source_id})
 
                     if record.deleted:
-                        self.writer.write_tombstone(config=config, run_id=run_id, source_record_id=source_record_id, record=record)
+                        previous_graph = GraphSnapshot.load(self.client)
+                        tombstone = self.writer.write_tombstone(config=config, run_id=run_id,
+                                                               source_record_id=source_record_id, record=record)
+                        delta = graph_delta(previous_graph, GraphSnapshot.load(self.client),
+                                            [source_record_id, tombstone['tombstone_evidence_id'],
+                                             *tombstone['affected_entities']])
+                        if delta:
+                            # Source deletion has been observed, but the writer deliberately
+                            # keeps canonical facts. Do not pretend canonical deletion verified.
+                            self.reactive.publish(source_record_id=source_record_id,
+                                source_checksum=record.checksum, changes=delta,
+                                authority='TOMBSTONE_UNRESOLVED', ingestion_run_id=run_id,
+                                source_id=config.id)
+                            self.reactive.process(limit=8)
                         if self.retrieval_indexer is not None:
                             self.retrieval_indexer.index_source_record(source_record_id)
                         report.written += 1
                         report.updated += 1 if existed else 0
-                        cursor = record.cursor or cursor
+                        if not page_cursor_is_page_level:
+                            cursor = record.cursor or cursor
                         self._advance_cursor(source_id, cursor)
                         processed += 1
                         continue
@@ -159,7 +198,8 @@ class IngestionPipeline:
                     if not normalized.entities:
                         self._quarantine_unmapped(source_record_id, source_id, normalized.warnings[0] if normalized.warnings else "NO_NORMALIZED_ENTITY")
                         report.quarantined += 1
-                        cursor = record.cursor or cursor
+                        if not page_cursor_is_page_level:
+                            cursor = record.cursor or cursor
                         self._advance_cursor(source_id, cursor)
                         processed += 1
                         continue
@@ -196,24 +236,48 @@ class IngestionPipeline:
                         report.quarantined += 1
                         self.events.record("ENTITY_RESOLUTION_QUARANTINED", about_ids=[source_record_id], summary=f"Ambiguous identity in {source_record_id}", event_id=stable_id("EVT-P9-", "ENTITY_RESOLUTION_QUARANTINED", source_record_id), properties={"phase": "9"})
 
+                    before_write = GraphSnapshot.load(self.client)
                     write_result = self.writer.write(config=config, run_id=run_id, source_record_id=source_record_id, record=record, normalized=normalized, resolutions=decisions, artifacts=artifact_metas)
                     report.warnings.extend(write_result.get("warnings") or [])
                     if self.retrieval_indexer is not None:
                         self.retrieval_indexer.index_source_record(source_record_id)
                         for meta in artifact_metas:
-                            self.retrieval_indexer.index_artifact(meta.artifact_id)
+                            # A parsed SQL dump is represented by canonical table,
+                            # column and constraint facts. Chunking its COPY rows as
+                            # retrieval prose can leave a manual sync running for
+                            # minutes after those facts have already been written.
+                            if record.record_type != "sql_file":
+                                self.retrieval_indexer.index_artifact(meta.artifact_id)
 
                     if write_result.get("written_nodes") or write_result.get("written_relationships"):
                         report.written += 1
                         if existed:
                             report.updated += 1
                         self.events.record("EXTERNAL_FACT_WRITTEN", about_ids=[source_record_id] + list(write_result.get("entity_map", {}).values()), summary=f"Wrote normalized facts from {source_record_id}", event_id=stable_id("EVT-P9-", "EXTERNAL_FACT_WRITTEN", source_record_id, record.checksum), properties={"phase": "9", "mapping_rule": normalized.mapping_rule})
+                        # Compare committed graph facts, not fetched claims. A duplicate source
+                        # record with no factual delta must not trigger learning again.
+                        changed_ids = [source_record_id, *write_result.get('entity_map', {}).values()]
+                        changes = graph_delta(before_write, GraphSnapshot.load(self.client), changed_ids)
+                        if changes:
+                            self.reactive.publish(source_record_id=source_record_id,
+                                source_checksum=record.checksum, changes=changes,
+                                authority=config.trust_class.value, ingestion_run_id=run_id,
+                                source_id=config.id)
+                            # Eager bounded application; the durable inbox also allows replay.
+                            self.reactive.process(limit=8)
 
-                    cursor = record.cursor or cursor
+                    if not page_cursor_is_page_level:
+                        cursor = record.cursor or cursor
                     self._advance_cursor(source_id, cursor)
                     processed += 1
                     if fail_after_committed is not None and processed >= fail_after_committed:
                         raise RuntimeError("Simulated ingestion crash after committed records")
+                if page_cursor_is_page_level:
+                    # A mid-page crash must replay only the unfinished page,
+                    # never skip its remaining records.
+                    cursor = page.next_cursor
+                    if not dry_run:
+                        self._advance_cursor(source_id, cursor)
                 if not page.has_more or processed >= max_records:
                     break
                 cursor = page.next_cursor or cursor

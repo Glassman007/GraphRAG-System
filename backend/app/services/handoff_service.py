@@ -47,6 +47,11 @@ class HandoffService:
             raise ValueError(f"Destination agent not found: {to_agent_id}")
         if destination_task_id and not has_label(snapshot.node(destination_task_id), "Task"):
             raise ValueError(f"Destination task not found: {destination_task_id}")
+        if from_agent_id == to_agent_id:
+            raise ValueError("Handoff sender and receiver must be different agents")
+        owner_state = self.coordination.get_task_owner(source_task_id) or {}
+        if (owner_state.get("owner") or {}).get("id") != from_agent_id:
+            raise ValueError("Handoff sender must be the active source task owner")
 
         artifact_ids = list(dict.fromkeys(artifact_ids))
         for artifact_id in artifact_ids:
@@ -66,6 +71,12 @@ class HandoffService:
             to_agent_id,
             ",".join(sorted(artifact_ids)),
         )
+        prior = snapshot.node(handoff_id)
+        if prior and has_label(prior, "Handoff"):
+            # Stable identifiers must not reopen a rejected/accepted contract.
+            if str(prior.get("status") or "").upper() != "PENDING":
+                raise ValueError("A finalized handoff cannot be recreated or reopened")
+            return self.get_handoff(handoff_id) or {"handoff_id": handoff_id}
         upsert_node(
             self.client,
             "Handoff",
@@ -150,14 +161,37 @@ class HandoffService:
         artifacts = detail["artifacts"]
         kinds = set()
         threshold = float(handoff.get("confidence_threshold") or 0.0)
+        snapshot = GraphSnapshot.load(self.client)
+        from_agent_id = str(handoff.get("from_agent_id") or "")
+        finding_ids: set[str] = set()
+        evidence_ids: set[str] = set()
         for artifact in artifacts:
             labels = set(artifact.get("_labels") or [])
+            artifact_id = str(artifact.get("id") or "")
             if "Finding" in labels:
                 kinds.add("FINDING")
+                finding_ids.add(artifact_id)
+                source_link = any(e.target == source_task_id for e in snapshot.edges_from(artifact_id, {"ABOUT"}))
+                producer_link = any(e.source == from_agent_id for e in snapshot.edges_to(artifact_id, {"PRODUCED"}))
+                if str(artifact.get("task_id") or "") != source_task_id or not source_link:
+                    errors.append("FINDING_NOT_FROM_SOURCE_TASK")
+                if str(artifact.get("created_by") or "") != from_agent_id or not producer_link:
+                    errors.append("FINDING_NOT_PRODUCED_BY_SENDER")
+                if str(artifact.get("scope") or "SHARED").upper() != "SHARED":
+                    errors.append("UNMERGED_BRANCH_FINDING")
                 if float(artifact.get("confidence") or 0.0) < threshold:
-                    confidence_failures.append({"finding_id": artifact.get("id"), "confidence": artifact.get("confidence"), "threshold": threshold})
+                    confidence_failures.append({"finding_id": artifact_id, "confidence": artifact.get("confidence"), "threshold": threshold})
             if "Evidence" in labels:
                 kinds.add("EVIDENCE")
+                evidence_ids.add(artifact_id)
+        if finding_ids and evidence_ids:
+            supported_evidence = {
+                edge.target
+                for fid in finding_ids
+                for edge in snapshot.edges_from(fid, {"DERIVED_FROM"})
+            }
+            if not evidence_ids.issubset(supported_evidence):
+                errors.append("EVIDENCE_NOT_LINKED_TO_FINDING")
         for expected in sorted(required - kinds):
             missing_evidence.append(expected)
         if str(handoff.get("contract_type")) == "INVESTIGATOR_TO_VERIFIER" and not bool(handoff.get("contradictory_evidence_disclosed")):
@@ -201,6 +235,8 @@ class HandoffService:
         if str(receiver.get("id")) != agent_id:
             raise ValueError("Only the designated receiver may accept the handoff")
         handoff = detail["handoff"]
+        if str(handoff.get("status") or "").upper() != "PENDING":
+            raise ValueError("Only a PENDING handoff can be accepted")
         upsert_node(self.client, "Handoff", handoff_id, {"status": "ACCEPTED", "completed_at": timestamp, "accepted_by": agent_id})
         self.events.record("HANDOFF_ACCEPTED", about_ids=[handoff_id, str(handoff.get("source_task_id"))], actor_id=agent_id, summary=f"Accepted {handoff_id}", occurred_at=timestamp)
         return {"handoff": GraphSnapshot.load(self.client).node(handoff_id), "validation": validation}
@@ -213,6 +249,8 @@ class HandoffService:
         receiver = detail.get("receiver") or {}
         if str(receiver.get("id")) != agent_id:
             raise ValueError("Only the designated receiver may reject the handoff")
+        if str(detail["handoff"].get("status") or "").upper() != "PENDING":
+            raise ValueError("Only a PENDING handoff can be rejected")
         upsert_node(self.client, "Handoff", handoff_id, {"status": "REJECTED", "completed_at": timestamp, "rejection_reason": reason, "rejected_by": agent_id})
         self.events.record("HANDOFF_REJECTED", about_ids=[handoff_id], actor_id=agent_id, summary=reason, occurred_at=timestamp)
         return {"handoff": GraphSnapshot.load(self.client).node(handoff_id)}

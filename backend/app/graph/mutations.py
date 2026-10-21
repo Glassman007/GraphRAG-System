@@ -16,7 +16,12 @@ def upsert_node(client: FalkorGraphClient, label: str, node_id: str, properties:
     label = validate_label(label)
     props = with_temporal_epochs(properties)
     props["id"] = node_id
-    props.setdefault("tenant_id", client.settings.tenant_id)
+    # A caller must never be able to redirect a canonical entity into another
+    # tenant by supplying a property that bypasses the active client scope.
+    tenant_id = client.settings.tenant_id
+    if "tenant_id" in props and props["tenant_id"] != tenant_id:
+        raise ValueError("Node tenant_id does not match the active graph tenant")
+    props["tenant_id"] = tenant_id
     cypher = f"""
     MERGE (n:Entity:{label} {{tenant_id: $tenant_id, id: $id}})
     SET n += $props

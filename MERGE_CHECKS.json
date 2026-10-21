@@ -1,0 +1,35 @@
+{
+  "project": "VERINEX",
+  "inputs": {
+    "main_files": 538,
+    "feature_archive_files": 605,
+    "same": 519,
+    "conflicts": 14,
+    "only_main": 5,
+    "only_features": 72
+  },
+  "merge_policy": {
+    "preserved_main": [
+      "backend/app/agent_runtime/harness.py",
+      "backend/app/agent_runtime/tools.py",
+      ".gitignore"
+    ],
+    "main_with_patch": [
+      "backend/app/agent_runtime/provider.py"
+    ],
+    "combined": [
+      ".env.example",
+      "README.md"
+    ],
+    "other_conflicts": "feature_archive"
+  },
+  "tests": {
+    "backend_non_integration_passed": 548,
+    "backend_integration_deselected": 299,
+    "offline_acceptance_checks_passed": 25,
+    "frontend_ts_files_syntax_checked": 105,
+    "frontend_build": "NOT_RUN_DEPENDENCIES_UNAVAILABLE",
+    "live_db_and_provider": "NOT_RUN"
+  },
+  "credentials_packaged": false
+}

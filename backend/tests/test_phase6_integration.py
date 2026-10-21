@@ -125,8 +125,11 @@ def test_phase6_checkpoint_survives_restart_and_resume_starts_after_latest_step(
     coord, task_id, execution_id = _claimed_execution(integration_client)
     coord.save_checkpoint(execution_id, INVESTIGATOR, step_index=1, current_step="inspect incident", completed_steps=["step 1"], pending_steps=["step 2", "step 3"])
     coord.save_checkpoint(execution_id, INVESTIGATOR, step_index=2, current_step="collect topology", completed_steps=["step 1", "step 2"], pending_steps=["step 3"])
+    paused = coord.pause_execution(execution_id, INVESTIGATOR)
+    assert paused["status"] == "PAUSED"
     restarted = CoordinationService(integration_client)
     state = restarted.get_execution_state(execution_id)
+    assert state["execution"]["status"] == "PAUSED"
     assert state["latest_checkpoint"]["step_index"] == 2
     resumed = restarted.resume_execution(execution_id, INVESTIGATOR)
     assert resumed["resume_from_step"] == 3
@@ -138,21 +141,34 @@ def test_phase6_another_eligible_agent_can_resume_and_prior_artifacts_remain(int
     coord, task_id, execution_id = _claimed_execution(integration_client)
     coord.save_checkpoint(execution_id, INVESTIGATOR, step_index=2, current_step="topology analyzed", completed_steps=["1", "2"], pending_steps=["3"])
     finding = coord.add_finding(task_id, INVESTIGATOR, statement="Pricing API depends on Pricing DB", confidence=0.91)
+    assert coord.pause_execution(execution_id, INVESTIGATOR)["status"] == "PAUSED"
     resumed = CoordinationService(integration_client).resume_execution(execution_id, DEPENDENCY)
     assert resumed["resume_from_step"] == 3
     assert resumed["owner"]["id"] == DEPENDENCY
     assert any(item["id"] == finding["finding"]["id"] for item in CoordinationService(integration_client).get_recent_findings(task_id))
 
 
+def test_phase6_running_execution_cannot_resume_without_pause(integration_client):
+    coord, _, execution_id = _claimed_execution(integration_client)
+    coord.save_checkpoint(execution_id, INVESTIGATOR, step_index=1, current_step="still running")
+    with pytest.raises(ValueError, match="PAUSED, BLOCKED or FAILED"):
+        CoordinationService(integration_client).resume_execution(execution_id, INVESTIGATOR)
+    assert CoordinationService(integration_client).get_execution_state(execution_id)["execution"]["status"] == "RUNNING"
+
+
 def test_phase6_ineligible_agent_cannot_resume_execution(integration_client):
     coord, _, execution_id = _claimed_execution(integration_client)
     coord.save_checkpoint(execution_id, INVESTIGATOR, step_index=1, current_step="started")
+    assert coord.pause_execution(execution_id, INVESTIGATOR)["status"] == "PAUSED"
     with pytest.raises(ValueError, match="cannot resume"):
         CoordinationService(integration_client).resume_execution(execution_id, VERIFIER)
 
 
 def test_phase6_unresolved_blocker_persists_and_prevents_resume(integration_client):
     coord, task_id, execution_id = _claimed_execution(integration_client)
+    # Blocked tasks cannot be paused after the blocker is added. Pause before blocking
+    # so resumption reaches the unresolved-blocker guard instead of the state guard.
+    assert coord.pause_execution(execution_id, INVESTIGATOR)["status"] == "PAUSED"
     blocker = coord.add_blocker(task_id, INVESTIGATOR, reason="Awaiting deployment record")
     restarted = CoordinationService(integration_client)
     assert any(item["id"] == blocker["blocker"]["id"] for item in restarted.get_unresolved_blockers(task_id))
