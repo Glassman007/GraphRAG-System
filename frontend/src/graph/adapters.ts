@@ -160,3 +160,15 @@ export function filterGraph(graph: UiGraph, filters: { nodeType?: string; edgeTy
   const edges=graph.edges.filter(edge => allowed.has(edge.source)&&allowed.has(edge.target)&&(!edgeType||edge.type.toLowerCase()===edgeType))
   return {nodes,edges}
 }
+
+/** Canonical graph preview: actual backend nodes and edges, never synthesized links. */
+export function previewToGraph(payload: Dict): UiGraph {
+  const nodes = new Map<string, UiGraphNode>(), edges = new Map<string, UiGraphEdge>()
+  for (const node of payload.nodes || []) addNode(nodes, node)
+  for (const rel of payload.edges || []) {
+    const r = relationShape(rel)
+    if (!nodes.has(r.source) || !nodes.has(r.target)) continue
+    addEdge(edges, r.source, r.type, r.target, r.data)
+  }
+  return {nodes: [...nodes.values()], edges: [...edges.values()]}
+}

@@ -346,7 +346,11 @@
       "AGENT-AST-POLICY"
     ],
     "test_prompts": [
-      "Identify a blocking cycle and suggest escalation without executing actions."
+      "Investigate TASK-AST-DEADLOCK-A and TASK-AST-DEADLOCK-B: check both directed blocking edges, current task states and assigned agents. Cite graph records for any confirmed cycle, identify what remains unknown, and propose human-reviewed escalation without modifying tasks or executing actions.",
+      "Which current graph records show why TASK-AST-DEADLOCK-A is blocked?",
+      "Does TASK-AST-DEADLOCK-B also depend on TASK-AST-DEADLOCK-A? Verify BOTH directed blocking relationships and cite both tasks.",
+      "Which agents are assigned to the blocked tasks? Distinguish confirmed assignment from candidate eligibility.",
+      "What human-reviewed escalation or dependency re-plan is appropriate? Recommend only; take no action."
     ],
     "permitted_operations": [
       "READ_GRAPH",

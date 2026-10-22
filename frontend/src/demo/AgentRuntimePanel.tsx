@@ -18,6 +18,7 @@ interface RunResult {
 export function AgentRuntimePanel({scenario}:{scenario:Scenario}){
  const {config,hasPermission}=useAuth()
  const [goal,setGoal]=useState(()=>scenario.test_prompts[0]||`Investigate ${scenario.title}`)
+ const [guidedQuestion,setGuidedQuestion]=useState('0')
  const [consent,setConsent]=useState(false)
  const [runId,setRunId]=useState('')
  const [runIdInput,setRunIdInput]=useState('')
@@ -58,7 +59,9 @@ export function AgentRuntimePanel({scenario}:{scenario:Scenario}){
   {graphAvailable&&!source.isLoading&&!sourceAvailable&&<p role="alert" className="notice">Scenario starting entity <code>{sourceId}</code> cannot be read in the scoped Asteria graph. The model will not be called.</p>}
   {status.error&&<ErrorPanel error={status.error}/>}
   {!configured&&<p className="notice">Set the backend model provider and API key before starting a run. Example: <code>GRAPH_HACKS_AGENT_PROVIDER=groq</code> and <code>GROQ_API_KEY</code>. The browser never receives your model key.</p>}
-  <label className="field"><span>Organizational objective</span><textarea value={goal} maxLength={1500} rows={3} onChange={e=>setGoal(e.target.value)} /></label>
+  {scenario.test_prompts.length>1&&<label className="field"><span>Guided investigation question</span><select value={guidedQuestion} onChange={e=>{setGuidedQuestion(e.target.value);if(e.target.value!=='custom')setGoal(scenario.test_prompts[Number(e.target.value)]);setRunId('');run.reset()}}>{scenario.test_prompts.map((question,i)=><option key={i} value={String(i)}>{i===0?'Full evidence-backed investigation':`Question ${i}: ${question}`}</option>)}{guidedQuestion==='custom'&&<option value="custom">Custom objective</option>}</select></label>}
+  <label className="field"><span>Organizational objective</span><textarea value={goal} maxLength={1500} rows={3} onChange={e=>{setGoal(e.target.value);setGuidedQuestion('custom');setRunId('');run.reset()}} /></label>
+  {scenario.test_prompts.length>1&&<p className="technical-secondary">Each question starts a separately persisted investigation. Changing the question clears the previous on-screen result; it does not continue the previous model conversation.</p>}
   <label className="field"><span>Maximum tool-selection iterations</span><select value={limit} onChange={e=>setLimit(Number(e.target.value))}>{[4,6,8,10,12].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
   <label style={{display:'flex',alignItems:'flex-start',gap:8}}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>I authorize sending selected organizational context and read-only tool observations to the configured model provider for this investigation.</span></label>
   <div className="toolbar"><button className="primary" disabled={!configured||!graphAvailable||!sourceAvailable||!consent||goal.trim().length<12||!hasPermission('CREATE_INVESTIGATION')||run.isPending} onClick={()=>{setRunId('');run.mutate()}}>{run.isPending?'Agent investigating…':'Start autonomous investigation'}</button><span className="muted">Read-only organizational tools; no actions or task creation.</span></div>

@@ -59,6 +59,10 @@ class PathsArg(EntityArg):
     direction: str = Field(default='both', pattern='^(both|out|in)$')
 
 
+class TaskBlockersArg(EntityArg):
+    max_depth: int = Field(default=4, ge=2, le=5)
+
+
 class DependencyArg(EntityArg):
     max_depth: int = Field(default=4, ge=1, le=6)
 
@@ -70,6 +74,7 @@ SCHEMAS: dict[str, type[Strict]] = {
     'graph_paths': PathsArg,
     'dependency_impact': DependencyArg,
     'incident_context': EntityArg,
+    'task_blockers': TaskBlockersArg,
     'historical_record': EntityArg,
     'expertise': FindEntities,
     'related_memory': MemoryArg,
@@ -82,6 +87,7 @@ DESCRIPTIONS = {
     'graph_paths':'Find bounded multi-hop paths from an entity to a specific target or reachable neighbors.',
     'dependency_impact':'Find operational systems that depend on a selected system (reverse DEPENDS_ON paths).',
     'incident_context':'Retrieve incident evidence, competing claims, events, decisions and linked systems.',
+    'task_blockers':'Inspect active directed task blocking edges, find a cycle through the chosen task, and identify recorded assignments (read only).',
     'historical_record':'Inspect current and superseded relationships and earlier owners/policies.',
     'expertise':'Discover employees or teams with recorded EXPERT_IN and CANDIDATE_EXPERT edges.',
     'related_memory':'Retrieve persisted claims, findings, checkpoints and outcomes connected to an entity, including validity and provenance.',
@@ -136,6 +142,63 @@ class ToolRegistry:
             result=snapshot.dependency_reachability(a.entity_id,reverse=True,max_depth=a.max_depth)
             return {'impacted':[{'path':x,'name':(snapshot.node(x['entity_id']) or {}).get('name')}
                                 for x in result[:25]],'truncated':len(result)>25}
+        if name == 'task_blockers':
+            if not has_label(node, 'Task'):
+                return {'error': 'NOT_A_TASK', 'entity_id': a.entity_id}
+            # A deadlock is a directed cycle of CURRENT task-to-task constraints.
+            # Do not interpret agent candidacy as assignment, or reverse edges as
+            # forward blockers. Bounded search, with the requested task as root.
+            adjacency: dict[str, list[tuple[str, Any]]] = {}
+            pending = [(a.entity_id, 0)]
+            visited: set[str] = set()
+            while pending and len(visited) < 40:
+                task_id, depth = pending.pop(0)
+                if task_id in visited:
+                    continue
+                visited.add(task_id)
+                task = snapshot.node(task_id)
+                if not has_label(task, 'Task') or not current(task):
+                    continue
+                outgoing = []
+                for edge in snapshot.edges_from(task_id, {'BLOCKED_BY', 'REQUIRES'}):
+                    target = snapshot.node(edge.target)
+                    if not has_label(target, 'Task') or not current(target):
+                        continue
+                    if edge.type == 'REQUIRES' and str(target.get('status') or '').upper() in {'COMPLETED', 'DONE', 'RESOLVED', 'CLOSED'}:
+                        continue
+                    outgoing.append((edge.target, edge))
+                    if depth + 1 < a.max_depth and edge.target not in visited:
+                        pending.append((edge.target, depth + 1))
+                adjacency[task_id] = sorted(outgoing, key=lambda item: (item[0], item[1].type))
+            cycles: list[dict[str, Any]] = []
+            def walk(task_id: str, path: list[str], edges: list[Any]) -> None:
+                if len(cycles) >= 4 or len(edges) >= a.max_depth:
+                    return
+                for nxt, edge in adjacency.get(task_id, []):
+                    if nxt == a.entity_id:
+                        cycles.append({'task_ids': path + [nxt], 'blocking_edges':
+                                       [item.as_dict() for item in edges + [edge]]})
+                    elif nxt not in path:
+                        walk(nxt, path + [nxt], edges + [edge])
+            walk(a.entity_id, [a.entity_id], [])
+            task_ids = set(visited)
+            # An active assignment establishes an owner; CANDIDATE_FOR does not.
+            assignments = []
+            for task_id in sorted(task_ids):
+                for edge in snapshot.edges_from(task_id, {'ASSIGNED_TO', 'CLAIMED_BY'}):
+                    owner = snapshot.node(edge.target)
+                    if has_label(owner, 'Agent') and current(owner):
+                        assignments.append({'task_id':task_id, 'agent':thin(owner),
+                                            'relationship':edge.as_dict()})
+            return {'entity_id': a.entity_id,
+                    'tasks': [thin(snapshot.node(task_id)) for task_id in sorted(task_ids)
+                              if has_label(snapshot.node(task_id), 'Task') and current(snapshot.node(task_id))],
+                    'blocking_edges': [edge.as_dict() for task_id in sorted(task_ids)
+                                       for _, edge in adjacency.get(task_id, [])],
+                    'cycles':cycles, 'deadlock_detected':bool(cycles),
+                    'assignments':assignments,
+                    'recommended_next_step':'Escalate for human review of the blocking dependency; do not remove edges, reassign agents or execute tasks automatically.',
+                    'scope':'Present-day directed graph edges through this task, bounded to max_depth; no independent proof of root cause.'}
         if name == 'related_memory':
             # Graph-backed memory retrieval is READ ONLY. Prefer direct relevant nodes,
             # then bounded two-hop context through Task/Investigation/Incident paths.

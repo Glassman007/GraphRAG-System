@@ -61,6 +61,7 @@ from backend.app.agent_runtime.governed_store import GraphGovernedActionStore
 from backend.app.agent_runtime.workspace import (WorkspaceStart, WorkspaceStore, runner as workspace_runner,
     format_workspace, build_replay, task_comparison, now as workspace_now)
 from backend.app.services.phase4_graph import GraphSnapshot, has_label
+from backend.app.services.graph_preview_service import make_graph_preview
 from backend.app.ingestion.source_control import SourceControlService
 from backend.app.ingestion.source_catalog import list_source_catalog, remove_source_from_catalog, inspect_source_removal
 
@@ -675,6 +676,16 @@ def ready():
     except Exception as exc:
         raise ApiError(503,"DEPENDENCY_UNAVAILABLE","FalkorDB is unavailable.") from exc
     return {"ready":bool(health.get("ok")),"dependencies":{"falkordb":"ready" if health.get("ok") else "unavailable"}}
+
+# A Company Brain is explicit on this endpoint: never fall back to a default
+# FalkorDB graph if a user has not selected an authorized graph.
+@router.get("/graph/preview", tags=["Entities"], summary="Bounded, read-only preview of the selected Company Brain")
+def graph_preview(principal: Principal = Depends(require("READ_GRAPH"))):
+    if not principal.graph_id:
+        raise ApiError(422, "GRAPH_SCOPE_REQUIRED", "Select a Company Brain before viewing its graph.")
+    snapshot = GraphSnapshot.load(client_for(principal))
+    return {"graph_id": principal.graph_id, **make_graph_preview(snapshot)}
+
 
 # -------------------- Situations --------------------
 @router.get("/situations", response_model=PageResponse, tags=["Situations"], summary="List situations")

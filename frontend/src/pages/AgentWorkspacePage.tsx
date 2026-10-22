@@ -1,4 +1,4 @@
-import {useMemo,useState} from 'react'
+import {useEffect,useMemo,useState} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {Link} from 'react-router-dom'
 import {useAuth} from '../auth/AuthContext'
@@ -96,15 +96,17 @@ export function AgentWorkspacePage(){
  const [selectedSource,setSelectedSource]=useState('')
  const sourceCatalog=useQuery({queryKey:['workspace-source-catalog',config.baseUrl,config.tenantId],queryFn:()=>listSourceCatalog(config),retry:false})
  const [selectedGraph,setSelectedGraph]=useState(()=>{
-  try{return new URLSearchParams(window.location.search).get('graph')||sessionStorage.getItem('verinex.workspace.graph.'+config.tenantId)||''}catch{return ''}
+  try{return new URLSearchParams(window.location.search).get('graph')||sessionStorage.getItem('verinex.workspace.graph.'+config.tenantId)||localStorage.getItem('verinex.workspace.graph.'+config.tenantId)||''}catch{return ''}
  })
  const availableBrains=brainList.data?.items.filter(item=>item.available)||[]
  const activeGraph=availableBrains.some(item=>item.graph_id===selectedGraph)?selectedGraph:''
+ // Deep-linked graph selections must also be visible to the homepage.
+ useEffect(()=>{if(activeGraph){try{sessionStorage.setItem('verinex.workspace.graph.'+config.tenantId,activeGraph);localStorage.setItem('verinex.workspace.graph.'+config.tenantId,activeGraph)}catch{/* storage disabled */}}},[activeGraph,config.tenantId])
  const scopedConfig={...config,graphId:activeGraph||undefined}
  const graphSources=(sourceCatalog.data?.items||[]).filter(item=>item.graph_id===activeGraph)
  const changeGraph=(next:string)=>{
   setSelectedGraph(next);setSelectedSource('');setChosen('');setFocused('');setSource('');setOpenedScenario('');setMemoryRequested(false);setShowEvidence(false)
-  try{sessionStorage.setItem('verinex.workspace.graph.'+config.tenantId,next)}catch{/* session storage disabled */}
+  try{sessionStorage.setItem('verinex.workspace.graph.'+config.tenantId,next);localStorage.setItem('verinex.workspace.graph.'+config.tenantId,next)}catch{/* session storage disabled */}
  }
 
  const [objective,setObjective]=useState('Investigate the route orchestration outage and produce an evidence-backed remediation proposal.')

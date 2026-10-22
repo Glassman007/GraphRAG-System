@@ -1,0 +1,279 @@
+--- a/frontend/src/demo/SupervisorPanel.tsx
++++ b/frontend/src/demo/SupervisorPanel.tsx
+@@ -1,8 +1,9 @@
+ import {useState} from 'react'
+ import {useMutation,useQuery} from '@tanstack/react-query'
+-import {Link} from 'react-router-dom'
+ import {useAuth} from '../auth/AuthContext'
+ import {apiRequest} from '../api/client'
++import {getEntity} from '../api/entities'
++import {useAsteriaPanelScope,hasCanonicalEntity} from './asteriaPanelScope'
+ import {ErrorPanel} from '../components/AsyncState'
+ import type {Scenario} from './demoModel'
+ 
+@@ -14,39 +15,54 @@
+ 
+ export function SupervisorPanel({scenario}:{scenario:Scenario}){
+  const {config,hasPermission}=useAuth()
++ const {scopedConfig,registry:brains,graphAvailable,graphId}=useAsteriaPanelScope(config)
+  const [goal,setGoal]=useState(scenario.test_prompts[0]||`Investigate ${scenario.title}`)
++ const [sourceId,setSourceId]=useState(scenario.entry_ids[0]||'')
+  const [consent,setConsent]=useState(false)
+  const [runId,setRunId]=useState('')
+  const [loadId,setLoadId]=useState('')
+  const [parallel,setParallel]=useState(3)
+  const [showRegistry,setShowRegistry]=useState(false)
+  const [resumeResult,setResumeResult]=useState<Run|null>(null)
+- const registry=useQuery({queryKey:['supervisor-registry',config.tenantId],queryFn:({signal})=>apiRequest<Registry>(config,'/api/v1/agent-runtime/supervisor/registry',{signal}),retry:false})
+- const create=useMutation({mutationFn:()=>apiRequest<Run>(config,'/api/v1/agent-runtime/supervisor/runs',{
+-   method:'POST',body:{goal,source_entity_id:scenario.entry_ids[0],allow_external_model:consent,max_parallel:parallel}
+- })})
+- const resume=useMutation({mutationFn:()=>apiRequest<Run>(config,`/api/v1/agent-runtime/supervisor/runs/${encodeURIComponent(loadId)}/resume?allow_external_model=true`,{method:'POST'}),onSuccess:data=>{setResumeResult(data);setRunId('')}})
+- const reopened=useQuery({queryKey:['supervisor-run',config.tenantId,runId],enabled:!!runId,
+-   queryFn:({signal})=>apiRequest<Run>(config,`/api/v1/agent-runtime/supervisor/runs/${encodeURIComponent(runId)}`,{signal}),retry:false})
++ const source=useQuery({queryKey:['demo-supervisor-source',config.baseUrl,config.tenantId,graphId,sourceId],
++  queryFn:({signal})=>getEntity(scopedConfig,sourceId,undefined,signal),
++  enabled:graphAvailable&&Boolean(sourceId),retry:false})
++ const sourceAvailable=hasCanonicalEntity(source.data,sourceId)
++ const registry=useQuery({queryKey:['supervisor-registry',config.baseUrl,config.tenantId,graphId],queryFn:({signal})=>apiRequest<Registry>(scopedConfig,'/api/v1/agent-runtime/supervisor/registry',{signal}),enabled:graphAvailable,retry:false})
++ const create=useMutation({mutationFn:async()=>{
++  const found=await getEntity(scopedConfig,sourceId)
++  if(!hasCanonicalEntity(found,sourceId))throw new Error('Starting entity not found in selected Asteria graph')
++  return apiRequest<Run>(scopedConfig,'/api/v1/agent-runtime/supervisor/runs',{
++   method:'POST',body:{goal,source_entity_id:sourceId,allow_external_model:consent,max_parallel:parallel}
++  })
++ },onSuccess:data=>{setRunId(data.id);setResumeResult(null)}})
++ const resume=useMutation({mutationFn:()=>apiRequest<Run>(scopedConfig,`/api/v1/agent-runtime/supervisor/runs/${encodeURIComponent(loadId)}/resume?allow_external_model=true`,{method:'POST'}),onSuccess:data=>{setResumeResult(data);setRunId('')}})
++ const reopened=useQuery({queryKey:['supervisor-run',config.baseUrl,config.tenantId,graphId,runId],enabled:graphAvailable&&!!runId,
++   queryFn:({signal})=>apiRequest<Run>(scopedConfig,`/api/v1/agent-runtime/supervisor/runs/${encodeURIComponent(runId)}`,{signal}),retry:false})
+  const data=reopened.data||resumeResult||create.data
+  return <section className="panel" style={{display:'grid',gap:12}}>
+   <div className="page-header"><div><div className="eyebrow">COMPONENT 2 / SUPERVISOR &amp; TASK SCHEDULER</div><h3>Coordinate specialist agents</h3><p>Read-only multi-agent investigations with parallel research, verified handoffs, dependency scheduling and human escalation.</p></div><span className="gh-demo-label">MULTI-AGENT</span></div>
++  <p className="technical-secondary">Demo scope: <code>{graphId}</code> · Tenant: <code>{config.tenantId}</code>. Model usage is still consent-gated.</p>
++  {brains.error&&<ErrorPanel error={brains.error}/>}
++  {!brains.isLoading&&!graphAvailable&&<p role="alert" className="notice">Asteria graph is not available to this authenticated tenant. Cannot launch a supervisor.</p>}
++  <label className="field"><span>Starting graph entity</span><input value={sourceId} onChange={e=>setSourceId(e.target.value.trim().toUpperCase())} placeholder="INC-AST-ROUTE-OUTAGE"/></label>
++  {source.error&&<p role="alert" className="notice">The starting entity cannot be retrieved in <code>{graphId}</code>. Select an existing canonical Asteria incident before starting.</p>}
+   <label className="field"><span>Investigation objective</span><textarea rows={3} maxLength={1500} value={goal} onChange={e=>setGoal(e.target.value)}/></label>
+   <label className="field"><span>Maximum parallel specialists</span><select value={parallel} onChange={e=>setParallel(Number(e.target.value))}>{[1,2,3,4].map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+   <label style={{display:'flex',alignItems:'flex-start',gap:8}}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>I authorize sending selected organizational evidence and validated specialist handoffs to the configured external model. This does not approve external actions.</span></label>
+-  <div className="toolbar"><button className="primary" disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||goal.trim().length<12||create.isPending} onClick={()=>{setRunId('');setResumeResult(null);create.mutate()}}>{create.isPending?'Coordinating specialists…':'Start multi-agent investigation'}</button><span className="muted">No external actions or autonomous approvals.</span></div>
++  <div className="toolbar"><button className="primary" disabled={!graphAvailable||!sourceAvailable||!hasPermission('CREATE_INVESTIGATION')||!consent||goal.trim().length<12||create.isPending} onClick={()=>{setRunId('');setResumeResult(null);create.mutate()}}>{create.isPending?'Coordinating specialists…':'Start multi-agent investigation'}</button><span className="muted">No external actions or autonomous approvals.</span></div>
+   {create.error&&<ErrorPanel error={create.error}/>}
+   {registry.error&&<ErrorPanel error={registry.error}/>}
+   <details open={showRegistry} onToggle={e=>setShowRegistry(e.currentTarget.open)}><summary>Specialist registry ({registry.data?.agents.length??0})</summary>
+    <div className="gh-demo-table-scroll"><table><thead><tr><th>Agent</th><th>Capabilities</th><th>Read-only tools</th></tr></thead><tbody>{(registry.data?.agents||[]).map(a=><tr key={a.id}><td>{a.id}</td><td>{a.capabilities.join(', ')}</td><td>{a.tools.join(', ')}</td></tr>)}</tbody></table></div>
+   </details>
+-  <details><summary>Reopen persisted supervisor run</summary><label className="field"><span>Run ID</span><input placeholder="SRUN-…" value={loadId} onChange={e=>setLoadId(e.target.value.trim().toUpperCase())}/></label><button disabled={!/^SRUN-[0-9A-F]{32}$/.test(loadId)} onClick={()=>{setResumeResult(null);setRunId(loadId)}}>Load DAG and trace</button> <button disabled={!/^SRUN-[0-9A-F]{32}$/.test(loadId)||!consent||!hasPermission('CREATE_INVESTIGATION')||resume.isPending} onClick={()=>resume.mutate()}>Resume interrupted tasks</button>{reopened.error&&<ErrorPanel error={reopened.error}/>} {resume.error&&<ErrorPanel error={resume.error}/>}</details>
++  <details><summary>Reopen persisted supervisor run</summary><label className="field"><span>Run ID</span><input placeholder="SRUN-…" value={loadId} onChange={e=>setLoadId(e.target.value.trim().toUpperCase())}/></label><button disabled={!graphAvailable||!/^SRUN-[0-9A-F]{32}$/.test(loadId)} onClick={()=>{setResumeResult(null);setRunId(loadId)}}>Load DAG and trace</button> <button disabled={!graphAvailable||!/^SRUN-[0-9A-F]{32}$/.test(loadId)||!consent||!hasPermission('CREATE_INVESTIGATION')||resume.isPending} onClick={()=>resume.mutate()}>Resume interrupted tasks</button>{reopened.error&&<ErrorPanel error={reopened.error}/>} {resume.error&&<ErrorPanel error={resume.error}/>}</details>
+   {data&&<section className="gh-work-board" style={{display:'grid',gap:12}}>
+    <div className="eyebrow">RUN {data.id} · {data.status}</div><div className="gh-demo-metrics"><div><b>{data.tasks?.length??0}</b><span>Decomposed tasks</span></div><div><b>{data.tasks?.filter(t=>t.status==='COMPLETED').length??0}</b><span>Completed tasks</span></div><div><b>{data.tokens_used??0}</b><span>Provider tokens / estimate</span></div></div>
+    {data.error&&<p role="alert">{data.error}</p>}
+-   <h4>Task DAG and handoffs</h4><ol className="gh-demo-steps">{(data.tasks||[]).map(task=><li key={task.id}><div><b>{task.id} · {task.status}</b><p>{task.objective}</p><p className="muted">{task.capability} · Assigned: {task.agent_id||'none'} · Attempts: {task.attempts} · Prerequisites: {task.depends_on.join(', ')||'none'}</p>{task.result&&<><p>{task.result.summary}</p><small>Confidence: {task.result.confidence} · Risk: {task.result.risk}</small><p>{task.result.citations.map(id=><Link key={id} to={`/entities/${encodeURIComponent(id)}`}>{id} </Link>)}</p></>}{task.error&&<p role="alert">{task.error}</p>}</div></li>)}</ol>
++   <h4>Task DAG and handoffs</h4><ol className="gh-demo-steps">{(data.tasks||[]).map(task=><li key={task.id}><div><b>{task.id} · {task.status}</b><p>{task.objective}</p><p className="muted">{task.capability} · Assigned: {task.agent_id||'none'} · Attempts: {task.attempts} · Prerequisites: {task.depends_on.join(', ')||'none'}</p>{task.result&&<><p>{task.result.summary}</p><small>Confidence: {task.result.confidence} · Risk: {task.result.risk}</small><p>{task.result.citations.map(id=><code key={id} title="Citation ID in selected Asteria graph">{id} </code>)}</p></>}{task.error&&<p role="alert">{task.error}</p>}</div></li>)}</ol>
+    <h4>Supervisor answer / proposal</h4>{data.answer?<p style={{whiteSpace:'pre-wrap'}}>{data.answer}</p>:<p className="muted">No validated aggregate answer. Inspect specialist results and escalation reasons.</p>}
+-   <h4>Validated final source IDs</h4><div className="toolbar">{(data.citations||[]).map(id=><Link key={id} to={`/entities/${encodeURIComponent(id)}`}>{id}</Link>)}{!data.citations?.length&&'None'}</div>
++   <h4>Validated final source IDs</h4><div className="toolbar">{(data.citations||[]).map(id=><code key={id}>{id}</code>)}{!data.citations?.length&&'None'}</div>
+    <h4>Human escalation ({data.escalations?.length??0})</h4>{data.escalations?.length?<ul>{data.escalations.map((e,i)=><li key={i}>{e.reason} · {e.task_ids.join(', ')}{e.detail?` — ${e.detail}`:''}</li>)}</ul>:<p className="muted">No escalation recorded.</p>}
+    <h4>Unresolved knowledge gaps</h4>{data.knowledge_gaps?.length?<ul>{data.knowledge_gaps.map((x,i)=><li key={i}>{x}</li>)}</ul>:<p className="muted">No additional gaps in supervisor synthesis.</p>}
+    <details><summary>Execution events ({data.events?.length??0})</summary><ol className="gh-demo-steps">{(data.events||[]).map((e,i)=><li key={e.index??e.event_index??i}><b>{e.kind} · {e.status}</b><p>{e.task_id} {e.agent_id} · {e.summary}</p><small>{e.created_at}</small></li>)}</ol></details>
+--- a/frontend/src/demo/AgentMemoryPanel.tsx
++++ b/frontend/src/demo/AgentMemoryPanel.tsx
+@@ -1,8 +1,9 @@
+ import {useState} from 'react'
+ import {useMutation} from '@tanstack/react-query'
+-import {Link} from 'react-router-dom'
+ import {useAuth} from '../auth/AuthContext'
+ import {apiRequest} from '../api/client'
++import {getEntity} from '../api/entities'
++import {useAsteriaPanelScope,hasCanonicalEntity} from './asteriaPanelScope'
+ import {ErrorPanel} from '../components/AsyncState'
+ import type {Scenario} from './demoModel'
+ 
+@@ -11,34 +12,45 @@
+ 
+ export function AgentMemoryPanel({scenario}:{scenario:Scenario}){
+  const {config,hasPermission}=useAuth()
++ const {scopedConfig,registry:brains,graphAvailable,graphId}=useAsteriaPanelScope(config)
+  const [entity,setEntity]=useState(scenario.entry_ids[0]||'')
+  const [query,setQuery]=useState('dependency evidence')
+  const [reviewId,setReviewId]=useState('')
+  const [reason,setReason]=useState('')
+  const [reviewStatus,setReviewStatus]=useState('RECHECK_REQUIRED')
+- const lookup=useMutation({mutationFn:()=>apiRequest<Result>(config,'/api/v1/agent-runtime/memory/search',{
+-  method:'POST',body:{entity_ids:entity.trim()?[entity.trim()]:[],query:query.trim(),limit:15}
+- })})
+- const review=useMutation({mutationFn:()=>apiRequest(config,`/api/v1/agent-runtime/memory/${encodeURIComponent(reviewId)}/validity`,{
++ const lookup=useMutation({mutationFn:async(entityOnly:boolean)=>{
++  // An absent canonical entity is different from an empty verified-memory result.
++  if(entity.trim()){
++   const found=await getEntity(scopedConfig,entity.trim())
++   if(!hasCanonicalEntity(found,entity.trim()))throw new Error('Entity not found in selected Asteria graph')
++  }
++  return apiRequest<Result>(scopedConfig,'/api/v1/agent-runtime/memory/search',{
++   method:'POST',body:{entity_ids:entity.trim()?[entity.trim()]:[],query:entityOnly?'':query.trim(),limit:15}
++  })
++ }})
++ const review=useMutation({mutationFn:()=>apiRequest(scopedConfig,`/api/v1/agent-runtime/memory/${encodeURIComponent(reviewId)}/validity`,{
+   method:'POST',body:{status:reviewStatus,reason}
+- }),onSuccess:()=>lookup.mutate()})
++ }),onSuccess:()=>lookup.mutate(false)})
+  return <section className="panel" style={{display:'grid',gap:12}}>
+   <div className="page-header"><div><div className="eyebrow">COMPONENT 3 / PERSISTENT AGENT MEMORY</div><h3>Verified knowledge across sessions</h3><p>Only current, source-backed, independently verified findings are shared. Private working branches, unresolved conflicts and stale knowledge are excluded.</p></div><span className="gh-demo-label">CROSS-SESSION</span></div>
++  <p className="technical-secondary">Verified shared memory in <code>{graphId}</code> · Tenant <code>{config.tenantId}</code>. Investigation reports and handoffs do not automatically become independently verified memory.</p>
++  {brains.error&&<ErrorPanel error={brains.error}/>}
++  {!brains.isLoading&&!graphAvailable&&<p role="alert">Asteria graph is not authorized/available for memory retrieval.</p>}
+   <div className="toolbar"><label className="field"><span>Entity ID</span><input value={entity} onChange={e=>setEntity(e.target.value)} placeholder="SYS-AST-DISPATCH"/></label><label className="field"><span>Context keywords</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Route Database dependency"/></label></div>
+-  <div className="toolbar"><button className="primary" disabled={lookup.isPending||(!query.trim()&&!entity.trim())} onClick={()=>lookup.mutate()}>{lookup.isPending?'Checking memory…':'Search verified memory'}</button><span className="muted">Graph relationship + entity + context matching; maximum 15 records</span></div>
++  <div className="toolbar"><button className="primary" disabled={!graphAvailable||lookup.isPending||(!query.trim()&&!entity.trim())} onClick={()=>lookup.mutate(false)}>{lookup.isPending?'Checking memory…':'Search verified memory'}</button><button disabled={!graphAvailable||lookup.isPending||!entity.trim()} onClick={()=>lookup.mutate(true)}>Search entity (ignore keywords)</button><span className="muted">Only VERIFIED / SHARED / current records; maximum 15</span></div>
+   {lookup.error&&<ErrorPanel error={lookup.error}/>}
+   {lookup.data&&<><div className="eyebrow">{lookup.data.count} eligible memories · VERIFIED / SHARED</div>
+-   {lookup.data.items.length===0?<p className="muted">No eligible prior knowledge. Run a supervised investigation that produces a structured, independently corroborated assertion, then search again.</p>:<div style={{display:'grid',gap:10}}>{lookup.data.items.map(m=><article key={m.id} className="gh-work-board" style={{padding:14}}>
++   {lookup.data.items.length===0?<p className="muted">No eligible verified, shared memory matched this search. An investigation can complete successfully without producing reusable independently verified assertions. Try the entity-only search to remove the keyword filter; do not interpret this as missing graph evidence.</p>:<div style={{display:'grid',gap:10}}>{lookup.data.items.map(m=><article key={m.id} className="gh-work-board" style={{padding:14}}>
+     <strong>{m.subject_id} · {m.predicate} → {m.value}</strong>
+     <p>{m.summary}</p><small>Memory: {m.id} · {m.status} · Verified: {m.verified_at}</small>
+     <p className="muted">Source: {m.origin_agent_id} ({m.origin_task_id}) · Independent check: {m.verified_by} · Tools: {m.source_tools.join(', ')||'reused verified memory'} · Run: {m.origin_run_id}</p>{Boolean(m.derived_memory_ids?.length)&&<p className="muted">Derived from verified memory: {m.derived_memory_ids?.join(', ')}</p>}
+-    <div className="toolbar">{m.citations.map(id=><Link key={id} to={`/entities/${encodeURIComponent(id)}`}>{id}</Link>)}</div>
++    <div className="toolbar">{m.citations.map(id=><code key={id}>{id}</code>)}</div>
+     {hasPermission('CREATE_INVESTIGATION')&&<button onClick={()=>setReviewId(m.id)}>Review validity</button>}
+    </article>)}</div>}</>}
+   {reviewId&&<div className="gh-work-board" style={{display:'grid',gap:8,padding:14}}><h4>Record review: {reviewId}</h4><p className="muted">This operation withdraws the memory from shared retrieval; it never changes the canonical source graph.</p>
+    <label className="field"><span>Review decision</span><select value={reviewStatus} onChange={e=>setReviewStatus(e.target.value)}><option value="RECHECK_REQUIRED">Require recheck</option><option value="SUPERSEDED">Superseded</option><option value="INVALIDATED">Invalidated</option></select></label>
+    <label className="field"><span>Reason (minimum 10 characters)</span><textarea rows={2} value={reason} onChange={e=>setReason(e.target.value)}/></label>
+-   <div className="toolbar"><button disabled={reason.trim().length<10||review.isPending} onClick={()=>review.mutate()}>Confirm review</button><button onClick={()=>setReviewId('')}>Cancel</button></div>
++   <div className="toolbar"><button disabled={!graphAvailable||reason.trim().length<10||review.isPending} onClick={()=>review.mutate()}>Confirm review</button><button onClick={()=>setReviewId('')}>Cancel</button></div>
+    {review.error&&<ErrorPanel error={review.error}/>}
+   </div>}
+   <p className="technical-secondary">Memory is graph-persisted in a separate FalkorDB namespace. A verified record includes an origin agent, source citations, tool provenance and verifier; thirty-day verification freshness and present-day graph evidence checks apply. Memory never provides business-action authorization.</p>
+--- a/frontend/src/demo/ReactiveLearningPanel.tsx
++++ b/frontend/src/demo/ReactiveLearningPanel.tsx
+@@ -1,8 +1,8 @@
+ import {useState} from 'react'
+ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
+-import {Link} from 'react-router-dom'
+ import {useAuth} from '../auth/AuthContext'
+ import {apiRequest} from '../api/client'
++import {useAsteriaPanelScope,propagationExplanation,isProcessableChangeStatus} from './asteriaPanelScope'
+ import {ErrorPanel} from '../components/AsyncState'
+ 
+ type MemoryImpact = {memory_id:string;decision:string;subject_id:string}
+@@ -10,33 +10,41 @@
+ type Notice = {type:string;event_id:string;message:string}
+ type ChangeEvent = {id:string;status:string;confidence:string;occurred_at?:string;source_id?:string;
+  changed_ids?:string[];changes?:unknown[];memory_impacts?:MemoryImpact[];workflow_impacts?:RunImpact[];
+- notifications?:Notice[];attempts?:number;error?:string}
++ notifications?:Notice[];attempts?:number;error?:string;legacy_impacts?:{entity_id:string;action:string;trigger_id:string}[]}
+ type Changes = {items:ChangeEvent[];count:number}
+ export function ReactiveLearningPanel(){
+  const {config,hasPermission}=useAuth()
++ const {scopedConfig,registry:brains,graphAvailable,graphId}=useAsteriaPanelScope(config)
+  const cache=useQueryClient()
+  const [details,setDetails]=useState<string|null>(null)
+- const key=['reactive-learning',config.tenantId]
+- const changes=useQuery({queryKey:key,queryFn:()=>apiRequest<Changes>(config,'/api/v1/agent-runtime/reactive/events?limit=30'),refetchInterval:20000})
+- const process=useMutation({mutationFn:()=>apiRequest(config,'/api/v1/agent-runtime/reactive/process?limit=12',{method:'POST'}),
++ const key=['reactive-learning',config.baseUrl,config.tenantId,graphId]
++ const changes=useQuery({queryKey:key,queryFn:()=>apiRequest<Changes>(scopedConfig,'/api/v1/agent-runtime/reactive/events?limit=30'),enabled:graphAvailable,refetchInterval:graphAvailable?20000:false,retry:false})
++ const hasPending=Boolean(changes.data?.items.some(event=>isProcessableChangeStatus(event.status)))
++ const process=useMutation({mutationFn:()=>apiRequest(scopedConfig,'/api/v1/agent-runtime/reactive/process?limit=12',{method:'POST'}),
+   onSuccess:()=>cache.invalidateQueries({queryKey:key})})
+  return <section className="panel" style={{display:'grid',gap:12}}>
+   <div className="page-header"><div><div className="eyebrow">COMPONENT 4 / REACTIVE ORGANIZATIONAL LEARNING</div>
+    <h3>What changed, and which conclusions need review?</h3>
+    <p>Validated source changes are propagated into verified memory and dependent supervisor plans. This is evidence maintenance, not model retraining.</p></div>
+    <span className="gh-demo-label">CHANGE PROPAGATION</span></div>
+-  <div className="toolbar"><button onClick={()=>changes.refetch()} disabled={changes.isFetching}>Refresh change timeline</button>
+-   {hasPermission('CREATE_INVESTIGATION')&&<button onClick={()=>process.mutate()} disabled={process.isPending}>{process.isPending?'Processing…':'Retry pending change events'}</button>}
+-   <span className="muted">Live view refreshes every 20 seconds. Ingestion also processes committed events automatically.</span></div>
++  <p className="technical-secondary">Source-change log scoped to <code>{graphId}</code> · Tenant <code>{config.tenantId}</code>. PROBABLE changes are not authoritative and cannot automatically invalidate findings or replan workflows.</p>
++  {brains.error&&<ErrorPanel error={brains.error}/>}
++  {!brains.isLoading&&!graphAvailable&&<p role="alert">Asteria graph is not available. Change processing is disabled.</p>}
++  <div className="toolbar"><button onClick={()=>changes.refetch()} disabled={!graphAvailable||changes.isFetching}>Refresh change timeline</button>
++   {hasPermission('CREATE_INVESTIGATION')&&<button onClick={()=>process.mutate()} disabled={!graphAvailable||!hasPending||process.isPending}>{process.isPending?'Processing…':'Process queued events'}</button>}
++   <span className="muted">Refresh every 20 seconds. Only queued events can be processed; existing NEEDS_REVIEW entries require authoritative evidence, not another retry.</span></div>
+   {changes.error&&<ErrorPanel error={changes.error}/>}{process.error&&<ErrorPanel error={process.error}/>}
+   {changes.isLoading&&<p className="muted">Checking durable event log…</p>}
++  {changes.data&&<p className="muted">{changes.data.items.filter(e=>e.confidence==='CONFIRMED').length} confirmed changes · {changes.data.items.filter(e=>e.confidence!=='CONFIRMED').length} unconfirmed changes · {changes.data.items.filter(e=>isProcessableChangeStatus(e.status)).length} queued/retryable events</p>}
+   {changes.data?.items.length===0&&<p className="muted">No reactive changes recorded. Ingest updated authoritative graph evidence to generate a change event; unchanged resyncs do not count.</p>}
+   {changes.data?.items.map(e=><article className="gh-work-board" key={e.id} style={{padding:12,display:'grid',gap:7}}>
+    <div className="toolbar"><strong>{e.confidence} · {e.status}</strong><code>{e.id}</code></div>
+    <small>{e.occurred_at||'Time not available'} · Source {e.source_id||'not available'} · {e.changed_ids?.length||0} related entities</small>
+-   <div className="toolbar"><b>{e.memory_impacts?.length||0} memory reviews</b><b>{e.workflow_impacts?.length||0} impacted workflows</b><button onClick={()=>setDetails(details===e.id?null:e.id)}>{details===e.id?'Hide':'Inspect'} propagation</button></div>
++   <p className="technical-secondary">{propagationExplanation(e)}</p>
++   <div className="toolbar"><b>{e.memory_impacts?.length||0} memory reviews</b><b>{e.workflow_impacts?.length||0} impacted workflows</b><b>{e.legacy_impacts?.length||0} organization review targets</b><button onClick={()=>setDetails(details===e.id?null:e.id)}>{details===e.id?'Hide':'Inspect'} propagation</button></div>
+    {details===e.id&&<div style={{display:'grid',gap:8}}>
+-    <p><strong>Changed:</strong> {(e.changed_ids||[]).map(id=><Link to={`/entities/${encodeURIComponent(id)}`} key={id} style={{marginRight:10}}>{id}</Link>)}</p>
++    <p><strong>Changed:</strong> {(e.changed_ids||[]).map(id=><code key={id} style={{marginRight:10}}>{id}</code>)}</p>
++    {e.legacy_impacts?.map((impact,i)=><p key={`${impact.entity_id}:${i}`}>Organizational review: <code>{impact.entity_id}</code> · {impact.action} (trigger {impact.trigger_id})</p>)}
+     {e.memory_impacts?.map(m=><p key={m.memory_id}>Memory <code>{m.memory_id}</code>: {m.decision} · {m.subject_id}</p>)}
+     {e.workflow_impacts?.map(r=><p key={r.run_id}>Run <code>{r.run_id}</code>: {r.status}; recheck tasks {r.affected_task_ids.join(', ')}. Fresh consent required before model re-execution.</p>)}
+     {e.notifications?.map((n,i)=><p key={i}><strong>{n.type}:</strong> {n.message}</p>)}
+--- /dev/null
++++ b/frontend/src/demo/asteriaPanelScope.ts
+@@ -0,0 +1,36 @@
++import {useQuery} from '@tanstack/react-query'
++import type {ApiConfig} from '../api/types'
++import {apiRequest} from '../api/client'
++import {ASTERIA_GRAPH,buildDemoHarnessConfig,isAsteriaGraphAvailable} from './agentRuntimeScope'
++
++type RegisteredBrains={items:{graph_id:string;available:boolean}[]}
++
++/** Reuse the same authorized, explicit Asteria scope as Demo Lab Component 1.
++ * This does not grant graph permissions; the backend checks every request. */
++export function useAsteriaPanelScope(config:ApiConfig){
++ const scopedConfig=buildDemoHarnessConfig(config)
++ const registry=useQuery({
++  queryKey:['demo-harness-brains',config.baseUrl,config.tenantId,config.token],
++  queryFn:({signal})=>apiRequest<RegisteredBrains>(config,'/api/v1/graphs',{signal}),
++  enabled:config.tenantId==='asteria',retry:false
++ })
++ return {scopedConfig,registry,graphAvailable:isAsteriaGraphAvailable(config,registry.data?.items),graphId:ASTERIA_GRAPH}
++}
++
++export function hasCanonicalEntity(payload:unknown,id:string):boolean {
++ if(!id||!payload||typeof payload!=='object')return false
++ const obj=payload as {id?:unknown;entity?:{id?:unknown}}
++ return obj.id===id||obj.entity?.id===id
++}
++
++export function propagationExplanation(event:{confidence:string;status:string;memory_impacts?:unknown[];workflow_impacts?:unknown[]}):string {
++ if(event.confidence!=='CONFIRMED')return 'Source change is not authoritative/confirmed. No verified memory or workflow can be invalidated automatically.'
++ if(event.status==='PENDING'||event.status==='RETRY'||event.status==='PROCESSING')return 'Confirmed change is queued or being processed; impact counts may not be final.'
++ if(event.status==='FAILED_NEEDS_REVIEW')return 'Propagation failed and requires operator review; do not treat the zero counts as proof of no impact.'
++ if(!(event.memory_impacts?.length||event.workflow_impacts?.length))return 'Confirmed change processed; no matching shared verified memory or saved workflow dependency was identified.'
++ return 'Recorded impacts are grounded in persisted verified memory and matching saved workflow dependencies.'
++}
++
++export function isProcessableChangeStatus(status:string):boolean {
++ return status==='PENDING'||status==='RETRY'
++}
+--- /dev/null
++++ b/frontend/src/test/asteriaPanelScope.test.ts
+@@ -0,0 +1,27 @@
++import {describe,it,expect} from 'vitest'
++import {buildDemoHarnessConfig,isAsteriaGraphAvailable} from '../demo/agentRuntimeScope'
++import {hasCanonicalEntity,propagationExplanation,isProcessableChangeStatus} from '../demo/asteriaPanelScope'
++
++const config={baseUrl:'',token:'test',tenantId:'asteria',graphId:'a_different_default_graph'}
++describe('Demo Lab Asteria component 2/3/4 contracts',()=>{
++ it('pins all requests to the Asteria graph even if auth has another default',()=>{
++  expect(buildDemoHarnessConfig(config).graphId).toBe('asteria_company_brain_v1')
++  expect(isAsteriaGraphAvailable(config,[{graph_id:'asteria_company_brain_v1',available:true}])).toBe(true)
++  expect(isAsteriaGraphAvailable({...config,tenantId:'other'},[{graph_id:'asteria_company_brain_v1',available:true}])).toBe(false)
++  expect(isAsteriaGraphAvailable(config,[{graph_id:'asteria_company_brain_v1',available:false}])).toBe(false)
++ })
++ it('does not mistake unrelated IDs for confirmed canonical entities',()=>{
++  expect(hasCanonicalEntity({entity:{id:'INC-AST-ROUTE-OUTAGE'}},'INC-AST-ROUTE-OUTAGE')).toBe(true)
++  expect(hasCanonicalEntity({entity:{id:'EVD-AST-0003'}},'INC-AST-ROUTE-OUTAGE')).toBe(false)
++  expect(hasCanonicalEntity({},'INC-AST-ROUTE-OUTAGE')).toBe(false)
++ })
++ it('never labels probable events as confirmed workflow propagation',()=>{
++  const unconfirmed=propagationExplanation({confidence:'PROBABLE',status:'NEEDS_REVIEW',memory_impacts:[],workflow_impacts:[]})
++  expect(unconfirmed).toContain('not authoritative')
++  expect(propagationExplanation({confidence:'CONFIRMED',status:'COMPLETED',memory_impacts:[],workflow_impacts:[]})).toContain('no matching')
++  expect(propagationExplanation({confidence:'CONFIRMED',status:'FAILED_NEEDS_REVIEW',memory_impacts:[],workflow_impacts:[]})).toContain('failed')
++  expect(isProcessableChangeStatus('PENDING')).toBe(true)
++  expect(isProcessableChangeStatus('RETRY')).toBe(true)
++  expect(isProcessableChangeStatus('NEEDS_REVIEW')).toBe(false)
++ })
++})

@@ -1,0 +1,529 @@
+diff --git a/backend/app/api_v1/router.py b/backend/app/api_v1/router.py
+index c6265f2..e5fd6fa 100644
+--- a/backend/app/api_v1/router.py
++++ b/backend/app/api_v1/router.py
+@@ -61,6 +61,7 @@ from backend.app.agent_runtime.governed_store import GraphGovernedActionStore
+ from backend.app.agent_runtime.workspace import (WorkspaceStart, WorkspaceStore, runner as workspace_runner,
+     format_workspace, build_replay, task_comparison, now as workspace_now)
+ from backend.app.services.phase4_graph import GraphSnapshot, has_label
++from backend.app.services.graph_preview_service import make_graph_preview
+ from backend.app.ingestion.source_control import SourceControlService
+ from backend.app.ingestion.source_catalog import list_source_catalog, remove_source_from_catalog, inspect_source_removal
+ 
+@@ -676,6 +677,16 @@ def ready():
+         raise ApiError(503,"DEPENDENCY_UNAVAILABLE","FalkorDB is unavailable.") from exc
+     return {"ready":bool(health.get("ok")),"dependencies":{"falkordb":"ready" if health.get("ok") else "unavailable"}}
+ 
++# A Company Brain is explicit on this endpoint: never fall back to a default
++# FalkorDB graph if a user has not selected an authorized graph.
++@router.get("/graph/preview", tags=["Entities"], summary="Bounded, read-only preview of the selected Company Brain")
++def graph_preview(principal: Principal = Depends(require("READ_GRAPH"))):
++    if not principal.graph_id:
++        raise ApiError(422, "GRAPH_SCOPE_REQUIRED", "Select a Company Brain before viewing its graph.")
++    snapshot = GraphSnapshot.load(client_for(principal))
++    return {"graph_id": principal.graph_id, **make_graph_preview(snapshot)}
++
++
+ # -------------------- Situations --------------------
+ @router.get("/situations", response_model=PageResponse, tags=["Situations"], summary="List situations")
+ def list_situations(limit:int=Query(50,ge=1,le=100),cursor:str|None=None,status_filter:str|None=Query(None,alias="status"),q:str|None=Query(None,max_length=200),as_of:str|None=None,principal:Principal=Depends(require("READ_GRAPH"))):
+diff --git a/backend/app/services/graph_preview_service.py b/backend/app/services/graph_preview_service.py
+new file mode 100644
+index 0000000..0fc7f74
+--- /dev/null
++++ b/backend/app/services/graph_preview_service.py
+@@ -0,0 +1,77 @@
++"""Deterministic, bounded preview of the current canonical tenant graph.
++
++The preview is a read-only SAMPLE of existing nodes/edges, not a reconstructed
++situation or a synthetic answer. The caller must supply a registered graph scope.
++"""
++from __future__ import annotations
++
++from collections import defaultdict, deque
++from typing import Any
++
++from backend.app.api_v1.application import node_visible, sanitize
++from backend.app.services.phase4_graph import GraphSnapshot
++
++_PREVIEW_FIELDS = {
++    'id', 'name', 'display_name', 'title', 'description', 'status', 'severity',
++    '_labels', 'type', 'kind', 'team_type', 'source_ref_id', 'source_record_id',
++}
++
++
++def make_graph_preview(snapshot: GraphSnapshot, *, max_nodes: int = 36,
++                       max_edges: int = 80) -> dict[str, Any]:
++    if not (1 <= max_nodes <= 100 and 0 <= max_edges <= 250):
++        raise ValueError('Preview bounds are outside the supported range')
++
++    visible = {key: node for key, node in snapshot.nodes.items() if node_visible(node, None)}
++    edges = [edge for edge in snapshot.edges if edge.source in visible and edge.target in visible
++             and GraphSnapshot._edge_active(edge, None)]
++    adjacent: dict[str, set[str]] = defaultdict(set)
++    for edge in edges:
++        adjacent[edge.source].add(edge.target)
++        adjacent[edge.target].add(edge.source)
++
++    def rank(node_id: str) -> tuple[int, int, str]:
++        node = visible[node_id]
++        labels = set(node.get('_labels') or [])
++        if 'Incident' in labels and str(node.get('status', '')).upper() == 'OPEN':
++            priority = 4
++        elif 'Incident' in labels:
++            priority = 3
++        elif labels & {'System', 'Service', 'Project', 'Team'}:
++            priority = 2
++        else:
++            priority = 1
++        return (-priority, -len(adjacent[node_id]), node_id)
++
++    ordered = sorted(visible, key=rank)
++    selected: set[str] = set()
++    # Prefer a well-connected real incident, but ensure a connected preview can be
++    # made even for graphs that contain zero Incident nodes (e.g. SQL schemas).
++    for seed in ordered:
++        if len(selected) >= max_nodes:
++            break
++        if seed in selected:
++            continue
++        queue = deque([seed])
++        enqueued = {seed}
++        while queue and len(selected) < max_nodes:
++            node_id = queue.popleft()
++            if node_id in selected:
++                continue
++            selected.add(node_id)
++            for neighbor in sorted(adjacent[node_id], key=rank):
++                if neighbor not in selected and neighbor not in enqueued:
++                    queue.append(neighbor)
++                    enqueued.add(neighbor)
++
++    preview_edges = [edge for edge in edges if edge.source in selected and edge.target in selected][:max_edges]
++    preview_nodes = [sanitize({key: val for key, val in visible[node_id].items() if key in _PREVIEW_FIELDS})
++                     for node_id in ordered if node_id in selected]
++    return {
++        'nodes': preview_nodes,
++        'edges': [{'source': edge.source, 'target': edge.target, 'type': edge.type,
++                   'properties': sanitize(edge.properties)} for edge in preview_edges],
++        'total_nodes': len(visible),
++        'total_edges': len(edges),
++        'sampled': len(selected) < len(visible) or len(preview_edges) < len(edges),
++    }
+diff --git a/backend/tests/test_landing_graph_preview.py b/backend/tests/test_landing_graph_preview.py
+new file mode 100644
+index 0000000..cafc52e
+--- /dev/null
++++ b/backend/tests/test_landing_graph_preview.py
+@@ -0,0 +1,104 @@
++"""Homepage graph preview must use recorded scoped graph facts, never fixture placeholders."""
++from __future__ import annotations
++
++import pytest
++from fastapi.testclient import TestClient
++
++from backend.app.main import app
++from backend.app.services.graph_preview_service import make_graph_preview
++from backend.app.services.phase4_graph import GraphEdge, GraphSnapshot
++
++
++def test_preview_uses_real_active_edges_and_canonical_node_labels():
++    snapshot = GraphSnapshot(
++        {
++            'INC-AST-ROUTE-OUTAGE': {'id': 'INC-AST-ROUTE-OUTAGE', 'name': 'Route outage', '_labels': ['Entity', 'Incident'], 'status': 'OPEN', 'access_token': 'MUST_NOT_APPEAR'},
++            'SYS-AST-ROUTING': {'id': 'SYS-AST-ROUTING', 'name': 'Route system', '_labels': ['Entity', 'System']},
++            'SYS-RETIRED': {'id': 'SYS-RETIRED', 'name': 'Old service', 'valid_until': '2025-01-01', '_labels': ['Entity', 'System']},
++        },
++        [GraphEdge('INC-AST-ROUTE-OUTAGE', 'AFFECTS', 'SYS-AST-ROUTING', {'edge_id': 'EDGE-1'}),
++         GraphEdge('SYS-AST-ROUTING', 'DEPENDS_ON', 'SYS-RETIRED', {}),
++         GraphEdge('INC-AST-ROUTE-OUTAGE', 'RESOLVED', 'SYS-AST-ROUTING', {'valid_until': '2025-01-01'})],
++    )
++    result = make_graph_preview(snapshot)
++    assert result['total_nodes'] == 2
++    assert result['total_edges'] == 1
++    assert {node['id'] for node in result['nodes']} == {'INC-AST-ROUTE-OUTAGE', 'SYS-AST-ROUTING'}
++    assert result['edges'] == [{'source': 'INC-AST-ROUTE-OUTAGE', 'target': 'SYS-AST-ROUTING', 'type': 'AFFECTS', 'properties': {'edge_id': 'EDGE-1'}}]
++    assert 'access_token' not in result['nodes'][0]
++    assert result['sampled'] is False
++
++
++def test_preview_works_without_any_incident_nodes():
++    snapshot = GraphSnapshot(
++        {'A': {'id': 'A', '_labels': ['Entity', 'SqlTable']}, 'B': {'id': 'B', '_labels': ['Entity', 'SqlTable']}},
++        [GraphEdge('A', 'FOREIGN_KEY_TO', 'B', {})],
++    )
++    result = make_graph_preview(snapshot)
++    assert len(result['nodes']) == 2 and len(result['edges']) == 1
++
++
++def test_preview_limits_graph_size_without_fake_connections():
++    nodes = {f'SYS-{n}': {'id': f'SYS-{n}', '_labels': ['Entity', 'System']} for n in range(70)}
++    edges = [GraphEdge('SYS-0', 'CONNECTS_TO', f'SYS-{n}', {}) for n in range(1, 70)]
++    result = make_graph_preview(GraphSnapshot(nodes, edges), max_nodes=12, max_edges=6)
++    ids = {node['id'] for node in result['nodes']}
++    assert len(ids) == 12 and len(result['edges']) == 6 and result['sampled'] is True
++    assert all(edge['source'] in ids and edge['target'] in ids for edge in result['edges'])
++    assert all(edge['type'] == 'CONNECTS_TO' for edge in result['edges'])
++
++
++def test_preview_denies_missing_graph_selection_before_database_access():
++    response = TestClient(app).get('/api/v1/graph/preview', headers={
++        'Authorization': 'Bearer test-reader-token', 'X-Tenant-ID': 'northstar',
++    })
++    assert response.status_code == 422
++    assert response.json()['error']['code'] == 'GRAPH_SCOPE_REQUIRED'
++
++
++def test_preview_denies_unauthenticated_request():
++    assert TestClient(app).get('/api/v1/graph/preview').status_code == 401
++
++
++def test_preview_validates_bounds():
++    with pytest.raises(ValueError):
++        make_graph_preview(GraphSnapshot({}, []), max_nodes=101)
++
++
++def test_scoped_api_preview_isolated_to_selected_registered_brain(monkeypatch):
++    """An explicitly chosen graph, not the default graph, supplies all preview data."""
++    from backend.app.graph.registry import GraphRegistry
++    from backend.app.api_v1 import router as v1_router
++
++    def resolve(self, *, tenant_id, graph_id):
++        if tenant_id != 'northstar' or graph_id not in {'asteria_company_brain_v1', 'other_brain'}:
++            from backend.app.graph.registry import GraphNotRegistered
++            raise GraphNotRegistered(graph_id)
++        return {'graph_id': graph_id}
++
++    class FakeClient:
++        def __init__(self, graph_id):
++            self.graph_id = graph_id
++
++    monkeypatch.setattr(GraphRegistry, 'resolve', resolve)
++    monkeypatch.setattr(v1_router, 'client_for', lambda principal: FakeClient(principal.graph_id))
++    monkeypatch.setattr(GraphSnapshot, 'load', classmethod(lambda cls, client: GraphSnapshot(
++        {f'{client.graph_id}-NODE': {'id': f'{client.graph_id}-NODE', 'name': 'Verified scoped entity'}}, [],
++    )))
++    api = TestClient(app)
++    asteria = api.get('/api/v1/graph/preview', headers={
++        'Authorization': 'Bearer test-reader-token', 'X-Tenant-ID': 'northstar',
++        'X-Company-Brain-ID': 'asteria_company_brain_v1',
++    })
++    other = api.get('/api/v1/graph/preview', headers={
++        'Authorization': 'Bearer test-reader-token', 'X-Tenant-ID': 'northstar',
++        'X-Company-Brain-ID': 'other_brain',
++    })
++    assert asteria.status_code == other.status_code == 200
++    assert asteria.json()['graph_id'] == 'asteria_company_brain_v1'
++    assert [node['id'] for node in asteria.json()['nodes']] == ['asteria_company_brain_v1-NODE']
++    assert [node['id'] for node in other.json()['nodes']] == ['other_brain-NODE']
++    assert api.get('/api/v1/graph/preview', headers={
++        'Authorization': 'Bearer test-reader-token', 'X-Tenant-ID': 'northstar',
++        'X-Company-Brain-ID': 'unregistered_brain',
++    }).status_code == 404
+diff --git a/frontend/src/api/graphPreview.ts b/frontend/src/api/graphPreview.ts
+new file mode 100644
+index 0000000..14b0e4b
+--- /dev/null
++++ b/frontend/src/api/graphPreview.ts
+@@ -0,0 +1,17 @@
++import { apiRequest } from './client'
++import type { ApiConfig, Dict } from './types'
++
++export interface GraphPreview {
++  graph_id: string
++  nodes: Dict[]
++  edges: Dict[]
++  total_nodes: number
++  total_edges: number
++  sampled: boolean
++}
++
++/** The server requires a registered, authorized Company Brain scope. */
++export function getGraphPreview(config: ApiConfig, signal?: AbortSignal) {
++  if (!config.graphId) throw new Error('Select a Company Brain to view its graph')
++  return apiRequest<GraphPreview>(config, '/api/v1/graph/preview', { signal })
++}
+diff --git a/frontend/src/graph/adapters.ts b/frontend/src/graph/adapters.ts
+index 750e20e..0af44d4 100644
+--- a/frontend/src/graph/adapters.ts
++++ b/frontend/src/graph/adapters.ts
+@@ -160,3 +160,15 @@ export function filterGraph(graph: UiGraph, filters: { nodeType?: string; edgeTy
+   const edges=graph.edges.filter(edge => allowed.has(edge.source)&&allowed.has(edge.target)&&(!edgeType||edge.type.toLowerCase()===edgeType))
+   return {nodes,edges}
+ }
++
++/** Canonical graph preview: actual backend nodes and edges, never synthesized links. */
++export function previewToGraph(payload: Dict): UiGraph {
++  const nodes = new Map<string, UiGraphNode>(), edges = new Map<string, UiGraphEdge>()
++  for (const node of payload.nodes || []) addNode(nodes, node)
++  for (const rel of payload.edges || []) {
++    const r = relationShape(rel)
++    if (!nodes.has(r.source) || !nodes.has(r.target)) continue
++    addEdge(edges, r.source, r.type, r.target, r.data)
++  }
++  return {nodes: [...nodes.values()], edges: [...edges.values()]}
++}
+diff --git a/frontend/src/pages/AgentWorkspacePage.tsx b/frontend/src/pages/AgentWorkspacePage.tsx
+index e78a4f8..1edd951 100644
+--- a/frontend/src/pages/AgentWorkspacePage.tsx
++++ b/frontend/src/pages/AgentWorkspacePage.tsx
+@@ -1,4 +1,4 @@
+-import {useMemo,useState} from 'react'
++import {useEffect,useMemo,useState} from 'react'
+ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
+ import {Link} from 'react-router-dom'
+ import {useAuth} from '../auth/AuthContext'
+@@ -96,15 +96,17 @@ export function AgentWorkspacePage(){
+  const [selectedSource,setSelectedSource]=useState('')
+  const sourceCatalog=useQuery({queryKey:['workspace-source-catalog',config.baseUrl,config.tenantId],queryFn:()=>listSourceCatalog(config),retry:false})
+  const [selectedGraph,setSelectedGraph]=useState(()=>{
+-  try{return new URLSearchParams(window.location.search).get('graph')||sessionStorage.getItem('verinex.workspace.graph.'+config.tenantId)||''}catch{return ''}
++  try{return new URLSearchParams(window.location.search).get('graph')||sessionStorage.getItem('verinex.workspace.graph.'+config.tenantId)||localStorage.getItem('verinex.workspace.graph.'+config.tenantId)||''}catch{return ''}
+  })
+  const availableBrains=brainList.data?.items.filter(item=>item.available)||[]
+  const activeGraph=availableBrains.some(item=>item.graph_id===selectedGraph)?selectedGraph:''
++ // Deep-linked graph selections must also be visible to the homepage.
++ useEffect(()=>{if(activeGraph){try{sessionStorage.setItem('verinex.workspace.graph.'+config.tenantId,activeGraph);localStorage.setItem('verinex.workspace.graph.'+config.tenantId,activeGraph)}catch{/* storage disabled */}}},[activeGraph,config.tenantId])
+  const scopedConfig={...config,graphId:activeGraph||undefined}
+  const graphSources=(sourceCatalog.data?.items||[]).filter(item=>item.graph_id===activeGraph)
+  const changeGraph=(next:string)=>{
+   setSelectedGraph(next);setSelectedSource('');setChosen('');setFocused('');setSource('');setOpenedScenario('');setMemoryRequested(false);setShowEvidence(false)
+-  try{sessionStorage.setItem('verinex.workspace.graph.'+config.tenantId,next)}catch{/* session storage disabled */}
++  try{sessionStorage.setItem('verinex.workspace.graph.'+config.tenantId,next);localStorage.setItem('verinex.workspace.graph.'+config.tenantId,next)}catch{/* session storage disabled */}
+  }
+ 
+  const [objective,setObjective]=useState('Investigate the route orchestration outage and produce an evidence-backed remediation proposal.')
+diff --git a/frontend/src/pages/LandingPage.tsx b/frontend/src/pages/LandingPage.tsx
+index 8ea0b43..a4b0ba1 100644
+--- a/frontend/src/pages/LandingPage.tsx
++++ b/frontend/src/pages/LandingPage.tsx
+@@ -1,10 +1,12 @@
+-import { useMemo } from 'react'
++import { useMemo, useState } from 'react'
+ import { Link } from 'react-router-dom'
+ import { useQuery } from '@tanstack/react-query'
+ import { useAuth } from '../auth/AuthContext'
++import { apiRequest } from '../api/client'
+ import { getReady } from '../api/system'
+-import { getSituationContext, listSituations } from '../api/situations'
+-import { contextToGraph } from '../graph/adapters'
++import { listSituations } from '../api/situations'
++import { getGraphPreview } from '../api/graphPreview'
++import { previewToGraph } from '../graph/adapters'
+ import { GraphView } from '../components/GraphView'
+ import { StatusBadge } from '../components/StatusBadge'
+ import { Decode } from '../components/Decode'
+@@ -22,18 +24,62 @@ const surfaces: [string, string, string][] = [
+   ['Scenarios', '/scenarios', 'guided Asteria test cases across the three tracks'],
+ ]
+ 
+-/** Demo entry: a live answer decoded out of the rain, straight from the backend graph. */
++type Brain = { graph_id: string; display_name: string; available: boolean }
++type BrainList = { items: Brain[]; default_graph_id: string | null }
++
++// Agent Workspace uses this same session-scoped choice. Never treat a source ID
++// as a graph ID: source filtering is NOT enforced by the graph APIs.
++function readWorkspaceGraph(tenantId: string) {
++  try { return sessionStorage.getItem(`verinex.workspace.graph.${tenantId}`) || localStorage.getItem(`verinex.workspace.graph.${tenantId}`) || '' }
++  catch { return '' }
++}
++
+ export function LandingPage() {
+   const { config } = useAuth()
++  const [choice, setChoice] = useState(() => ({ tenant: config.tenantId, id: readWorkspaceGraph(config.tenantId) }))
++  const requestedGraph = choice.tenant === config.tenantId ? choice.id : readWorkspaceGraph(config.tenantId)
+   const ready = useQuery({ queryKey: ['ready', config.baseUrl], queryFn: ({ signal }) => getReady(config, signal), retry: false })
+-  const situations = useQuery({ queryKey: ['landing-situations', config.tenantId], queryFn: ({ signal }) => listSituations(config, { limit: 10 }, signal) })
++  const registry = useQuery({
++    queryKey: ['landing-brains', config.baseUrl, config.tenantId, config.token],
++    queryFn: ({ signal }) => apiRequest<BrainList>(config, '/api/v1/graphs', { signal }),
++    retry: false,
++  })
++  const available = registry.data?.items.filter(brain => brain.available) || []
++  // A sole authorized graph is unambiguous; otherwise require an explicit choice.
++  // A stale saved choice must NEVER silently fall back to another graph.
++  const activeGraph = available.some(brain => brain.graph_id === requestedGraph)
++    ? requestedGraph : (!requestedGraph && available.length === 1 ? available[0].graph_id : '')
++  const selectedBrain = available.find(brain => brain.graph_id === activeGraph)
++  const scopedConfig = useMemo(() => ({ ...config, graphId: activeGraph || undefined }), [config, activeGraph])
++  const preview = useQuery({
++    queryKey: ['landing-graph-preview', config.baseUrl, config.tenantId, config.token, activeGraph],
++    queryFn: ({ signal }) => getGraphPreview(scopedConfig, signal),
++    enabled: !!activeGraph,
++    retry: false,
++  })
++  const situations = useQuery({
++    queryKey: ['landing-situations', config.baseUrl, config.tenantId, config.token, activeGraph],
++    queryFn: ({ signal }) => listSituations(scopedConfig, { limit: 10 }, signal),
++    enabled: !!activeGraph,
++    retry: false,
++  })
+   const lead = useMemo(() => {
+-    const items: any[] = situations.data?.items || []
++    const items = situations.data?.items || []
+     return items.find(s => String(s.status).toUpperCase() === 'OPEN') || items[0]
+   }, [situations.data])
+-  const context = useQuery({ queryKey: ['situation-context', config.tenantId, lead?.id, ''], queryFn: ({ signal }) => getSituationContext(config, lead.id, undefined, signal), enabled: !!lead?.id })
+-  const graph = useMemo(() => contextToGraph(context.data || {}), [context.data])
+-  const title = lead ? String(lead.title || lead.name || lead.id) : ''
++  const graph = useMemo(() => previewToGraph(preview.data || {}), [preview.data])
++  const chooseGraph = (id: string) => {
++    setChoice({ tenant: config.tenantId, id })
++    try {
++      if (id) {
++        sessionStorage.setItem(`verinex.workspace.graph.${config.tenantId}`, id)
++        localStorage.setItem(`verinex.workspace.graph.${config.tenantId}`, id)
++      } else {
++        sessionStorage.removeItem(`verinex.workspace.graph.${config.tenantId}`)
++        localStorage.removeItem(`verinex.workspace.graph.${config.tenantId}`)
++      }
++    } catch { /* no session storage available */ }
++  }
+ 
+   return <div className="landing">
+     <RainLayer density={1} />
+@@ -52,22 +98,40 @@ export function LandingPage() {
+         <p>GraphHacks turns a company's incidents, systems, people and decisions into one FalkorDB graph, then shows the traversal behind every answer it gives.</p>
+         <div className="toolbar">
+           <Link className="button-link" to="/situations">Enter console</Link>
+-          {lead && <Link className="landing-secondary" to={`/situations/${encodeURIComponent(lead.id)}`}>Open {lead.id}</Link>}
++          {activeGraph && <Link className="landing-secondary" to={`/agent-workspace?graph=${encodeURIComponent(activeGraph)}`}>Open selected brain</Link>}
+         </div>
+       </section>
+ 
+-      <section className="panel landing-live" aria-label="Live answer from the graph">
++      <section className="panel landing-live" aria-label="Live Company Brain graph">
+         <h3>Live from the graph</h3>
+-        {situations.error ? <ErrorPanel error={situations.error} /> : !lead ? <p className="muted">{situations.isLoading ? 'Querying FalkorDB…' : 'The graph has no situations yet. Connect a source to begin.'}</p> : <>
+-          <div className="landing-q"><span aria-hidden="true">&gt;</span> What is happening right now, and why?</div>
+-          <div className="landing-a"><Decode text={title} delay={350} duration={800} /></div>
+-          <div className="toolbar"><StatusBadge value={lead.status} />{lead.severity && <StatusBadge value={lead.severity} />}<span className="technical-secondary">{lead.id}</span></div>
+-          {context.error ? <ErrorPanel error={context.error} /> : <GraphView graph={graph} height={300}  />}
+-          <div className="landing-trace">
+-            <span className="status"><span className="status__glyph" aria-hidden="true">◆</span><span>connected context</span></span>
+-            <span>{(context.data?.claims || []).length} claims · {(context.data?.evidence || []).length} evidence · {(context.data?.relationships || []).length} relationships returned by the backend</span>
+-          </div>
+-          <div className="technical-secondary">{config.tenantId==='asteria'?'Asteria is a synthetic demo organization.':config.tenantId==='northstar'?'Northstar is a synthetic demo company.':'Showing data for the selected tenant.'}</div>
++        {registry.error ? <ErrorPanel error={registry.error} /> : <>
++          <label className="field landing-brain-choice">
++            <span>Company Brain</span>
++            <select aria-label="Homepage Company Brain" value={activeGraph} onChange={event => chooseGraph(event.target.value)} disabled={registry.isLoading}>
++              <option value="">Select an authorized Company Brain</option>
++              {available.map(brain => <option key={brain.graph_id} value={brain.graph_id}>{brain.display_name}</option>)}
++            </select>
++          </label>
++          {registry.isLoading ? <p className="muted">Finding authorized Company Brains…</p>
++            : requestedGraph && !activeGraph ? <p role="alert">The previously selected Company Brain is no longer available to this tenant. Choose an authorized graph to continue.</p>
++            : !available.length ? <p className="muted">No available Company Brains. Register a graph in Sources to begin.</p>
++            : !activeGraph ? <p className="muted">Choose a Company Brain to load its live graph.</p>
++            : <>
++              <div className="landing-q"><span aria-hidden="true">&gt;</span> {selectedBrain?.display_name || activeGraph}</div>
++              {lead && <div className="landing-a"><Decode text={String(lead.title || lead.name || lead.id)} delay={350} duration={800} /> <StatusBadge value={lead.status} /></div>}
++              {preview.isLoading ? <p className="muted">Loading live, read-only graph preview…</p>
++                : preview.error ? <ErrorPanel error={preview.error} />
++                : !graph.nodes.length ? <p className="muted">This Company Brain has no current canonical entities to display.</p>
++                : <>
++                  <GraphView key={`${config.tenantId}:${activeGraph}`} graph={graph} apiConfig={scopedConfig} height={340} />
++                  <div className="landing-trace">
++                    <span className="status"><span className="status__glyph" aria-hidden="true">◆</span><span>live graph sample</span></span>
++                    <span>{graph.nodes.length} of {preview.data?.total_nodes} nodes · {graph.edges.length} displayed relationships (of {preview.data?.total_edges} current relationships)</span>
++                  </div>
++                  <p className="technical-secondary">Read-only sample of recorded entities and relationships from the selected Company Brain. Connections do not establish causality or verify claims.</p>
++                </>}
++              {situations.error && <p className="technical-secondary">Situation summary unavailable. The graph preview is retrieved independently.</p>}
++            </>}
+         </>}
+       </section>
+     </main>
+diff --git a/frontend/src/test/landingGraphPreview.test.tsx b/frontend/src/test/landingGraphPreview.test.tsx
+new file mode 100644
+index 0000000..db4718e
+--- /dev/null
++++ b/frontend/src/test/landingGraphPreview.test.tsx
+@@ -0,0 +1,86 @@
++import { beforeEach, describe, expect, it, vi } from 'vitest'
++import { fireEvent, render, screen, waitFor } from '@testing-library/react'
++import { MemoryRouter } from 'react-router-dom'
++import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
++import { LandingPage } from '../pages/LandingPage'
++import { getGraphPreview } from '../api/graphPreview'
++import { listSituations } from '../api/situations'
++import { apiRequest } from '../api/client'
++import type { ApiConfig } from '../api/types'
++
++let config: ApiConfig = {baseUrl: '', token: 'test-token', tenantId: 'asteria'}
++vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({config}) }))
++vi.mock('../api/client', () => ({apiRequest:vi.fn()}))
++vi.mock('../api/system', () => ({getReady:vi.fn().mockResolvedValue({ready:true})}))
++vi.mock('../api/graphPreview', () => ({getGraphPreview:vi.fn()}))
++vi.mock('../api/situations', () => ({listSituations:vi.fn()}))
++vi.mock('../components/GraphView', () => ({GraphView:({graph,apiConfig}:any)=><div data-testid="live-preview">{apiConfig?.graphId}: {graph.nodes.length} nodes / {graph.edges.length} edges</div>}))
++vi.mock('../components/Decode', () => ({Decode:({text}:any)=><>{text}</>}))
++vi.mock('../components/RainLayer', () => ({RainLayer:()=>null}))
++
++const ASTERIA = 'asteria_company_brain_v1'
++const OTHER = 'other_company_brain'
++const brains = {items:[{graph_id:ASTERIA,display_name:'Asteria',available:true},
++  {graph_id:OTHER,display_name:'Other Brain',available:true}],default_graph_id:null}
++const sample = {graph_id:ASTERIA,total_nodes:2,total_edges:1,sampled:false,
++  nodes:[{id:'INC-AST-ROUTE-OUTAGE',name:'Route outage',_labels:['Entity','Incident']},
++    {id:'SYS-AST',name:'Routing',_labels:['Entity','System']}],
++  edges:[{source:'INC-AST-ROUTE-OUTAGE',target:'SYS-AST',type:'AFFECTS',properties:{}}]}
++
++function mount() {
++  const client = new QueryClient({defaultOptions:{queries:{retry:false}}})
++  return render(<MemoryRouter><QueryClientProvider client={client}><LandingPage /></QueryClientProvider></MemoryRouter>)
++}
++
++describe('homepage Company Brain graph preview', () => {
++  beforeEach(() => {
++    vi.clearAllMocks()
++    sessionStorage.clear()
++    localStorage.clear()
++    config = {baseUrl:'',token:'test-token',tenantId:'asteria'}
++    vi.mocked(apiRequest).mockResolvedValue(brains)
++    vi.mocked(getGraphPreview).mockResolvedValue(sample)
++    vi.mocked(listSituations).mockResolvedValue({items:[],limit:10,has_more:false})
++  })
++
++  it('renders Asteria canonical graph without requiring a Situation result', async () => {
++    sessionStorage.setItem('verinex.workspace.graph.asteria', ASTERIA)
++    mount()
++    expect(await screen.findByTestId('live-preview')).toHaveTextContent(`${ASTERIA}: 2 nodes / 1 edges`)
++    expect(screen.queryByText(/The graph has no situations yet/)).not.toBeInTheDocument()
++    expect(vi.mocked(getGraphPreview).mock.calls[0][0].graphId).toBe(ASTERIA)
++    expect(vi.mocked(listSituations).mock.calls[0][0].graphId).toBe(ASTERIA)
++  })
++
++  it('does not leak or silently fall back when saved graph is no longer authorized', async () => {
++    sessionStorage.setItem('verinex.workspace.graph.asteria', 'deleted_brain')
++    mount()
++    expect(await screen.findByRole('alert')).toHaveTextContent(/no longer available/i)
++    expect(getGraphPreview).not.toHaveBeenCalled()
++    expect(listSituations).not.toHaveBeenCalled()
++  })
++
++  it('can select an authorized graph and shares the choice with Agent Workspace', async () => {
++    mount()
++    const selector = await screen.findByRole('combobox', {name:'Homepage Company Brain'})
++    await waitFor(() => expect(screen.getByText(/Choose a Company Brain to load/)).toBeInTheDocument())
++    fireEvent.change(selector, {target:{value:ASTERIA}})
++    expect(await screen.findByTestId('live-preview')).toHaveTextContent(ASTERIA)
++    expect(sessionStorage.getItem('verinex.workspace.graph.asteria')).toBe(ASTERIA)
++    expect(localStorage.getItem('verinex.workspace.graph.asteria')).toBe(ASTERIA)
++  })
++
++  it('restores an authorized selection from an earlier browser session', async () => {
++    localStorage.setItem('verinex.workspace.graph.asteria', ASTERIA)
++    mount()
++    expect(await screen.findByTestId('live-preview')).toHaveTextContent(ASTERIA)
++  })
++
++  it('does not display a graph if scoped preview request fails', async () => {
++    sessionStorage.setItem('verinex.workspace.graph.asteria', ASTERIA)
++    vi.mocked(getGraphPreview).mockRejectedValue(new Error('FalkorDB disconnected'))
++    mount()
++    expect(await screen.findByText(/FalkorDB disconnected/)).toBeInTheDocument()
++    expect(screen.queryByTestId('live-preview')).not.toBeInTheDocument()
++  })
++})

@@ -1,0 +1,413 @@
+diff --git a/backend/app/agent_runtime/tools.py b/backend/app/agent_runtime/tools.py
+--- a/backend/app/agent_runtime/tools.py
++++ b/backend/app/agent_runtime/tools.py
+@@ -59,6 +59,10 @@
+     direction: str = Field(default='both', pattern='^(both|out|in)$')
+ 
+ 
++class TaskBlockersArg(EntityArg):
++    max_depth: int = Field(default=4, ge=2, le=5)
++
++
+ class DependencyArg(EntityArg):
+     max_depth: int = Field(default=4, ge=1, le=6)
+ 
+@@ -70,6 +74,7 @@
+     'graph_paths': PathsArg,
+     'dependency_impact': DependencyArg,
+     'incident_context': EntityArg,
++    'task_blockers': TaskBlockersArg,
+     'historical_record': EntityArg,
+     'expertise': FindEntities,
+     'related_memory': MemoryArg,
+@@ -82,6 +87,7 @@
+     'graph_paths':'Find bounded multi-hop paths from an entity to a specific target or reachable neighbors.',
+     'dependency_impact':'Find operational systems that depend on a selected system (reverse DEPENDS_ON paths).',
+     'incident_context':'Retrieve incident evidence, competing claims, events, decisions and linked systems.',
++    'task_blockers':'Inspect active directed task blocking edges, find a cycle through the chosen task, and identify recorded assignments (read only).',
+     'historical_record':'Inspect current and superseded relationships and earlier owners/policies.',
+     'expertise':'Discover employees or teams with recorded EXPERT_IN and CANDIDATE_EXPERT edges.',
+     'related_memory':'Retrieve persisted claims, findings, checkpoints and outcomes connected to an entity, including validity and provenance.',
+@@ -136,6 +142,63 @@
+             result=snapshot.dependency_reachability(a.entity_id,reverse=True,max_depth=a.max_depth)
+             return {'impacted':[{'path':x,'name':(snapshot.node(x['entity_id']) or {}).get('name')}
+                                 for x in result[:25]],'truncated':len(result)>25}
++        if name == 'task_blockers':
++            if not has_label(node, 'Task'):
++                return {'error': 'NOT_A_TASK', 'entity_id': a.entity_id}
++            # A deadlock is a directed cycle of CURRENT task-to-task constraints.
++            # Do not interpret agent candidacy as assignment, or reverse edges as
++            # forward blockers. Bounded search, with the requested task as root.
++            adjacency: dict[str, list[tuple[str, Any]]] = {}
++            pending = [(a.entity_id, 0)]
++            visited: set[str] = set()
++            while pending and len(visited) < 40:
++                task_id, depth = pending.pop(0)
++                if task_id in visited:
++                    continue
++                visited.add(task_id)
++                task = snapshot.node(task_id)
++                if not has_label(task, 'Task') or not current(task):
++                    continue
++                outgoing = []
++                for edge in snapshot.edges_from(task_id, {'BLOCKED_BY', 'REQUIRES'}):
++                    target = snapshot.node(edge.target)
++                    if not has_label(target, 'Task') or not current(target):
++                        continue
++                    if edge.type == 'REQUIRES' and str(target.get('status') or '').upper() in {'COMPLETED', 'DONE', 'RESOLVED', 'CLOSED'}:
++                        continue
++                    outgoing.append((edge.target, edge))
++                    if depth + 1 < a.max_depth and edge.target not in visited:
++                        pending.append((edge.target, depth + 1))
++                adjacency[task_id] = sorted(outgoing, key=lambda item: (item[0], item[1].type))
++            cycles: list[dict[str, Any]] = []
++            def walk(task_id: str, path: list[str], edges: list[Any]) -> None:
++                if len(cycles) >= 4 or len(edges) >= a.max_depth:
++                    return
++                for nxt, edge in adjacency.get(task_id, []):
++                    if nxt == a.entity_id:
++                        cycles.append({'task_ids': path + [nxt], 'blocking_edges':
++                                       [item.as_dict() for item in edges + [edge]]})
++                    elif nxt not in path:
++                        walk(nxt, path + [nxt], edges + [edge])
++            walk(a.entity_id, [a.entity_id], [])
++            task_ids = set(visited)
++            # An active assignment establishes an owner; CANDIDATE_FOR does not.
++            assignments = []
++            for task_id in sorted(task_ids):
++                for edge in snapshot.edges_from(task_id, {'ASSIGNED_TO', 'CLAIMED_BY'}):
++                    owner = snapshot.node(edge.target)
++                    if has_label(owner, 'Agent') and current(owner):
++                        assignments.append({'task_id':task_id, 'agent':thin(owner),
++                                            'relationship':edge.as_dict()})
++            return {'entity_id': a.entity_id,
++                    'tasks': [thin(snapshot.node(task_id)) for task_id in sorted(task_ids)
++                              if has_label(snapshot.node(task_id), 'Task') and current(snapshot.node(task_id))],
++                    'blocking_edges': [edge.as_dict() for task_id in sorted(task_ids)
++                                       for _, edge in adjacency.get(task_id, [])],
++                    'cycles':cycles, 'deadlock_detected':bool(cycles),
++                    'assignments':assignments,
++                    'recommended_next_step':'Escalate for human review of the blocking dependency; do not remove edges, reassign agents or execute tasks automatically.',
++                    'scope':'Present-day directed graph edges through this task, bounded to max_depth; no independent proof of root cause.'}
+         if name == 'related_memory':
+             # Graph-backed memory retrieval is READ ONLY. Prefer direct relevant nodes,
+             # then bounded two-hop context through Task/Investigation/Incident paths.
+diff --git a/backend/app/agent_runtime/harness.py b/backend/app/agent_runtime/harness.py
+--- a/backend/app/agent_runtime/harness.py
++++ b/backend/app/agent_runtime/harness.py
+@@ -293,6 +293,7 @@
+ Never imply you executed a business action, created a task, or obtained approval: those capabilities are NOT in your tool set.
+ Use tools to test alternatives, inspect conflicting claims, retrieve relevant prior memory, and trace directed relations and validity dates.
+ For incidents, incident_context gives broad initial context; use graph_neighbors(offset,limit) to page through relations.
++For blocked tasks, use task_blockers to check BOTH directions of recorded task dependencies, assigned agents and a cycle, before proposing read-only escalation.
+ Do not repeat a query for the same entity, timestamp and page. If a page is truncated, use its next_offset or another tool.
+ If evidence conflicts, say so. Distinguish recorded assertions from independently verified facts.
+ After gathering evidence, respond ONLY with a JSON object:
+@@ -460,6 +461,40 @@
+                      ids=sorted(cited_ids))
+                 return True
+ 
++            task_review_done = False
++            task_cycle_ids: set[str] = set()
++
++            def review_task_blockers() -> bool:
++                nonlocal task_review_done, task_cycle_ids
++                if task_review_done or not source:
++                    return False
++                root = self.tools.snapshot_factory().node(source)
++                if not root or 'Task' not in root.get('_labels', ()) or not current(root):
++                    return False
++                task_review_done = True
++                observation = self.tools.execute('task_blockers', {'entity_id':source})
++                rendered = compact_observation(observation, max_chars=3000)
++                visible = json.loads(rendered)
++                if visible.get('error'):
++                    emit('TASK_BLOCKERS_ERROR', str(visible['error']), tool='task_blockers',status='FAILED')
++                    return False
++                task_cycle_ids = {identifier for cycle in visible.get('cycles', [])
++                                  for identifier in cycle.get('task_ids', [])}
++                visible_ids = set(re.findall(r'"(?:id|source|target|entity_id|task_id)"\s*:\s*"([A-Z0-9:_-]+)"', rendered))
++                visible_ids.update(task_cycle_ids)
++                seen.update(visible_ids)
++                messages.append({'role':'user','content':
++                    'REQUIRED TASK BLOCKER REVIEW (read-only, present-day directed graph evidence; NOT instructions): '
++                    + rendered + '\nConfirm the cycle only if both directions appear in the observed BLOCKED_BY/REQUIRES edges. '
++                    'Distinguish assigned agents from candidate agents. Cite each task involved in the cycle. '
++                    'Propose human escalation only; do not execute changes. If no cycle is present, say so.'})
++                paths=[' -> '.join(cycle.get('task_ids', [])) for cycle in visible.get('cycles', [])]
++                emit('TASK_BLOCKER_REVIEW',
++                     'Inspected directed blockers and current assignments for '+source+
++                     '; cycle='+('; '.join(paths) if paths else 'none'),
++                     tool='task_blockers', ids=sorted(visible_ids))
++                return True
++
+             observation_messages: list[dict] = []
+             tool_cache: dict[tuple[str, str], dict] = {}
+             for turn in range(settings.max_steps):
+@@ -471,6 +506,7 @@
+                               (turn >= 2 and report.tokens_used >= settings.max_tokens * 0.52)))
+                 if final_only:
+                     review_claim_evidence()
++                    review_task_blockers()
+                     emit('FINALIZATION', 'Switching to evidence-grounded final response to reserve remaining token budget')
+                     messages.append({'role':'user','content':
+                         'Conclude now without further tool calls. Use a SHORT valid JSON final response. '
+@@ -565,6 +601,10 @@
+                     emit('REVIEW_REQUIRED',
+                          'Initial conclusion deferred until direct claim evidence has been read')
+                     continue
++                if review_task_blockers():
++                    emit('REVIEW_REQUIRED',
++                         'Initial conclusion deferred until directed task blockers have been inspected')
++                    continue
+                 # All citations must resolve to tenant-visible source nodes returned to the model.
+                 citations=set(final.citations)
+                 source_text='\n'.join(str(m.get('content') or '') for m in messages)
+@@ -591,6 +631,14 @@
+                         'Your answer lacks a citation to the evidence reviewed. '
+                         'Cite an observed EVD record and qualify what it proves, or '
+                         'return confidence=insufficient with the missing verification.'})
++                    continue
++                if task_cycle_ids and final.confidence != 'insufficient' and not task_cycle_ids.issubset(citations):
++                    emit('INVALID_TASK_GROUNDING',
++                         'Confirmed task cycle requires citations to every task in that cycle',
++                         ids=sorted(task_cycle_ids), status='FAILED')
++                    messages.append({'role':'user','content':
++                        'Your supported deadlock conclusion must cite every task ID in the inspected cycle, '
++                        'or report insufficient evidence and identify what remains unknown.'})
+                     continue
+                 report.answer=final.answer
+                 report.citations=final.citations
+diff --git a/frontend/src/demo/AgentRuntimePanel.tsx b/frontend/src/demo/AgentRuntimePanel.tsx
+--- a/frontend/src/demo/AgentRuntimePanel.tsx
++++ b/frontend/src/demo/AgentRuntimePanel.tsx
+@@ -18,6 +18,7 @@
+ export function AgentRuntimePanel({scenario}:{scenario:Scenario}){
+  const {config,hasPermission}=useAuth()
+  const [goal,setGoal]=useState(()=>scenario.test_prompts[0]||`Investigate ${scenario.title}`)
++ const [guidedQuestion,setGuidedQuestion]=useState('0')
+  const [consent,setConsent]=useState(false)
+  const [runId,setRunId]=useState('')
+  const [runIdInput,setRunIdInput]=useState('')
+@@ -58,7 +59,9 @@
+   {graphAvailable&&!source.isLoading&&!sourceAvailable&&<p role="alert" className="notice">Scenario starting entity <code>{sourceId}</code> cannot be read in the scoped Asteria graph. The model will not be called.</p>}
+   {status.error&&<ErrorPanel error={status.error}/>}
+   {!configured&&<p className="notice">Set the backend model provider and API key before starting a run. Example: <code>GRAPH_HACKS_AGENT_PROVIDER=groq</code> and <code>GROQ_API_KEY</code>. The browser never receives your model key.</p>}
+-  <label className="field"><span>Organizational objective</span><textarea value={goal} maxLength={1500} rows={3} onChange={e=>setGoal(e.target.value)} /></label>
++  {scenario.test_prompts.length>1&&<label className="field"><span>Guided investigation question</span><select value={guidedQuestion} onChange={e=>{setGuidedQuestion(e.target.value);if(e.target.value!=='custom')setGoal(scenario.test_prompts[Number(e.target.value)]);setRunId('');run.reset()}}>{scenario.test_prompts.map((question,i)=><option key={i} value={String(i)}>{i===0?'Full evidence-backed investigation':`Question ${i}: ${question}`}</option>)}{guidedQuestion==='custom'&&<option value="custom">Custom objective</option>}</select></label>}
++  <label className="field"><span>Organizational objective</span><textarea value={goal} maxLength={1500} rows={3} onChange={e=>{setGoal(e.target.value);setGuidedQuestion('custom');setRunId('');run.reset()}} /></label>
++  {scenario.test_prompts.length>1&&<p className="technical-secondary">Each question starts a separately persisted investigation. Changing the question clears the previous on-screen result; it does not continue the previous model conversation.</p>}
+   <label className="field"><span>Maximum tool-selection iterations</span><select value={limit} onChange={e=>setLimit(Number(e.target.value))}>{[4,6,8,10,12].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+   <label style={{display:'flex',alignItems:'flex-start',gap:8}}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>I authorize sending selected organizational context and read-only tool observations to the configured model provider for this investigation.</span></label>
+   <div className="toolbar"><button className="primary" disabled={!configured||!graphAvailable||!sourceAvailable||!consent||goal.trim().length<12||!hasPermission('CREATE_INVESTIGATION')||run.isPending} onClick={()=>{setRunId('');run.mutate()}}>{run.isPending?'Agent investigating…':'Start autonomous investigation'}</button><span className="muted">Read-only organizational tools; no actions or task creation.</span></div>
+diff --git a/frontend/src/demo/SupervisorPanel.tsx b/frontend/src/demo/SupervisorPanel.tsx
+--- a/frontend/src/demo/SupervisorPanel.tsx
++++ b/frontend/src/demo/SupervisorPanel.tsx
+@@ -5,6 +5,7 @@
+ import {apiRequest} from '../api/client'
+ import {ErrorPanel} from '../components/AsyncState'
+ import type {Scenario} from './demoModel'
++import {ASTERIA_GRAPH,buildDemoHarnessConfig} from './agentRuntimeScope'
+ 
+ type Finding = {summary:string;citations:string[];knowledge_gaps:string[];confidence:string;assertions?:{subject_id:string;predicate:string;value:string}[];risk:string;requires_human_review:boolean}
+ type Task = {id:string;objective:string;capability:string;depends_on:string[];status:string;agent_id?:string|null;attempts:number;result?:Finding|null;error?:string|null}
+@@ -14,6 +15,7 @@
+ 
+ export function SupervisorPanel({scenario}:{scenario:Scenario}){
+  const {config,hasPermission}=useAuth()
++ const scopedConfig=buildDemoHarnessConfig(config)
+  const [goal,setGoal]=useState(scenario.test_prompts[0]||`Investigate ${scenario.title}`)
+  const [consent,setConsent]=useState(false)
+  const [runId,setRunId]=useState('')
+@@ -21,13 +23,13 @@
+  const [parallel,setParallel]=useState(3)
+  const [showRegistry,setShowRegistry]=useState(false)
+  const [resumeResult,setResumeResult]=useState<Run|null>(null)
+- const registry=useQuery({queryKey:['supervisor-registry',config.tenantId],queryFn:({signal})=>apiRequest<Registry>(config,'/api/v1/agent-runtime/supervisor/registry',{signal}),retry:false})
+- const create=useMutation({mutationFn:()=>apiRequest<Run>(config,'/api/v1/agent-runtime/supervisor/runs',{
++ const registry=useQuery({queryKey:['supervisor-registry',config.baseUrl,config.tenantId,config.token,ASTERIA_GRAPH],queryFn:({signal})=>apiRequest<Registry>(scopedConfig,'/api/v1/agent-runtime/supervisor/registry',{signal}),retry:false})
++ const create=useMutation({mutationFn:()=>apiRequest<Run>(scopedConfig,'/api/v1/agent-runtime/supervisor/runs',{
+    method:'POST',body:{goal,source_entity_id:scenario.entry_ids[0],allow_external_model:consent,max_parallel:parallel}
+  })})
+- const resume=useMutation({mutationFn:()=>apiRequest<Run>(config,`/api/v1/agent-runtime/supervisor/runs/${encodeURIComponent(loadId)}/resume?allow_external_model=true`,{method:'POST'}),onSuccess:data=>{setResumeResult(data);setRunId('')}})
+- const reopened=useQuery({queryKey:['supervisor-run',config.tenantId,runId],enabled:!!runId,
+-   queryFn:({signal})=>apiRequest<Run>(config,`/api/v1/agent-runtime/supervisor/runs/${encodeURIComponent(runId)}`,{signal}),retry:false})
++ const resume=useMutation({mutationFn:()=>apiRequest<Run>(scopedConfig,`/api/v1/agent-runtime/supervisor/runs/${encodeURIComponent(loadId)}/resume?allow_external_model=true`,{method:'POST'}),onSuccess:data=>{setResumeResult(data);setRunId('')}})
++ const reopened=useQuery({queryKey:['supervisor-run',config.baseUrl,config.tenantId,config.token,ASTERIA_GRAPH,runId],enabled:!!runId,
++   queryFn:({signal})=>apiRequest<Run>(scopedConfig,`/api/v1/agent-runtime/supervisor/runs/${encodeURIComponent(runId)}`,{signal}),retry:false})
+  const data=reopened.data||resumeResult||create.data
+  return <section className="panel" style={{display:'grid',gap:12}}>
+   <div className="page-header"><div><div className="eyebrow">COMPONENT 2 / SUPERVISOR &amp; TASK SCHEDULER</div><h3>Coordinate specialist agents</h3><p>Read-only multi-agent investigations with parallel research, verified handoffs, dependency scheduling and human escalation.</p></div><span className="gh-demo-label">MULTI-AGENT</span></div>
+diff --git a/frontend/src/demo/AgentMemoryPanel.tsx b/frontend/src/demo/AgentMemoryPanel.tsx
+--- a/frontend/src/demo/AgentMemoryPanel.tsx
++++ b/frontend/src/demo/AgentMemoryPanel.tsx
+@@ -5,21 +5,23 @@
+ import {apiRequest} from '../api/client'
+ import {ErrorPanel} from '../components/AsyncState'
+ import type {Scenario} from './demoModel'
++import {buildDemoHarnessConfig} from './agentRuntimeScope'
+ 
+ type Memory = {id:string;subject_id:string;predicate:string;value:string;summary:string;citations:string[];source_tools:string[];derived_memory_ids?:string[];status:string;scope:string;origin_agent_id:string;origin_run_id:string;origin_task_id:string;verified_by:string;verified_at:string;valid_until?:string;created_at:string;relevance:number}
+ type Result = {items:Memory[];count:number;policy:string}
+ 
+ export function AgentMemoryPanel({scenario}:{scenario:Scenario}){
+  const {config,hasPermission}=useAuth()
++ const scopedConfig=buildDemoHarnessConfig(config)
+  const [entity,setEntity]=useState(scenario.entry_ids[0]||'')
+  const [query,setQuery]=useState('dependency evidence')
+  const [reviewId,setReviewId]=useState('')
+  const [reason,setReason]=useState('')
+  const [reviewStatus,setReviewStatus]=useState('RECHECK_REQUIRED')
+- const lookup=useMutation({mutationFn:()=>apiRequest<Result>(config,'/api/v1/agent-runtime/memory/search',{
++ const lookup=useMutation({mutationFn:()=>apiRequest<Result>(scopedConfig,'/api/v1/agent-runtime/memory/search',{
+   method:'POST',body:{entity_ids:entity.trim()?[entity.trim()]:[],query:query.trim(),limit:15}
+  })})
+- const review=useMutation({mutationFn:()=>apiRequest(config,`/api/v1/agent-runtime/memory/${encodeURIComponent(reviewId)}/validity`,{
++ const review=useMutation({mutationFn:()=>apiRequest(scopedConfig,`/api/v1/agent-runtime/memory/${encodeURIComponent(reviewId)}/validity`,{
+   method:'POST',body:{status:reviewStatus,reason}
+  }),onSuccess:()=>lookup.mutate()})
+  return <section className="panel" style={{display:'grid',gap:12}}>
+diff --git a/frontend/src/data/asteriaScenarios.json b/frontend/src/data/asteriaScenarios.json
+--- a/frontend/src/data/asteriaScenarios.json
++++ b/frontend/src/data/asteriaScenarios.json
+@@ -346,7 +346,11 @@
+       "AGENT-AST-POLICY"
+     ],
+     "test_prompts": [
+-      "Identify a blocking cycle and suggest escalation without executing actions."
++      "Investigate TASK-AST-DEADLOCK-A and TASK-AST-DEADLOCK-B: check both directed blocking edges, current task states and assigned agents. Cite graph records for any confirmed cycle, identify what remains unknown, and propose human-reviewed escalation without modifying tasks or executing actions.",
++      "Which current graph records show why TASK-AST-DEADLOCK-A is blocked?",
++      "Does TASK-AST-DEADLOCK-B also depend on TASK-AST-DEADLOCK-A? Verify BOTH directed blocking relationships and cite both tasks.",
++      "Which agents are assigned to the blocked tasks? Distinguish confirmed assignment from candidate eligibility.",
++      "What human-reviewed escalation or dependency re-plan is appropriate? Recommend only; take no action."
+     ],
+     "permitted_operations": [
+       "READ_GRAPH",
+diff --git a/fixtures/asteria/v1/scenarios/ast-am-04.json b/fixtures/asteria/v1/scenarios/ast-am-04.json
+--- a/fixtures/asteria/v1/scenarios/ast-am-04.json
++++ b/fixtures/asteria/v1/scenarios/ast-am-04.json
+@@ -33,7 +33,11 @@
+     "UNBOUNDED_DATABASE_MUTATION"
+   ],
+   "test_prompts": [
+-    "Identify a blocking cycle and suggest escalation without executing actions."
++    "Investigate TASK-AST-DEADLOCK-A and TASK-AST-DEADLOCK-B: check both directed blocking edges, current task states and assigned agents. Cite graph records for any confirmed cycle, identify what remains unknown, and propose human-reviewed escalation without modifying tasks or executing actions.",
++    "Which current graph records show why TASK-AST-DEADLOCK-A is blocked?",
++    "Does TASK-AST-DEADLOCK-B also depend on TASK-AST-DEADLOCK-A? Verify BOTH directed blocking relationships and cite both tasks.",
++    "Which agents are assigned to the blocked tasks? Distinguish confirmed assignment from candidate eligibility.",
++    "What human-reviewed escalation or dependency re-plan is appropriate? Recommend only; take no action."
+   ],
+   "visible_to_agents": [
+     "graph facts",
+diff --git a/backend/tests/test_agent_runtime_task_deadlock.py b/backend/tests/test_agent_runtime_task_deadlock.py
+new file mode 100644
+--- /dev/null
++++ b/backend/tests/test_agent_runtime_task_deadlock.py
+@@ -0,0 +1,107 @@
++"""Two-agent deadlock: actual Asteria fixture, read-only tool, model loop grounding.
++
++No database or external provider is needed. The live FalkorDB graph is not
++assumed to match this pack until a separate live check succeeds.
++"""
++from __future__ import annotations
++
++import json
++from pathlib import Path
++
++from backend.app.agent_runtime.harness import AgentHarness, AgentSettings
++from backend.app.agent_runtime.provider import Completion
++from backend.app.agent_runtime.tools import ToolRegistry, declarations
++from backend.app.services.phase4_graph import GraphEdge, GraphSnapshot
++
++
++ROOT = Path(__file__).resolve().parents[2]
++A = 'TASK-AST-DEADLOCK-A'
++B = 'TASK-AST-DEADLOCK-B'
++
++
++def fixture():
++    data = json.loads((ROOT / 'fixtures/asteria/v1/seed/03_coordination.json').read_text())
++    return GraphSnapshot(
++        {n['id']: {**n['properties'], '_labels':['Entity', n['label']]} for n in data['nodes']},
++        [GraphEdge(e['source'],e['type'],e['target'],e.get('properties') or {}) for e in data['edges']],
++    )
++
++
++def test_fixture_deadlock_reports_both_directed_edges_and_assigned_agents():
++    report = ToolRegistry(fixture).execute('task_blockers',{'entity_id': A})
++    assert report['deadlock_detected'] is True
++    assert report['cycles'][0]['task_ids'] == [A, B, A]
++    assert [(e['source'], e['type'], e['target']) for e in report['cycles'][0]['blocking_edges']] == [
++        (A, 'BLOCKED_BY', B), (B, 'BLOCKED_BY', A),
++    ]
++    assignments = {(a['task_id'], a['agent']['id']) for a in report['assignments']}
++    assert assignments == {(A, 'AGENT-AST-INVESTIGATOR'), (B, 'AGENT-AST-POLICY')}
++    assert all(e['type'] in {'BLOCKED_BY','REQUIRES'} for e in report['blocking_edges'])
++    assert 'write' not in report['scope'].lower()
++    assert 'task_blockers' in [x['function']['name'] for x in declarations()]
++
++
++def test_no_false_cycle_when_reverse_edge_expired():
++    snapshot = fixture()
++    snapshot.remove_edges(lambda e: e.source == B and e.target == A and e.type == 'BLOCKED_BY')
++    report = ToolRegistry(lambda:snapshot).execute('task_blockers',{'entity_id':A})
++    assert report['deadlock_detected'] is False
++    assert report['cycles'] == []
++
++
++def test_task_blockers_is_type_safe_and_read_only():
++    snapshot = fixture()
++    original = [(e.source,e.type,e.target) for e in snapshot.edges]
++    registry = ToolRegistry(lambda:snapshot)
++    assert registry.execute('task_blockers', {'entity_id':'AGENT-AST-POLICY'})['error'] == 'NOT_A_TASK'
++    assert registry.execute('task_blockers', {'entity_id':A,'max_depth':2})['deadlock_detected']
++    assert [(e.source,e.type,e.target) for e in snapshot.edges] == original
++
++
++class ScriptedProvider:
++    name='scripted'
++    model='scripted-test'
++    def __init__(self, responses):
++        self.responses = list(responses)
++        self.prompts=[]
++    def complete(self, messages, tools, **kwargs):
++        self.prompts.append(json.dumps(messages))
++        assert self.responses, 'unexpected model call'
++        return Completion(self.responses.pop(0), [], 100)
++
++
++class MemoryStore:
++    def __init__(self):
++        self.saved=[]
++    def start(self, item):self.saved.append(('start',item))
++    def trace(self, run_id, item):self.saved.append(('trace',item))
++    def finish(self, run_id, item):self.saved.append(('finish',item))
++
++
++def conclusion(citations):
++    return json.dumps({'answer':'Two task-to-task blocking edges form a recorded cycle; escalate to a human to review dependencies without mutating the graph.',
++        'citations':citations,'knowledge_gaps':['Policy approval to change either dependency has not been obtained'],
++        'confidence':'supported'})
++
++
++def test_autonomous_task_investigation_must_review_cycle_and_cite_both_tasks():
++    # This model tries to finalize prematurely (and then cites only one task).
++    # The harness must first fetch *real* graph evidence, then reject the partial citation.
++    provider=ScriptedProvider([
++        json.dumps({'steps':['Check directed blockers', 'Verify assignments', 'Recommend human escalation']}),
++        conclusion([A]),
++        conclusion([A]),
++        conclusion([A,B]),
++    ])
++    store=MemoryStore()
++    runner=AgentHarness(provider=provider,tools=ToolRegistry(fixture),store=store,tenant='asteria')
++    result=runner.run(AgentSettings(goal=f'Investigate directed blocking cycle between {A} and {B}, without action',
++        source_entity_id=A, max_steps=4,allow_external_model=True),subject='test-user')
++    assert result.status=='COMPLETED'
++    assert result.citations==[A,B]
++    assert result.plan[0]=='Check directed blockers'
++    assert any(e['kind']=='TASK_BLOCKER_REVIEW' and f'{A} -> {B} -> {A}' in e['summary'] for e in result.trace)
++    assert any(e['kind']=='INVALID_TASK_GROUNDING' for e in result.trace)
++    assert any('REQUIRED TASK BLOCKER REVIEW' in prompt for prompt in provider.prompts[2:])
++    assert store.saved[-1][1]['status']=='COMPLETED'
++    assert not any(x['kind']=='TOOL_ERROR' for x in result.trace)
