@@ -87,3 +87,56 @@ def test_workspace_run_cannot_cross_selected_graph(monkeypatch):
     with pytest.raises(Exception) as e:
         workspace_api._workspace_owned(_principal('asteria_company_brain_v1'),'SRUN-'+'A'*32)
     assert getattr(e.value,'status_code',None)==404
+
+
+def test_workspace_legacy_unscoped_run_denied(monkeypatch):
+    class Store:
+        def get(self, *_args):
+            return {'id': 'SRUN-' + 'A' * 32, 'tenant': 'asteria',
+                    'owner': 'alice', 'status': 'FAILED'}  # no graph_id
+    monkeypatch.setattr(workspace_api, '_workspace_store', lambda _principal: Store())
+    with pytest.raises(Exception) as exc:
+        workspace_api._workspace_owned(_principal('asteria_company_brain_v1'), 'SRUN-' + 'A' * 32)
+    assert getattr(exc.value, 'status_code', None) == 404
+
+
+def test_workspace_list_excludes_missing_and_other_graph_scopes(monkeypatch):
+    graph = 'asteria_company_brain_v1'
+    principal = _principal(graph)
+    valid = {'id': 'SRUN-' + 'A' * 32, 'tenant': 'asteria', 'graph_id': graph,
+             'owner': 'alice', 'status': 'NEEDS_REVIEW', 'allow_external_model': True}
+    legacy = {**valid, 'id': 'SRUN-' + 'B' * 32}
+    legacy.pop('graph_id')
+    other = {**valid, 'id': 'SRUN-' + 'C' * 32, 'graph_id': 'unrelated_graph'}
+    wrong_tenant = {**valid, 'id': 'SRUN-' + 'D' * 32, 'tenant': 'not_asteria'}
+    class Store:
+        def list(self, owner, limit):
+            assert owner == 'alice' and limit == 20
+            return [legacy, other, wrong_tenant, valid]
+    monkeypatch.setattr(workspace_api, '_workspace_store', lambda _principal: Store())
+    monkeypatch.setattr(workspace_api.workspace_runner, 'live', lambda *_: False)
+    rows = workspace_api.workspace_runs(20, principal)['items']
+    assert [r['id'] for r in rows] == [valid['id']]
+    assert rows[0]['graph_id'] == graph and rows[0]['tenant'] == 'asteria'
+
+
+def test_workspace_changes_omits_unscoped_run_impacts(monkeypatch):
+    graph = 'asteria_company_brain_v1'
+    run = 'SRUN-' + 'A' * 32
+    legacy = 'SRUN-' + 'B' * 32
+    principal = _principal(graph)
+    events = [{'id': 'change-1', 'workflow_impacts': [
+        {'run_id': run}, {'run_id': legacy}, {'run_id': 'SRUN-' + 'C' * 32}]}]
+    monkeypatch.setattr(workspace_api, '_reactive_service',
+                        lambda _principal: SimpleNamespace(store=SimpleNamespace(list_events=lambda _limit: events)))
+    class Store:
+        def get(self, run_id, owner):
+            assert owner == 'alice'
+            if run_id == run:
+                return {'id': run, 'tenant': 'asteria', 'graph_id': graph}
+            if run_id == legacy:
+                return {'id': legacy, 'tenant': 'asteria'}
+            return None
+    monkeypatch.setattr(workspace_api, '_workspace_store', lambda _principal: Store())
+    result = workspace_api.workspace_changes(20, principal)
+    assert result['items'][0]['workflow_impacts'] == [{'run_id': run}]

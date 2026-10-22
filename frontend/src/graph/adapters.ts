@@ -21,11 +21,29 @@ export function sqlSchemaToGraph(payload: Dict): UiGraph {
 function labels(n: Dict) { return Array.isArray(n?._labels) ? n._labels : [] }
 function nodeType(n: Dict) { return String(labels(n).find((x:string) => x !== 'Entity') || n?.type || n?.kind || 'Entity') }
 function labelFor(n: Dict) { return String(n?.name || n?.title || n?.statement || n?.description || n?.id || 'unknown') }
+// Relationship responses contain both full neighbors and ID-only endpoints.
+// Never let a reference-only placeholder replace a canonical node payload.
+function nodeDetailScore(node: UiGraphNode): number {
+  const raw = node.data || {}
+  const properties = Object.keys(raw).filter(key => !['id', 'entity_id', 'task_id', 'claim_id', 'evidence_id'].includes(key))
+  return properties.length + (node.type !== 'Entity' && node.type !== 'EvidenceRoot' ? 2 : 0)
+}
+function preserveRichNode(map: Map<string, UiGraphNode>, next: UiGraphNode) {
+  const previous = map.get(next.id)
+  if (!previous) { map.set(next.id, next); return }
+  const richer = nodeDetailScore(next) > nodeDetailScore(previous) ? next : previous
+  const weaker = richer === next ? previous : next
+  map.set(next.id, {
+    ...richer,
+    status: richer.status || weaker.status,
+    data: {...weaker.data, ...richer.data},
+  })
+}
 function addNode(map: Map<string, UiGraphNode>, value: any, forcedType?: string) {
   if (!value || typeof value !== 'object') return
   const id = String(value.id || value.entity_id || value.task_id || value.claim_id || value.evidence_id || '')
   if (!id) return
-  map.set(id, { id, type: forcedType || nodeType(value), label: labelFor(value), status: value.status, data: value })
+  preserveRichNode(map, { id, type: forcedType || nodeType(value), label: labelFor(value), status: value.status, data: value })
 }
 function addEdge(map: Map<string, UiGraphEdge>, source: string, type: string, target: string, data: Dict = {}) {
   if (!source || !target) return
@@ -119,9 +137,7 @@ export function mergeGraphs(...graphs: UiGraph[]): UiGraph {
   const nodes=new Map<string,UiGraphNode>(), edges=new Map<string,UiGraphEdge>()
   for (const graph of graphs) {
     for (const node of graph.nodes) {
-      const prior=nodes.get(node.id)
-      // Neighbor expansion may return placeholder IDs; don't erase a richer node.
-      if(!prior || Object.keys(node.data||{}).length>=Object.keys(prior.data||{}).length) nodes.set(node.id,node)
+      preserveRichNode(nodes,node)
     }
     for (const edge of graph.edges) edges.set(edge.id,edge)
   }

@@ -1,0 +1,20 @@
+{
+  "package": "A1",
+  "check": "Asteria Workspace scope diagnostic",
+  "graph": "asteria_company_brain_v1",
+  "tenant": "asteria",
+  "executed_at_utc": "2026-10-21T23:29:57.126548+00:00",
+  "model_calls": 0,
+  "business_graph_writes": 0,
+  "list_http_status": 200,
+  "returned_count": 0,
+  "categories": {},
+  "classification": "ALL_RETURNED_ROWS_ASTERIA_SCOPED",
+  "matching_asteria_run_checks": "NO_MATCHING_OWNED_RUN_FOR_READBACK",
+  "unregistered_graph_authorization": {
+    "http_status": 404,
+    "denied": true,
+    "error_type": "HTTP_REJECTED"
+  },
+  "outcome": "SCOPED_LIST_VERIFIED"
+}

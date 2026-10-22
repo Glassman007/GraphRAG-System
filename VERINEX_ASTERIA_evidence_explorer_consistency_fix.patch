@@ -1,0 +1,353 @@
+diff --git a/frontend/src/components/GraphView.tsx b/frontend/src/components/GraphView.tsx
+index 7352caf..b4d0bb8 100644
+--- a/frontend/src/components/GraphView.tsx
++++ b/frontend/src/components/GraphView.tsx
+@@ -1,7 +1,9 @@
+ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+ import cytoscape from 'cytoscape'
+ import { useAuth } from '../auth/AuthContext'
+-import { getNeighbors } from '../api/entities'
++import { getEntity, getEntityProvenance, getNeighbors } from '../api/entities'
++import type { ApiConfig } from '../api/types'
++import { useQuery } from '@tanstack/react-query'
+ import type { UiGraph } from '../graph/adapters'
+ import { mergeGraphs, relationshipsToGraph } from '../graph/adapters'
+ import { flowTrace, ghGraphStyle } from '../design/graphStyle'
+@@ -13,10 +15,12 @@ import { TechnicalDetails } from './TechnicalDetails'
+ import { Link } from 'react-router-dom'
+ 
+ type Layout = 'cose'|'breadthfirst'|'circle'
+-type GraphProps = {graph:UiGraph;onNode?:(data:any)=>void;onEdge?:(data:any)=>void;layout?:Layout;height?:number;traceIds?:Set<string>}
++type GraphProps = {graph:UiGraph;onNode?:(data:any)=>void;onEdge?:(data:any)=>void;layout?:Layout;height?:number;traceIds?:Set<string>;apiConfig?:ApiConfig}
+ const inference=(data:any)=>data?.inferred===true||data?.is_inferred===true||data?.expected===true||String(data?.inference_type||'').toUpperCase()==='INFERRED'
+-export function GraphView({graph,onNode,onEdge,layout='cose',height=480,traceIds}:GraphProps) {
+-  const {config}=useAuth()
++export function GraphView({graph,onNode,onEdge,layout='cose',height=480,traceIds,apiConfig}:GraphProps) {
++  const {config:authConfig}=useAuth()
++  const config=apiConfig||authConfig
++  const scoped=Boolean(apiConfig?.graphId)
+   const ref=useRef<HTMLDivElement>(null),cyRef=useRef<cytoscape.Core|null>(null)
+   const onNodeRef=useRef(onNode),onEdgeRef=useRef(onEdge)
+   onNodeRef.current=onNode;onEdgeRef.current=onEdge
+@@ -26,6 +30,20 @@ export function GraphView({graph,onNode,onEdge,layout='cose',height=480,traceIds
+   const [focus,setFocus]=useState(''),[picked,setPicked]=useState<any>(null)
+   const [expanded,setExpanded]=useState<UiGraph>({nodes:[],edges:[]})
+   const [expanding,setExpanding]=useState(false),[expandError,setExpandError]=useState('')
++  const scopeKey=[config.baseUrl,config.tenantId,config.graphId||''].join('|')
++  const latestScope=useRef(scopeKey)
++  latestScope.current=scopeKey
++  const pickedId=picked?.kind==='node' ? String(picked.id) : ''
++  const canonical=useQuery({
++    queryKey:['evidence-graph-entity',scopeKey,pickedId],
++    queryFn:({signal})=>getEntity(config,pickedId,undefined,signal),
++    enabled:scoped&&!!pickedId,retry:false,
++  })
++  const provenance=useQuery({
++    queryKey:['evidence-graph-provenance',scopeKey,pickedId],
++    queryFn:({signal})=>getEntityProvenance(config,pickedId,signal),
++    enabled:scoped&&!!pickedId&&canonical.isSuccess,retry:false,
++  })
+   const merged=useMemo(()=>mergeGraphs(graph,expanded),[graph,expanded])
+   const types=useMemo(()=>Array.from(new Set(merged.nodes.map(n=>n.type))).sort(),[merged])
+   const visible=useMemo(()=>{
+@@ -36,7 +54,7 @@ export function GraphView({graph,onNode,onEdge,layout='cose',height=480,traceIds
+   const toggle=useCallback((t:string)=>setHidden(prev=>{const next=new Set(prev);next.has(t)?next.delete(t):next.add(t);return next}),[])
+   const signature=useMemo(()=>JSON.stringify(visible),[visible])
+   const traceSignature=useMemo(()=>[...(traceIds||[])].sort().join('|'),[traceIds])
+-  useEffect(()=>{setExpanded({nodes:[],edges:[]});setPicked(null);setFocus('')},[graph])
++  useEffect(()=>{setExpanded({nodes:[],edges:[]});setPicked(null);setFocus('');setExpandError('')},[graph,scopeKey])
+   useEffect(()=>{
+     if(!ref.current||!visible.nodes.length) {cyRef.current?.destroy();cyRef.current=null;return}
+     const present=new Set(visible.nodes.map(n=>n.id))
+@@ -54,12 +72,37 @@ export function GraphView({graph,onNode,onEdge,layout='cose',height=480,traceIds
+   },[signature,activeLayout,traceSignature])
+   const zoom=(factor:number)=>{const cy=cyRef.current;if(!cy)return;cy.zoom({level:Math.min(3,Math.max(.15,cy.zoom()*factor)),renderedPosition:{x:cy.width()/2,y:cy.height()/2}})}
+   const locate=(term:string)=>{const cy=cyRef.current;if(!cy||!term)return;const n=cy.nodes().filter(e=>String(e.data('id')).toLowerCase().includes(term.toLowerCase())||String(e.data('label')).toLowerCase().includes(term.toLowerCase())).first();if(!n.length)return;setFocus(n.id());setPicked({...n.data(),kind:'node'});cy.animate({fit:{eles:n, padding:100},duration:200});onNodeRef.current?.(n.data())}
+-  const expand=async()=>{if(!focus)return;setExpanding(true);setExpandError('');try{const rels=await getNeighbors(config,focus,{limit:50});const items=Array.isArray(rels.items)?rels.items:[];const neighbors=relationshipsToGraph(items);setExpanded(prev=>mergeGraphs(prev,neighbors))}catch(e){setExpandError(String(e))}finally{setExpanding(false)}}
++  const inspectEndpoint=(id:string)=>{
++    const node=merged.nodes.find(n=>n.id===id)
++    setPicked({id,type:node?.type||'Entity',raw:node?.data||{id},kind:'node'})
++    setFocus(id)
++  }
++  const expand=async()=>{
++    if(!focus || (scoped&&!canonical.isSuccess))return
++    const startedScope=scopeKey
++    setExpanding(true);setExpandError('')
++    try {
++      const rels=await getNeighbors(config,focus,{limit:50})
++      const neighbors=relationshipsToGraph(Array.isArray(rels.items)?rels.items:[])
++      if(latestScope.current===startedScope)setExpanded(prev=>mergeGraphs(prev,neighbors))
++    } catch(e) {if(latestScope.current===startedScope)setExpandError(String(e))}
++    finally {if(latestScope.current===startedScope)setExpanding(false)}
++  }
+   if(!merged.nodes.length)return <EmptyState title="No graph data" detail="The backend did not return graph-shaped data for this view." />
+   return <div className="gh-graph"><div className="gh-graph-toolbar"><label className="field"><span>Find node</span><input value={search} placeholder="Name or ID" onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')locate(search)}}/></label><button onClick={()=>locate(q)} disabled={!q}>Find</button><button onClick={()=>cyRef.current?.fit(undefined,32)}>Fit all</button><button onClick={()=>zoom(1.3)} aria-label="Zoom in">+</button><button onClick={()=>zoom(1/1.3)} aria-label="Zoom out">−</button><label className="field"><span>Layout</span><select value={activeLayout} onChange={e=>setLayout(e.target.value as Layout)}><option value="cose">Network</option><option value="breadthfirst">Hierarchy</option><option value="circle">Circle</option></select></label></div>
+     <GraphLegend types={types} hidden={hidden} onToggle={toggle}/>
+     <div className="gh-graph-key">Solid edge = recorded relationship · Dashed edge = explicitly inferred · Violet = explicitly provided trace</div>
+     {visible.nodes.length?<div className="graph-canvas" ref={ref} style={{height}} aria-label="Interactive graph"/>:<EmptyState title="All node categories hidden" detail="Select a category above to show it again."/>}
+-    {picked&&<section className="panel gh-graph-inspector" aria-label="Graph selection"><div className="toolbar" style={{justifyContent:'space-between'}}><h3>{picked.kind==='edge'?'Relationship':'Selected entity'}</h3><button onClick={()=>{setPicked(null);cyRef.current?.elements().removeClass('faded neighbor')}}>Close</button></div>{picked.kind==='edge'?<><p><strong>{presentRelationship(picked.type,picked.source,picked.target).phrase}</strong></p><div className="technical-secondary">{picked.type} · {picked.source} → {picked.target}</div><p>{inference(picked.raw)?'Inferred relationship: verify its source before relying on it.':'Graph relationship returned by the backend. Its existence does not establish causality.'}</p><div className="toolbar"><Link to={`/entities/${encodeURIComponent(picked.source)}`}>View source</Link><Link to={`/entities/${encodeURIComponent(picked.target)}`}>View target</Link></div></>:<><strong>{displayName(picked.raw||{id:picked.id})}</strong><p className="technical-secondary">{picked.type} · {picked.id}</p>{picked.raw?.description&&<p>{picked.raw.description}</p>}{picked.raw?.status&&<p>Status: {String(picked.raw.status)}</p>}{picked.raw?.source_name&&<p>Source: {String(picked.raw.source_name)}</p>}{picked.raw?.observed_at&&<p>Observed: {String(picked.raw.observed_at)}</p>}<div className="toolbar"><Link to={`/entities/${encodeURIComponent(picked.id)}`}>Details and provenance</Link><button onClick={expand} disabled={expanding}>{expanding?'Expanding…':'Expand neighbors'}</button></div>{expandError&&<p role="alert">{expandError}</p>}</> }<TechnicalDetails><pre>{JSON.stringify(picked.raw||picked,null,2)}</pre></TechnicalDetails></section>}
++    {picked&&<section className="panel gh-graph-inspector" aria-label="Graph selection"><div className="toolbar" style={{justifyContent:'space-between'}}><h3>{picked.kind==='edge'?'Relationship':'Selected entity'}</h3><button onClick={()=>{setPicked(null);cyRef.current?.elements().removeClass('faded neighbor')}}>Close</button></div>{picked.kind==='edge'?<><p><strong>{presentRelationship(picked.type,picked.source,picked.target).phrase}</strong></p><div className="technical-secondary">{picked.type} · {picked.source} → {picked.target}</div><p>{inference(picked.raw)?'Inferred relationship: verify its source before relying on it.':'Graph relationship returned by the backend. Its existence does not establish causality.'}</p><div className="toolbar">{scoped?<><button onClick={()=>inspectEndpoint(String(picked.source))}>Inspect source in selected graph</button><button onClick={()=>inspectEndpoint(String(picked.target))}>Inspect target in selected graph</button></>:<><Link to={`/entities/${encodeURIComponent(picked.source)}`}>View source</Link><Link to={`/entities/${encodeURIComponent(picked.target)}`}>View target</Link></>}</div></>:<><strong>{displayName(picked.raw||{id:picked.id})}</strong><p className="technical-secondary">{picked.type} · {picked.id}</p>{picked.raw?.description&&<p>{picked.raw.description}</p>}{picked.raw?.status&&<p>Status: {String(picked.raw.status)}</p>}{picked.raw?.source_name&&<p>Source: {String(picked.raw.source_name)}</p>}{picked.raw?.observed_at&&<p>Observed: {String(picked.raw.observed_at)}</p>}{scoped&&<div className="aw-inspector" data-testid="scoped-entity-readback">
++    {canonical.isPending&&<p>Checking canonical entity in the selected Company Brain…</p>}
++    {canonical.error&&<p role="alert">Canonical entity lookup failed in the selected Company Brain: {String(canonical.error)}. A displayed graph reference is not proof that the entity exists.</p>}
++    {canonical.data&&<><p>Canonical entity found in the selected Company Brain.</p>
++      <TechnicalDetails title="Canonical entity"><pre>{JSON.stringify(canonical.data,null,2)}</pre></TechnicalDetails>
++      {provenance.isPending&&<p>Loading provenance…</p>}
++      {provenance.error&&<p role="alert">Provenance could not be loaded: {String(provenance.error)}</p>}
++      {provenance.data&&<><p>{provenance.data?.source_ref_id||provenance.data?.source_record_id||(provenance.data?.links||[]).length ? 'Provenance references returned; inspect their source records before trusting the claim.' : 'No source provenance references were returned for this entity.'}</p><TechnicalDetails title="Recorded provenance"><pre>{JSON.stringify(provenance.data,null,2)}</pre></TechnicalDetails></>}
++    </>}
++  </div>}
++  <div className="toolbar">{!scoped&&<Link to={`/entities/${encodeURIComponent(picked.id)}`}>Details and provenance</Link>}<button onClick={expand} disabled={expanding||(scoped&&!canonical.isSuccess)}>{expanding?'Expanding…':'Expand neighbors'}</button></div>{expandError&&<p role="alert">{expandError}</p>}</> }<TechnicalDetails><pre>{JSON.stringify(picked.raw||picked,null,2)}</pre></TechnicalDetails></section>}
+   </div>
+ }
+diff --git a/frontend/src/graph/adapters.ts b/frontend/src/graph/adapters.ts
+index b10a198..750e20e 100644
+--- a/frontend/src/graph/adapters.ts
++++ b/frontend/src/graph/adapters.ts
+@@ -21,11 +21,29 @@ export function sqlSchemaToGraph(payload: Dict): UiGraph {
+ function labels(n: Dict) { return Array.isArray(n?._labels) ? n._labels : [] }
+ function nodeType(n: Dict) { return String(labels(n).find((x:string) => x !== 'Entity') || n?.type || n?.kind || 'Entity') }
+ function labelFor(n: Dict) { return String(n?.name || n?.title || n?.statement || n?.description || n?.id || 'unknown') }
++// Relationship responses contain both full neighbors and ID-only endpoints.
++// Never let a reference-only placeholder replace a canonical node payload.
++function nodeDetailScore(node: UiGraphNode): number {
++  const raw = node.data || {}
++  const properties = Object.keys(raw).filter(key => !['id', 'entity_id', 'task_id', 'claim_id', 'evidence_id'].includes(key))
++  return properties.length + (node.type !== 'Entity' && node.type !== 'EvidenceRoot' ? 2 : 0)
++}
++function preserveRichNode(map: Map<string, UiGraphNode>, next: UiGraphNode) {
++  const previous = map.get(next.id)
++  if (!previous) { map.set(next.id, next); return }
++  const richer = nodeDetailScore(next) > nodeDetailScore(previous) ? next : previous
++  const weaker = richer === next ? previous : next
++  map.set(next.id, {
++    ...richer,
++    status: richer.status || weaker.status,
++    data: {...weaker.data, ...richer.data},
++  })
++}
+ function addNode(map: Map<string, UiGraphNode>, value: any, forcedType?: string) {
+   if (!value || typeof value !== 'object') return
+   const id = String(value.id || value.entity_id || value.task_id || value.claim_id || value.evidence_id || '')
+   if (!id) return
+-  map.set(id, { id, type: forcedType || nodeType(value), label: labelFor(value), status: value.status, data: value })
++  preserveRichNode(map, { id, type: forcedType || nodeType(value), label: labelFor(value), status: value.status, data: value })
+ }
+ function addEdge(map: Map<string, UiGraphEdge>, source: string, type: string, target: string, data: Dict = {}) {
+   if (!source || !target) return
+@@ -119,9 +137,7 @@ export function mergeGraphs(...graphs: UiGraph[]): UiGraph {
+   const nodes=new Map<string,UiGraphNode>(), edges=new Map<string,UiGraphEdge>()
+   for (const graph of graphs) {
+     for (const node of graph.nodes) {
+-      const prior=nodes.get(node.id)
+-      // Neighbor expansion may return placeholder IDs; don't erase a richer node.
+-      if(!prior || Object.keys(node.data||{}).length>=Object.keys(prior.data||{}).length) nodes.set(node.id,node)
++      preserveRichNode(nodes,node)
+     }
+     for (const edge of graph.edges) edges.set(edge.id,edge)
+   }
+diff --git a/frontend/src/pages/AgentWorkspacePage.tsx b/frontend/src/pages/AgentWorkspacePage.tsx
+index 2d2d3cb..e78a4f8 100644
+--- a/frontend/src/pages/AgentWorkspacePage.tsx
++++ b/frontend/src/pages/AgentWorkspacePage.tsx
+@@ -8,7 +8,7 @@ import {ErrorPanel} from '../components/AsyncState'
+ import {GovernedToolPanel} from '../demo/GovernedToolPanel'
+ import {GraphView} from '../components/GraphView'
+ import {getEntity,getNeighbors} from '../api/entities'
+-import {relationshipsToGraph} from '../graph/adapters'
++import {mergeGraphs,relationshipsToGraph} from '../graph/adapters'
+ import {allScenarios} from '../demo/demoModel'
+ import './agentWorkspace.css'
+ import {workspaceRecoveryState} from './workspaceRecovery'
+@@ -62,21 +62,31 @@ function TaskGraph({tasks,selected,onSelect}:{tasks:Task[];selected:string;onSel
+ 
+ function CitationLinks({ids,graphId}:{ids:string[];graphId?:string}){return <span className="aw-citations">{ids.map(id=>graphId?<span key={id}>{id}</span>:<Link key={id} to={`/entities/${encodeURIComponent(id)}`}>{id} ↗</Link>)}{!ids.length&&<span className="aw-muted">None verified</span>}</span>}
+ 
+-function EvidenceExplorer({ids,config}:{ids:string[];config:import('../api/types').ApiConfig}){
++export function EvidenceExplorer({ids,config}:{ids:string[];config:import('../api/types').ApiConfig}){
+  const [selected,setSelected]=useState('')
+  const focus=ids.includes(selected)?selected:ids[0]||''
+- const record=useQuery({queryKey:['workspace-evidence-entity',config.tenantId,config.baseUrl,focus],queryFn:()=>getEntity(config,focus),enabled:!!focus,retry:false})
+- const neighborhood=useQuery({queryKey:['workspace-evidence-neighbors',config.tenantId,config.baseUrl,focus],queryFn:()=>getNeighbors(config,focus,{limit:40}),enabled:!!focus,retry:false})
++ const record=useQuery({queryKey:['workspace-evidence-entity',config.tenantId,config.baseUrl,config.graphId,focus],queryFn:()=>getEntity(config,focus),enabled:!!focus&&!!config.graphId,retry:false})
++ const neighborhood=useQuery({queryKey:['workspace-evidence-neighbors',config.tenantId,config.baseUrl,config.graphId,focus],queryFn:()=>getNeighbors(config,focus,{limit:40}),enabled:!!focus&&!!config.graphId&&record.isSuccess,retry:false})
+  const graph=useMemo(()=>{
+   const found=relationshipsToGraph(Array.isArray(neighborhood.data?.items)?neighborhood.data.items:[])
+-  if(focus&&!found.nodes.some(n=>n.id===focus)) found.nodes.unshift({id:focus,type:'EvidenceRoot',label:focus,data:{id:focus}})
+-  return found
+- },[focus,neighborhood.data])
++  const entity=record.data?.entity||record.data
++  if(!entity)return {nodes:[],edges:[]}
++  const labels=Array.isArray(entity._labels)?entity._labels.filter((x:string)=>x!=='Entity'):[]
++  const type=String(labels[0]||entity.type||entity.kind||'Entity')
++  const root={id:focus,type,label:String(entity.name||entity.title||entity.id||focus),status:entity.status,data:entity}
++  return mergeGraphs(found,{nodes:[root],edges:[]})
++ },[focus,record.data,neighborhood.data])
+  if(!ids.length)return <p className="aw-muted">No verified final citations to explore.</p>
++ if(!config.graphId)return <p role="alert">Select a Company Brain before retrieving evidence. Unscoped entity lookups are disabled in this explorer.</p>
+  return <div className="aw-evidence-explorer"><div className="aw-controls-row"><label className="aw-field aw-grow"><span>Evidence or connected graph entity</span><select value={focus} onChange={e=>setSelected(e.target.value)}>{ids.map(id=><option value={id} key={id}>{id}</option>)}</select></label><span className="aw-muted">Scoped to selected Company Brain</span></div>
+-  {record.error&&<ErrorPanel error={record.error}/>}{neighborhood.error&&<ErrorPanel error={neighborhood.error}/>}
+-  {record.data&&<div className="aw-inspector"><b>{String(record.data?.entity?.name||record.data?.name||focus)}</b><p className="aw-muted">Record and provenance are backed by the current tenant graph. Edges below are returned graph relationships, not claims inferred by this interface.</p></div>}
+-  {neighborhood.isLoading?<p className="aw-muted">Retrieving connected evidence…</p>:<GraphView graph={graph} layout="breadthfirst" height={315}/>}<p className="aw-footnote">Graph paths and provenance are current graph reads. Click any node to inspect its recorded links. Claims still require source verification.</p>
++  {record.isLoading&&<p className="aw-muted">Checking selected citation in the current Company Brain…</p>}
++  {record.error&&<><ErrorPanel error={record.error}/><p role="alert">This citation could not be resolved to a canonical entity in the selected graph. The explorer will not display it as verified evidence.</p></>}
++  {record.data&&<><div className="aw-inspector"><b>{String(record.data?.entity?.name||record.data?.name||focus)}</b><p className="aw-muted">Canonical entity found in the selected graph. This alone does not verify the truth or provenance of associated claims.</p></div>
++   {neighborhood.isLoading&&<p className="aw-muted">Retrieving connected evidence…</p>}
++   {neighborhood.error&&<ErrorPanel error={neighborhood.error}/>}
++   {!neighborhood.isLoading&&!neighborhood.error&&<GraphView key={`${config.tenantId}:${config.graphId}:${focus}`} graph={graph} apiConfig={config} layout="breadthfirst" height={315}/>}
++   <p className="aw-footnote">Relationships are bounded graph reads. Select a node to verify its canonical identity and recorded provenance in this Company Brain. A connection does not establish causality.</p>
++  </>}
+  </div>
+ }
+ 
+diff --git a/frontend/src/test/evidenceGraphConsistency.test.tsx b/frontend/src/test/evidenceGraphConsistency.test.tsx
+new file mode 100644
+index 0000000..25c8b3e
+--- /dev/null
++++ b/frontend/src/test/evidenceGraphConsistency.test.tsx
+@@ -0,0 +1,78 @@
++import { beforeEach, describe, expect, it, vi } from 'vitest'
++import { render, screen, waitFor } from '@testing-library/react'
++import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
++import { relationshipsToGraph, mergeGraphs } from '../graph/adapters'
++import { EvidenceExplorer } from '../pages/AgentWorkspacePage'
++import { getEntity, getNeighbors } from '../api/entities'
++import type { ApiConfig } from '../api/types'
++
++vi.mock('../api/entities', () => ({getEntity:vi.fn(),getNeighbors:vi.fn()}))
++vi.mock('../components/GraphView', () => ({
++  GraphView: ({apiConfig,graph}:any) => <div data-testid="scoped-graph">
++    <span data-testid="graph-scope">{apiConfig?.graphId||'MISSING'}</span>
++    <span data-testid="graph-nodes">{JSON.stringify(graph.nodes.map((n:any)=>({id:n.id,type:n.type})))}</span>
++  </div>,
++}))
++
++const scope = (graphId='asteria_company_brain_v1'): ApiConfig => ({baseUrl:'',tenantId:'asteria',graphId,token:'test'})
++function mount(ids:string[], config=scope()) {
++  const client=new QueryClient({defaultOptions:{queries:{retry:false}}})
++  return render(<QueryClientProvider client={client}><EvidenceExplorer ids={ids} config={config}/></QueryClientProvider>)
++}
++
++describe('Asteria Evidence Explorer consistency', () => {
++  beforeEach(()=>{vi.clearAllMocks()})
++
++  it('keeps the full Evidence neighbor instead of overwriting it with an ID-only endpoint', () => {
++    const g=relationshipsToGraph([{source:'INC-AST-ROUTE-OUTAGE',target:'EVD-AST-0007',relationship:'SUPPORTS',
++      neighbor:{id:'EVD-AST-0007',name:'Route evidence',_labels:['Entity','Evidence'],source_record_id:'SRC-1'}}])
++    expect(g.nodes.find(n=>n.id==='EVD-AST-0007')).toMatchObject({type:'Evidence',label:'Route evidence',data:{source_record_id:'SRC-1'}})
++    expect(g.nodes.find(n=>n.id==='INC-AST-ROUTE-OUTAGE')?.type).toBe('Entity')
++  })
++
++  it('preserves full graph records when merging placeholder expansions', () => {
++    const root={id:'EVD-AST-0007',type:'Evidence',label:'Route evidence',data:{id:'EVD-AST-0007',_labels:['Entity','Evidence'],source_record_id:'SRC-1'}}
++    const placeholder={id:'EVD-AST-0007',type:'Entity',label:'EVD-AST-0007',data:{id:'EVD-AST-0007'}}
++    const result=mergeGraphs({nodes:[root],edges:[]},{nodes:[placeholder],edges:[]})
++    expect(result.nodes).toHaveLength(1)
++    expect(result.nodes[0]).toMatchObject({type:'Evidence',data:{source_record_id:'SRC-1'}})
++  })
++
++  it('passes selected graph scope to the graph and its canonical root', async()=>{
++    vi.mocked(getEntity).mockResolvedValue({id:'INC-AST-ROUTE-OUTAGE',name:'Route outage',_labels:['Entity','Incident']})
++    vi.mocked(getNeighbors).mockResolvedValue({items:[{source:'INC-AST-ROUTE-OUTAGE',target:'EVD-AST-0007',relationship:'HAS_EVIDENCE',
++      neighbor:{id:'EVD-AST-0007',_labels:['Entity','Evidence'],name:'Evidence seven'}}]})
++    mount(['INC-AST-ROUTE-OUTAGE'])
++    await waitFor(()=>expect(screen.getByTestId('graph-scope').textContent).toBe('asteria_company_brain_v1'))
++    expect(screen.getByTestId('graph-nodes').textContent).toContain('"type":"Incident"')
++    expect(screen.getByTestId('graph-nodes').textContent).toContain('"type":"Evidence"')
++    expect(vi.mocked(getNeighbors).mock.calls[0][0].graphId).toBe('asteria_company_brain_v1')
++  })
++
++  it('refuses unscoped evidence queries', ()=>{
++    mount(['EVD-AST-0007'],scope(''))
++    expect(screen.getByText(/Unscoped entity lookups are disabled/i)).toBeTruthy()
++    expect(getEntity).not.toHaveBeenCalled()
++    expect(getNeighbors).not.toHaveBeenCalled()
++  })
++
++  it('never displays a failed canonical lookup as verified graph evidence', async()=>{
++    vi.mocked(getEntity).mockRejectedValue(new Error('Entity EVD-AST-0007 was not found'))
++    mount(['EVD-AST-0007'])
++    await waitFor(()=>expect(screen.getByText(/citation could not be resolved/i)).toBeTruthy())
++    expect(screen.queryByTestId('scoped-graph')).toBeNull()
++    expect(getNeighbors).not.toHaveBeenCalled()
++  })
++
++  it('does not carry an Asteria graph result into a different selected graph', async()=>{
++    vi.mocked(getEntity).mockResolvedValue({id:'INC-AST-ROUTE-OUTAGE',_labels:['Entity','Incident']})
++    vi.mocked(getNeighbors).mockResolvedValue({items:[]})
++    const client=new QueryClient({defaultOptions:{queries:{retry:false}}})
++    const view=(config:ApiConfig)=><QueryClientProvider client={client}><EvidenceExplorer ids={['INC-AST-ROUTE-OUTAGE']} config={config}/></QueryClientProvider>
++    const result=render(view(scope()))
++    await waitFor(()=>expect(screen.getByTestId('graph-scope').textContent).toBe('asteria_company_brain_v1'))
++    result.rerender(view(scope('another_authorized_graph')))
++    await waitFor(()=>expect(screen.getByTestId('graph-scope').textContent).toBe('another_authorized_graph'))
++    expect(vi.mocked(getEntity).mock.calls.some(call=>call[0].graphId==='another_authorized_graph')).toBe(true)
++  })
++})
+diff --git a/frontend/src/test/evidenceGraphViewScope.test.tsx b/frontend/src/test/evidenceGraphViewScope.test.tsx
+new file mode 100644
+index 0000000..051e130
+--- /dev/null
++++ b/frontend/src/test/evidenceGraphViewScope.test.tsx
+@@ -0,0 +1,62 @@
++import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
++import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
++import { beforeEach, describe, expect, it, vi } from 'vitest'
++import { GraphView } from '../components/GraphView'
++import { TechnicalModeProvider } from '../presentation/TechnicalModeContext'
++import { getEntity, getEntityProvenance, getNeighbors } from '../api/entities'
++
++const harness=vi.hoisted(()=>({tapNode:undefined as undefined|((event:any)=>void)}))
++vi.mock('cytoscape',()=>({default:()=>({
++  zoom:()=>1,center:()=>{},destroy:()=>{},width:()=>400,height:()=>300,
++  on:(event:string,selector:any,callback?:any)=>{
++    if(event==='tap'&&selector==='node')harness.tapNode=callback
++  },
++  elements:()=>({addClass:()=>({removeClass:()=>{}}),removeClass:()=>{}}),
++})}))
++vi.mock('../design/graphStyle',()=>({ghGraphStyle:()=>[],flowTrace:()=>()=>{}}))
++vi.mock('../auth/AuthContext',()=>({useAuth:()=>({config:{baseUrl:'',tenantId:'asteria',token:'test'}})}))
++vi.mock('../api/entities',()=>({getEntity:vi.fn(),getEntityProvenance:vi.fn(),getNeighbors:vi.fn()}))
++
++describe('Scoped GraphView node inspection',()=>{
++  beforeEach(()=>{vi.clearAllMocks();harness.tapNode=undefined})
++  it('uses the selected Asteria graph for canonical node, provenance and expansion reads',async()=>{
++    vi.mocked(getEntity).mockResolvedValue({id:'EVD-AST-0007',_labels:['Entity','Evidence']})
++    vi.mocked(getEntityProvenance).mockResolvedValue({entity_id:'EVD-AST-0007',links:[]})
++    vi.mocked(getNeighbors).mockResolvedValue({items:[]})
++    const apiConfig={baseUrl:'',tenantId:'asteria',graphId:'asteria_company_brain_v1',token:'test'}
++    const client=new QueryClient({defaultOptions:{queries:{retry:false}}})
++    render(<QueryClientProvider client={client}><TechnicalModeProvider><GraphView
++      apiConfig={apiConfig} height={220}
++      graph={{nodes:[{id:'EVD-AST-0007',label:'Evidence seven',type:'Evidence',data:{id:'EVD-AST-0007'}}],edges:[]}}
++    /></TechnicalModeProvider></QueryClientProvider>)
++    await waitFor(()=>expect(harness.tapNode).toBeTypeOf('function'))
++    act(()=>harness.tapNode?.({target:{
++      id:()=> 'EVD-AST-0007', data:()=>({id:'EVD-AST-0007',raw:{id:'EVD-AST-0007'},type:'Evidence'}),
++      closedNeighborhood:()=>({removeClass:()=>{},edges:()=>({addClass:()=>{}})}),
++    }}))
++    await waitFor(()=>expect(screen.getByText(/Canonical entity found in the selected Company Brain/i)).toBeTruthy())
++    await waitFor(()=>expect(getEntityProvenance).toHaveBeenCalled())
++    expect(vi.mocked(getEntity).mock.calls[0][0].graphId).toBe('asteria_company_brain_v1')
++    expect(vi.mocked(getEntityProvenance).mock.calls[0][0].graphId).toBe('asteria_company_brain_v1')
++    fireEvent.click(screen.getByRole('button',{name:/Expand neighbors/i}))
++    await waitFor(()=>expect(getNeighbors).toHaveBeenCalled())
++    expect(vi.mocked(getNeighbors).mock.calls[0][0].graphId).toBe('asteria_company_brain_v1')
++  })
++  it('does not expand an evidence reference whose scoped canonical lookup fails',async()=>{
++    vi.mocked(getEntity).mockRejectedValue(new Error('NOT_FOUND'))
++    const client=new QueryClient({defaultOptions:{queries:{retry:false}}})
++    render(<QueryClientProvider client={client}><TechnicalModeProvider><GraphView
++      apiConfig={{baseUrl:'',tenantId:'asteria',graphId:'asteria_company_brain_v1',token:'test'}}
++      graph={{nodes:[{id:'EVD-AST-0007',label:'EVD-AST-0007',type:'Entity',data:{id:'EVD-AST-0007'}}],edges:[]}}
++    /></TechnicalModeProvider></QueryClientProvider>)
++    await waitFor(()=>expect(harness.tapNode).toBeTypeOf('function'))
++    act(()=>harness.tapNode?.({target:{
++      id:()=> 'EVD-AST-0007', data:()=>({id:'EVD-AST-0007',raw:{id:'EVD-AST-0007'},type:'Entity'}),
++      closedNeighborhood:()=>({removeClass:()=>{},edges:()=>({addClass:()=>{}})}),
++    }}))
++    await waitFor(()=>expect(screen.getByText(/Canonical entity lookup failed/i)).toBeTruthy())
++    expect((screen.getByRole('button',{name:/Expand neighbors/i}) as HTMLButtonElement).disabled).toBe(true)
++    expect(getNeighbors).not.toHaveBeenCalled()
++  })
++
++})

@@ -23,10 +23,13 @@ class GraphSupervisorStore:
             self.client.query('''
                 CREATE (r:Entity:SupervisorRun {tenant_id:$tenant,id:$id,goal:$goal,
                   subject:$subject,status:'RUNNING',provider:$provider,model:$model,
-                  source_entity_id:$source_id,started_at:$started_at})
+                  source_entity_id:$source_id,source_resolution_method:$resolution,
+                  plan_rationale:$rationale,started_at:$started_at})
             ''', {'tenant': self.client.settings.tenant_id, 'id': run['id'],
                   'goal': run['goal'], 'subject': run['subject'], 'provider': run['provider'],
                   'model': run['model'], 'source_id': run.get('source_entity_id') or '',
+                  'resolution': run.get('source_resolution_method') or '',
+                  'rationale': run.get('plan_rationale') or '',
                   'started_at': run['started_at']})
 
     def task(self, run_id: str, task: dict) -> None:

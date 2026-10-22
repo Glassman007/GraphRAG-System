@@ -1,0 +1,91 @@
+{
+  "package": "A2",
+  "stage": "live_asteria_no_model",
+  "graph": "asteria_company_brain_v1",
+  "tenant": "asteria",
+  "executed_at_utc": "2026-10-21T23:53:22.113719+00:00",
+  "outcome": "A2_LIVE_PASS",
+  "model_network_calls_permitted": false,
+  "business_graph_writes": false,
+  "persistent_supervisor_runs": false,
+  "checks": [
+    {
+      "check": "Asteria-only graph binding",
+      "result": "PASS",
+      "graph": "asteria_company_brain_v1",
+      "tenant": "asteria"
+    },
+    {
+      "check": "Live Asteria target and evidence",
+      "result": "PASS",
+      "incident": "INC-AST-ROUTE-OUTAGE",
+      "evidence": "EVD-AST-0003"
+    },
+    {
+      "check": "Explicit canonical incident plan",
+      "result": "PASS",
+      "status": "PAUSED",
+      "source": "INC-AST-ROUTE-OUTAGE",
+      "method": "EXPLICIT_ENTITY",
+      "tasks": 4,
+      "model_attempts": 0
+    },
+    {
+      "check": "Descriptive objective resolves incident",
+      "result": "PASS",
+      "status": "PAUSED",
+      "source": "INC-AST-ROUTE-OUTAGE",
+      "method": "UNIQUE_GRAPH_INCIDENT_MATCH",
+      "tasks": 4,
+      "model_attempts": 0
+    },
+    {
+      "check": "Objective containing canonical incident ID",
+      "result": "PASS",
+      "status": "PAUSED",
+      "source": "INC-AST-ROUTE-OUTAGE",
+      "method": "OBJECTIVE_CANONICAL_ID",
+      "tasks": 4,
+      "model_attempts": 0
+    },
+    {
+      "check": "Unknown explicit ID rejected",
+      "result": "PASS",
+      "expected": "TARGET_NOT_FOUND",
+      "observed": "TARGET_NOT_FOUND",
+      "persisted_runs": 0,
+      "model_attempts": 0
+    },
+    {
+      "check": "Evidence node rejected for incident objective",
+      "result": "PASS",
+      "expected": "TARGET_KIND_MISMATCH",
+      "observed": "TARGET_KIND_MISMATCH",
+      "persisted_runs": 0,
+      "model_attempts": 0
+    },
+    {
+      "check": "Underspecified incident requires input",
+      "result": "PASS",
+      "expected": "TARGET_NEEDS_INPUT",
+      "observed": "TARGET_NEEDS_INPUT",
+      "persisted_runs": 0,
+      "model_attempts": 0
+    },
+    {
+      "check": "Multiple embedded incident IDs rejected",
+      "result": "PASS",
+      "expected": "TARGET_AMBIGUOUS",
+      "observed": "TARGET_AMBIGUOUS",
+      "persisted_runs": 0,
+      "model_attempts": 0
+    },
+    {
+      "check": "No provider calls or persisted telemetry",
+      "result": "PASS",
+      "model_attempts": 0,
+      "persistent_store_used": false,
+      "workers_dispatched": false
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+--- a/frontend/src/demo/AgentRuntimePanel.tsx
++++ b/frontend/src/demo/AgentRuntimePanel.tsx
+@@ -21,6 +21,7 @@
+  const [consent,setConsent]=useState(false)
+  const [runId,setRunId]=useState('')
+  const [runIdInput,setRunIdInput]=useState('')
++ const [limit,setLimit]=useState(8)
+  // Asteria demo fixtures are pinned to this registered graph, not to the API's
+  // potentially unrelated default graph. The server still authorizes this scope.
+  const scopedConfig=buildDemoHarnessConfig(config)

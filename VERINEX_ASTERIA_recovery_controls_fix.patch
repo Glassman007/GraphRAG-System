@@ -1,0 +1,119 @@
+diff --git a/frontend/src/pages/AgentWorkspacePage.tsx b/frontend/src/pages/AgentWorkspacePage.tsx
+index 9f8c550..2d2d3cb 100644
+--- a/frontend/src/pages/AgentWorkspacePage.tsx
++++ b/frontend/src/pages/AgentWorkspacePage.tsx
+@@ -11,6 +11,7 @@ import {getEntity,getNeighbors} from '../api/entities'
+ import {relationshipsToGraph} from '../graph/adapters'
+ import {allScenarios} from '../demo/demoModel'
+ import './agentWorkspace.css'
++import {workspaceRecoveryState} from './workspaceRecovery'
+ 
+ const base='/api/v1/agent-runtime/workspace'
+ type Brain={graph_id:string;display_name:string;available:boolean}
+@@ -113,6 +114,7 @@ export function AgentWorkspacePage(){
+  const current=detail.data?.workspace
+  const result=detail.data?.supervisor
+  const tasks=result?.tasks||[]
++ const recovery=workspaceRecoveryState(current,detail.data?.checkpoint,tasks)
+  const events=result?.events||[]
+  const selectedTask=tasks.find(t=>(t.task_id||t.id)===focused)
+  const isActive=!!current&&inProgress.includes(current.status)
+@@ -152,7 +154,7 @@ export function AgentWorkspacePage(){
+   </section>
+   <div className="aw-layout"><aside className="aw-card aw-run-list"><div className="aw-head"><div><span className="aw-overline">EXECUTION QUEUE</span><h2>Investigations</h2></div><button onClick={refresh} aria-label="Refresh runs">↻</button></div>
+     {runs.error&&<ErrorPanel error={runs.error}/>}{!runs.data?.items.length&&<div className="aw-empty">No workspace runs yet. Start one above to create a real investigation.</div>}
+-    {runs.data?.items.map(run=><button className={`aw-run ${activeId===run.id?'aw-picked':''}`} key={run.id} onClick={()=>{setChosen(run.id);setFocused('');setFrame(0)}}><span className="aw-run-top"><b className={`aw-pill aw-pill-${run.status.toLowerCase()}`}>{run.status.replaceAll('_',' ')}</b><small>{stamp(run.created_at)}</small></span><strong>{run.goal}</strong><small>{run.graph_id||'Legacy default'} · {run.id}</small></button>)}
++    {runs.data?.items.map(run=><button className={`aw-run ${activeId===run.id?'aw-picked':''}`} key={run.id} onClick={()=>{control.reset();setChosen(run.id);setFocused('');setFrame(0)}}><span className="aw-run-top"><b className={`aw-pill aw-pill-${run.status.toLowerCase()}`}>{run.status.replaceAll('_',' ')}</b><small>{stamp(run.created_at)}</small></span><strong>{run.goal}</strong><small>{run.graph_id||'Legacy default'} · {run.id}</small></button>)}
+     <p className="aw-footnote">Only runs owned by the authenticated principal are listed.</p>
+    </aside>
+    <div className="aw-main">
+@@ -160,7 +162,10 @@ export function AgentWorkspacePage(){
+     {!current?<section className="aw-card aw-empty-state"><span className="aw-overline">AWAITING OBJECTIVE</span><h2>The workspace is ready.</h2><p>Start an investigation or choose one of your saved runs to observe tasks and inspect verified outcomes.</p></section>:<>
+      <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">SUPERVISOR / {current.id}</span><h2>{current.goal}</h2><p className="aw-muted">Owner {current.owner} · {stamp(current.created_at)} · Brain: {current.graph_id||'Legacy default'}</p></div><b className={`aw-pill aw-pill-${current.status.toLowerCase()}`}>{current.status}</b></div>
+       <div className="aw-metrics"><span><strong>{tasks.length}</strong> scheduled tasks</span><span><strong>{tasks.filter(t=>t.status==='COMPLETED').length}</strong> completed</span><span><strong>{events.length}</strong> recorded events</span><span><strong>{result?.tokens_used??0}</strong> tokens / estimate</span></div>
+-      <div className="aw-actions"><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('pause')}>Pause after current tasks</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('cancel')}>Cancel scheduling</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!current.recovery_available||!['PAUSED','INTERRUPTED'].includes(current.status)||control.isPending} onClick={()=>control.mutate('resume')}>Resume</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!['FAILED','PARTIAL','NEEDS_REVIEW'].includes(current.status)||control.isPending} onClick={()=>control.mutate('retry')}>Retry failed work</button><button onClick={()=>detail.refetch()}>Refresh now</button></div>
++      <div className="aw-actions"><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('pause')}>Pause after current tasks</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('cancel')}>Cancel scheduling</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!recovery.canResume||control.isPending} onClick={()=>control.mutate('resume')}>Resume</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!recovery.canRetry||control.isPending} onClick={()=>control.mutate('retry')}>Retry failed work</button><button onClick={()=>detail.refetch()}>Refresh now</button></div>
++      {recovery.reviewOnly&&<p className="aw-footnote">All specialist tasks completed. This run needs evidence or human review; there is no failed work to retry.</p>}
++      {recovery.missingCheckpoint&&<p className="aw-footnote">No planned checkpoint is available for this run. It cannot safely resume or retry; a new investigation is required.</p>}
++      {recovery.hasCheckpoint&&<p className="aw-footnote">Persisted checkpoint: revision {detail.data?.checkpoint.revision}. Recovery is only offered when there is eligible work.</p>}
+       {current.error&&<p role="alert">{current.error}</p>}{control.error&&<ErrorPanel error={control.error}/>}
+       <p className="aw-footnote">{live?'Polling persisted operational activity every 2.5 seconds.':'Persisted state, not a fabricated live animation.'} Pause/cancel are cooperative and may wait for active model calls. No rollback or notification is executed by the supervisor.</p>
+      </section>
+diff --git a/frontend/src/pages/workspaceRecovery.test.ts b/frontend/src/pages/workspaceRecovery.test.ts
+new file mode 100644
+index 0000000..7ff1628
+--- /dev/null
++++ b/frontend/src/pages/workspaceRecovery.test.ts
+@@ -0,0 +1,40 @@
++import {describe,expect,it} from 'vitest'
++import {workspaceRecoveryState} from './workspaceRecovery'
++
++const checkpoint={revision:42,reactive_affected_tasks:[]}
++const complete=Array.from({length:4},()=>({status:'COMPLETED'}))
++const run=(status:string,recovery_available=true)=>({status,recovery_available})
++
++describe('Workspace recovery action eligibility',()=>{
++  it('does not offer retry for an evidence-review-only Asteria investigation',()=>{
++    const state=workspaceRecoveryState(run('NEEDS_REVIEW'),checkpoint,complete)
++    expect(state.reviewOnly).toBe(true)
++    expect(state.canRetry).toBe(false)
++    expect(state.hasCheckpoint).toBe(true)
++  })
++  it('does not offer retry when pre-supervisor startup failed without a checkpoint',()=>{
++    const state=workspaceRecoveryState(run('FAILED'),undefined,[])
++    expect(state.missingCheckpoint).toBe(true)
++    expect(state.canRetry).toBe(false)
++  })
++  it('offers retry only when failed or blocked tasks have a checkpoint',()=>{
++    const state=workspaceRecoveryState(run('NEEDS_REVIEW'),checkpoint,
++      [{status:'COMPLETED'},{status:'FAILED'},{status:'BLOCKED'}])
++    expect(state.canRetry).toBe(true)
++  })
++  it('offers resume for an interrupted run with a valid checkpoint',()=>{
++    const state=workspaceRecoveryState(run('INTERRUPTED'),checkpoint,[])
++    expect(state.canResume).toBe(true)
++    expect(state.canRetry).toBe(false)
++  })
++  it('keeps actions disabled when workspace does not authorize recovery',()=>{
++    const state=workspaceRecoveryState(run('FAILED',false),checkpoint,[{status:'FAILED'}])
++    expect(state.canRetry).toBe(false)
++  })
++  it('allows targeted evidence re-verification if checkpoint explicitly lists affected tasks',()=>{
++    const state=workspaceRecoveryState(run('NEEDS_REVIEW'),
++      {revision:44,reactive_affected_tasks:['verify_findings']},complete)
++    expect(state.canRetry).toBe(true)
++    expect(state.reviewOnly).toBe(false)
++  })
++})
+diff --git a/frontend/src/pages/workspaceRecovery.ts b/frontend/src/pages/workspaceRecovery.ts
+new file mode 100644
+index 0000000..910c04c
+--- /dev/null
++++ b/frontend/src/pages/workspaceRecovery.ts
+@@ -0,0 +1,26 @@
++/** Derive recoverable actions from persisted state, not the NEEDS_REVIEW label alone. */
++export type RecoveryWorkspace = { status:string; recovery_available:boolean }
++export type RecoveryCheckpoint = {revision?:number; reactive_affected_tasks?:string[]}
++export type RecoveryTask = {status:string}
++
++export function workspaceRecoveryState(
++  workspace:RecoveryWorkspace|undefined,
++  checkpoint:RecoveryCheckpoint|undefined,
++  tasks:readonly RecoveryTask[],
++) {
++  const hasCheckpoint=typeof checkpoint?.revision==='number' &&
++    Number.isInteger(checkpoint.revision) && checkpoint.revision>=0
++  const hasFailedWork=tasks.some(task=>['FAILED','BLOCKED'].includes(task.status))
++  const hasReactiveWork=Boolean(checkpoint?.reactive_affected_tasks?.length)
++  const hasRecoveryRight=Boolean(workspace?.recovery_available)
++  const canResume=hasRecoveryRight && hasCheckpoint &&
++    ['PAUSED','INTERRUPTED'].includes(workspace?.status||'')
++  const canRetry=hasRecoveryRight && hasCheckpoint &&
++    ['FAILED','PARTIAL','NEEDS_REVIEW'].includes(workspace?.status||'') &&
++    (hasFailedWork || hasReactiveWork)
++  const reviewOnly=workspace?.status==='NEEDS_REVIEW' && tasks.length>0 &&
++    tasks.every(task=>task.status==='COMPLETED') && !hasReactiveWork
++  const missingCheckpoint=Boolean(workspace &&
++    ['FAILED','PARTIAL','PAUSED','INTERRUPTED'].includes(workspace.status) && !hasCheckpoint)
++  return {hasCheckpoint,hasFailedWork,hasReactiveWork,canResume,canRetry,reviewOnly,missingCheckpoint}
++}

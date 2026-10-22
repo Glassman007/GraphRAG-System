@@ -6,6 +6,7 @@ choices, exchange checked evidence via handoffs, and never execute business acti
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 import time
@@ -18,9 +19,10 @@ from typing import Any, Callable, Literal, Protocol
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from backend.app.agent_runtime.harness import FinalResponse, json_content
+from backend.app.agent_runtime.incident_skill import build_incident_packet
 from backend.app.agent_runtime.memory import AgentMemory, MemoryAssertion, MemorySearch, utcnow
 from backend.app.agent_runtime.provider import ProviderError
-from backend.app.agent_runtime.tools import ToolRegistry, SCHEMAS, declarations, thin
+from backend.app.agent_runtime.tools import ToolRegistry, SCHEMAS, current, declarations, thin
 from backend.app.services.phase4_graph import has_label
 
 
@@ -190,6 +192,70 @@ def _incident_plan(source: str) -> list[TaskSpec]:
     ]
 
 
+
+class TargetResolutionError(ValueError):
+    """Fail-closed source resolution; no provider or specialist should run."""
+
+
+def _resolve_target(snapshot: Any, goal: str, explicit: str | None) -> tuple[str | None, str, str]:
+    """Resolve a uniquely identified Incident without a model or guessed graph IDs.
+
+    Uses only the selected graph snapshot. Inexact free-text matching is deliberately
+    conservative: exact canonical ID tokens or the full recorded incident title.
+    """
+    goal_ids = list(dict.fromkeys(re.findall(r'\bINC-[A-Z0-9]+(?:-[A-Z0-9]+)+\b', goal, re.I)))
+    incident_intent = bool(re.search(r'\b(?:incident|incidents|outage|outages)\b', goal, re.I)) or bool(goal_ids)
+
+    if explicit:
+        node = snapshot.node(explicit)
+        if not node:
+            raise TargetResolutionError(f'TARGET_NOT_FOUND: Starting entity {explicit} is absent from the selected graph')
+        if incident_intent and not has_label(node, 'Incident'):
+            raise TargetResolutionError(f'TARGET_KIND_MISMATCH: Incident investigation requires an Incident, not {explicit}')
+        return explicit, 'EXPLICIT_ENTITY', 'User-supplied canonical target verified against the selected graph'
+
+    if goal_ids:
+        if len(goal_ids) != 1:
+            raise TargetResolutionError('TARGET_AMBIGUOUS: Multiple incident IDs in objective: ' + ', '.join(goal_ids[:8]))
+        target = goal_ids[0]
+        node = snapshot.node(target)
+        if not node:
+            raise TargetResolutionError(f'TARGET_NOT_FOUND: Incident ID {target} is absent from the selected graph')
+        if not has_label(node, 'Incident'):
+            raise TargetResolutionError(f'TARGET_KIND_MISMATCH: {target} is not an Incident')
+        return target, 'OBJECTIVE_CANONICAL_ID', 'Canonical incident ID in objective verified against selected graph'
+
+    if not incident_intent:
+        return None, 'NON_INCIDENT_OBJECTIVE', 'No incident target inferred; bounded general planning required'
+
+    def tokens(value: str) -> list[str]:
+        return re.findall(r'[a-z0-9]+', value.lower())
+
+    goal_tokens = set(tokens(goal))
+    goal_text = ' '.join(tokens(goal))
+    incidents = [node for node in snapshot.nodes.values() if has_label(node, 'Incident')]
+    if len(incidents) > 250:
+        raise TargetResolutionError('TARGET_NEEDS_REVIEW: Too many incident candidates for bounded resolution')
+    candidates = []
+    for node in incidents:
+        entity_id = str(node.get('id') or '')
+        # Only semantic tokens AFTER the incident and namespace prefixes are used.
+        parts = entity_id.upper().split('-')
+        alias_tokens = [part.lower() for part in parts[2:] if len(part) >= 3] if len(parts) > 3 and parts[0] == 'INC' else []
+        id_match = len(set(alias_tokens)) >= 2 and set(alias_tokens).issubset(goal_tokens)
+        exact_title = any(len(tokens(str(node.get(key) or ''))) >= 2 and
+                          ' '.join(tokens(str(node.get(key)))) in goal_text
+                          for key in ('name', 'title'))
+        if id_match or exact_title:
+            candidates.append(entity_id)
+    candidates = sorted(set(candidates))
+    if len(candidates) != 1:
+        reason = 'TARGET_AMBIGUOUS' if candidates else 'TARGET_NEEDS_INPUT'
+        suffix = ', '.join(candidates[:8]) if candidates else 'Provide a canonical Incident ID'
+        raise TargetResolutionError(f'{reason}: Cannot uniquely resolve incident; {suffix}')
+    return candidates[0], 'UNIQUE_GRAPH_INCIDENT_MATCH', 'Unique incident alias/title match in selected graph; no model used'
+
+
 def _observed_ids(value: Any, nodes: dict, *, seen: set[str] | None = None) -> set[str]:
     """Count only canonical IDs actually included in an observation, not input args."""
     if seen is None:
@@ -235,6 +301,161 @@ def _contradictions(tasks: dict[str, TaskState]) -> list[dict]:
     return [dict(t) for t in {json.dumps(item, sort_keys=True): item for item in conflicts}.values()]
 
 
+
+def _incident_skill_covered(snapshot: Any, source: str | None) -> bool:
+    """Use deterministic incident skills only with substantive visible graph evidence.
+
+    Sparse/general cases retain the existing model-driven specialist path. The
+    coverage check itself is in-memory and does not dispatch a tool or model.
+    """
+    node = snapshot.node(source) if source else None
+    if not node or not has_label(node, 'Incident') or not current(node):
+        return False
+    kinds = set()
+    for entity_id, _, _ in snapshot.neighbors(source):
+        linked = snapshot.node(entity_id)
+        if linked and current(linked):
+            if has_label(linked, 'Claim'):
+                kinds.add('Claim')
+            if has_label(linked, 'Evidence'):
+                kinds.add('Evidence')
+        if len(kinds) == 2:
+            return True
+    return False
+
+
+def _safe_tool_id(value: Any) -> str:
+    """Log only canonical-looking identifiers, never arbitrary model arguments."""
+    if isinstance(value, str) and re.fullmatch(r'[A-Za-z0-9_:-]{2,150}', value):
+        return value
+    return '[redacted]'
+
+
+def _skill_finding(snapshot: Any, source: str, capability: str, packet: dict,
+                   visible: set[str], impacts: list[dict]) -> dict:
+    """Structured observed facts and epistemic gaps, not an inferred root cause."""
+    evidence = sorted(entity_id for entity_id in visible
+                      if has_label(snapshot.node(entity_id), 'Evidence'))
+    claims = sorted(entity_id for entity_id in visible
+                    if has_label(snapshot.node(entity_id), 'Claim'))
+    events = packet.get('chronology') or []
+    systems = packet.get('affected_systems') or []
+    impacted = sorted({record.get('entity_id') for record in impacts
+                       if record.get('entity_id') and snapshot.node(record['entity_id'])})
+    cited = [source, *evidence[:8], *claims[:4]]
+    gaps = ['Graph links and event timing do not establish a complete causal chain; independent corroboration is required.']
+    omissions = {k: v for k, v in (packet.get('omitted_counts') or {}).items() if v}
+    if omissions:
+        gaps.append('Bounded incident packet omits some records: ' + ', '.join(f'{k}={v}' for k, v in sorted(omissions.items())))
+    if capability == 'dependency_analysis':
+        cited.extend(record['id'] for record in systems if record.get('id') in snapshot.nodes)
+        cited.extend(impacted[:10])
+        summary = (f'Graph records for incident {source} contain {len(systems)} linked system(s) '
+                   f'and {len(impacted)} distinct reverse-DEPENDS_ON reachable system(s) '
+                   f'within bounded traversal; these are possible dependencies, not confirmed outage impact.')
+        if not systems:
+            gaps.append('No directly linked System found; dependency blast radius could not be established.')
+    elif capability == 'evidence_retrieval':
+        summary = (f'Incident {source} has {len(evidence)} visibly included Evidence ID(s), '
+                   f'{len(claims)} Claim ID(s), and {len(events)} event(s) in a bounded packet; '
+                   'their recorded associations require independent provenance verification.')
+        if not evidence:
+            gaps.append('No citeable Evidence entities were included in the bounded packet.')
+    else:
+        summary = (f'Read-only incident investigation of {source}: bounded graph packet includes '
+                   f'{len(events)} event(s), {len(claims)} claim(s), and {len(evidence)} evidence record(s). '
+                   'Treat recorded schema and CPU observations as hypotheses or observations, not a proven root cause.')
+    cited = list(dict.fromkeys(entity_id for entity_id in cited if entity_id in snapshot.nodes))[:20]
+    finding = SpecialistFinding(summary=summary, citations=cited, knowledge_gaps=gaps[:10],
+                                confidence='uncertain' if evidence else 'insufficient',
+                                assertions=[], conflicts_with=[], risk='low',
+                                requires_human_review=not bool(evidence))
+    return finding.model_dump()
+
+
+def _mvp_verification_finding(snapshot: Any, source: str, parents: list[dict],
+                              observed_ids: set[str]) -> dict:
+    """Limited graph-evidence check, NOT definitive source/causal verification."""
+    if {p['task_id'] for p in parents} != {'analyze_dependencies', 'retrieve_evidence'}:
+        raise ValueError('MVP_VERIFIER_PREREQUISITES_MISSING')
+    citations = set()
+    for parent in parents:
+        finding = SpecialistFinding.model_validate(parent['result'])
+        if finding.confidence == 'insufficient' or not finding.citations:
+            raise ValueError('MVP_VERIFIER_INSUFFICIENT_PREDECESSOR')
+        citations.update(finding.citations)
+    if source not in observed_ids:
+        raise ValueError('MVP_VERIFIER_TARGET_NOT_OBSERVED')
+    if not citations.issubset(snapshot.nodes.keys()):
+        raise ValueError('MVP_VERIFIER_INVALID_CITATION')
+    directly_observed = sorted(citations & observed_ids)
+    evidence = [cid for cid in directly_observed if has_label(snapshot.node(cid), 'Evidence')]
+    if not evidence:
+        raise ValueError('MVP_VERIFIER_NO_DIRECT_EVIDENCE')
+    return SpecialistFinding(
+        summary=(f'Independent graph identity and incident-link check: verified {len(evidence)} '
+                 f'incident-linked Evidence record(s) and {len(directly_observed)} direct '
+                 'canonical citations. This verifies recorded entities/links, not claim truth or causation.'),
+        citations=directly_observed[:20],
+        knowledge_gaps=[
+            'Recorded provenance and links do not independently prove a complete outage causal chain.',
+            'Obtain missing primary logs, retry/load timing, and a reviewed postmortem before asserting root cause.'
+        ],
+        confidence='uncertain', assertions=[], risk='low', requires_human_review=True
+    ).model_dump()
+
+
+def _mvp_proposal_finding(snapshot: Any, source: str, parents: list[dict]) -> dict:
+    """Read-only proposal, consuming only the prior verifier's structured finding."""
+    if len(parents) != 1 or parents[0]['task_id'] != 'verify_findings':
+        raise ValueError('MVP_PROPOSAL_REQUIRES_VERIFIER')
+    verified = SpecialistFinding.model_validate(parents[0]['result'])
+    if verified.confidence == 'insufficient' or not verified.citations:
+        raise ValueError('MVP_PROPOSAL_UNVERIFIED_INPUT')
+    if any(snapshot.node(cid) is None for cid in verified.citations):
+        raise ValueError('MVP_PROPOSAL_STALE_CITATION')
+    # This is a task proposal, never an assertion that investigation or remediation occurred.
+    steps = (
+        'Proposed actions only, NOT executed: (1) collect missing incident-specific primary logs '
+        'and deployment/configuration snapshots; (2) compare the schema/422 error chronology '
+        'with retry and CPU timelines; (3) investigate bounded dependency paths and conflicting '
+        'evidence; (4) prepare change/rollback options with owner approval and pre-change '
+        'validation, and do not deploy or modify any business system.'
+    )
+    return SpecialistFinding(
+        summary=f'Read-only investigation/remediation proposal for {source}: {steps}',
+        citations=verified.citations[:20],
+        knowledge_gaps=list(dict.fromkeys([*verified.knowledge_gaps,
+              'Human authorization, impact validation and rollback readiness are prerequisites to any future execution.']))[:10],
+        confidence='uncertain', assertions=[], risk='low', requires_human_review=True
+    ).model_dump()
+
+
+def _mvp_incident_report(source: str, states: dict[str, TaskState], snapshot: Any) -> tuple[str, list[str], list[str]]:
+    """Deterministic report for a complete scoped DAG. No invented causal claims."""
+    expected = ('analyze_dependencies', 'retrieve_evidence', 'verify_findings', 'propose_remediation')
+    if not all(k in states and states[k].status == 'COMPLETED' and states[k].result for k in expected):
+        raise ValueError('MVP_REPORT_INCOMPLETE_DAG')
+    citations = list(dict.fromkeys(cid for key in expected for cid in states[key].result['citations']
+                                   if snapshot.node(cid) is not None))[:20]
+    if source not in citations or not any(has_label(snapshot.node(cid), 'Evidence') for cid in citations):
+        raise ValueError('MVP_REPORT_MISSING_EVIDENCE')
+    gaps = list(dict.fromkeys(gap for key in expected
+                              for gap in states[key].result['knowledge_gaps']))[:15]
+    cite = ', '.join(citations)
+    report = ('Read-only Asteria investigation — ' + source + '\n\n'
+              'OBSERVED GRAPH RECORDS (not causal proof):\n'
+              + states['retrieve_evidence'].result['summary'] + '\n'
+              + states['analyze_dependencies'].result['summary'] + '\n\n'
+              'INDEPENDENT CHECK (limited to entity and link existence):\n'
+              + states['verify_findings'].result['summary'] + '\n\n'
+              'READ-ONLY PROPOSAL (nothing executed):\n'
+              + states['propose_remediation'].result['summary'] + '\n\n'
+              'CITATIONS: ' + cite + '\n\n'
+              'UNRESOLVED EVIDENCE GAPS / HUMAN REVIEW:\n- ' + '\n- '.join(gaps))
+    return report, citations, gaps
+
+
 class Supervisor:
     def __init__(self, *, provider: Any, tools: ToolRegistry, store: SupervisorStore,
                  tenant: str, permissions: frozenset[str], agents: tuple[AgentProfile, ...] = DEFAULT_AGENTS,
@@ -259,14 +480,6 @@ class Supervisor:
         if not settings.allow_external_model:
             raise ValueError('Explicit model-data transmission consent is required')
         snapshot = self.tools.snapshot_factory()
-        source = settings.source_entity_id
-        if source and not snapshot.node(source):
-            raise ValueError('Starting entity was not found in the current tenant graph')
-        if not source:
-            for possible in re.findall(r'\b[A-Z]{2,8}-[A-Z0-9]+(?:-[A-Z0-9]+){1,12}\b', settings.goal):
-                if snapshot.node(possible):
-                    source = possible
-                    break
         recovered = None
         if resume_id:
             if self.memory is None:
@@ -281,6 +494,17 @@ class Supervisor:
             if not settings.allow_external_model:
                 raise ValueError('Explicit model consent is required to resume')
             source = recovered.get('source') or None
+            # The saved plan and target, not new user text, own resume scope.
+            source, method, rationale = _resolve_target(snapshot, settings.goal, source)
+            if source != (recovered.get('source') or None):
+                raise TargetResolutionError('TARGET_SCOPE_CHANGED: Checkpoint source could not be verified')
+            method = recovered.get('source_resolution_method') or method
+            rationale = recovered.get('plan_rationale') or rationale
+        else:
+            source, method, rationale = _resolve_target(snapshot, settings.goal, settings.source_entity_id)
+            if source and has_label(snapshot.node(source), 'Incident'):
+                validate_dag(_incident_plan(source), settings.max_tasks)
+                rationale += '; prevalidated incident dependency/evidence/verification/remediation DAG'
         run = SupervisorRun(id=resume_id or run_id or 'SRUN-' + uuid.uuid4().hex.upper(), goal=settings.goal)
         if recovered:
             run.events = recovered.get('events', [])
@@ -289,7 +513,8 @@ class Supervisor:
         if not recovered:
             self.store.start({'id': run.id, 'goal': settings.goal, 'subject': subject, 'tenant': self.tenant,
                               'provider': self.provider.name, 'model': self.provider.model,
-                              'source_entity_id': source, 'started_at': _now()})
+                              'source_entity_id': source, 'source_resolution_method': method,
+                              'plan_rationale': rationale, 'started_at': _now()})
         checkpoint_revision = int(recovered.get('revision') or 0) if recovered else 0
         states: dict[str, TaskState] = {}
 
@@ -301,6 +526,7 @@ class Supervisor:
                 checkpoint_revision += 1
                 payload = {'id': run.id, 'tenant': self.tenant, 'owner': subject,
                            'settings': settings.model_dump(), 'goal': settings.goal, 'source': source,
+                           'source_resolution_method': method, 'plan_rationale': rationale,
                            'status': run.status, 'tasks': [s.public() for s in states.values()],
                            'events': run.events[-250:], 'tokens_used': run.tokens_used,
                            'revision': checkpoint_revision, 'updated_at': _now()}
@@ -379,6 +605,12 @@ class Supervisor:
                 response = call([{'role': 'system', 'content': prompt},
                                  {'role': 'user', 'content': json.dumps(context)[:4000]}], [], max_tokens=1000)
                 specs = Decomposition.model_validate(json_content(response.content)).tasks
+                validate_dag(specs, settings.max_tasks)
+                if any(not any(task.capability in agent.capabilities and
+                               agent.permissions.issubset(self.permissions) and
+                               all(tool in SCHEMAS for tool in agent.tools)
+                               for agent in self.agents) for task in specs):
+                    raise ValueError('Model decomposition includes a task with no authorized executable worker')
                 emit('DECOMPOSE', 'Model proposed a dependency-aware multi-specialist work plan')
             if not recovered:
                 validate_dag(specs, settings.max_tasks)
@@ -386,6 +618,23 @@ class Supervisor:
                 for state in states.values():
                     self.store.task(run.id, state.public())
                 emit('PLAN_VALIDATED', f'{len(states)} unique tasks; no cyclic prerequisites')
+
+            # Asteria-only bridge. Offline/in-memory stores retain the established
+            # scheduler path; other Company Brains never participate in this adapter.
+            bridge = None
+            client = getattr(self.store, 'client', None)
+            client_settings = getattr(client, 'settings', None)
+            if (os.getenv('VERINEX_A4_HANDOFFS') == '1' and
+                    source and has_label(snapshot.node(source), 'Incident') and
+                    self.tenant == 'asteria' and client_settings is not None and
+                    getattr(client_settings, 'tenant_id', None) == 'asteria' and
+                    getattr(client_settings, 'falkordb_graph', None) == 'asteria_company_brain_v1' and
+                    set(states).issuperset({'analyze_dependencies', 'retrieve_evidence',
+                                            'verify_findings', 'propose_remediation'})):
+                from backend.app.agent_runtime.asteria_coordination_bridge import AsteriaCoordinationBridge
+                bridge = AsteriaCoordinationBridge(client, run.id, source, states)
+                bridge.prepare()
+                emit('COORDINATION_ATTACHED', 'Phase-6 Asteria tasks and registry attached to this Supervisor DAG')
 
             def pick(capability: str, active: dict[str, int], excluded: list[str]) -> AgentProfile | None:
                 suitable = [a for a in self.agents if capability in a.capabilities
@@ -402,8 +651,105 @@ class Supervisor:
                 for dep in state.depends_on:
                     parent = states[dep]
                     assert parent.result is not None and parent.status == 'COMPLETED'
-                    parents.append({'task_id': dep, 'agent_id': parent.agent_id, 'result': parent.result})
-                    eligible.update(parent.result['citations'])
+                    if bridge:
+                        persisted = bridge.consume(dep, state.id)
+                        parents.append(persisted)
+                        eligible.update(persisted['result']['citations'])
+                        emit('HANDOFF_CONSUMED',
+                             f"Accepted handoff {persisted['handoff_id']} with persisted artifact IDs: "
+                             + ', '.join(persisted['artifact_ids'][:8]),
+                             task_id=state.id, agent_id=agent.id)
+                    else:
+                        parents.append({'task_id': dep, 'agent_id': parent.agent_id, 'result': parent.result})
+                        eligible.update(parent.result['citations'])
+                # Skills-first for adequately evidenced incident observations only.
+                # Do not call a model to decide whether incident_context is needed.
+                if (source and state.capability in {'investigation', 'dependency_analysis', 'evidence_retrieval'}
+                        and 'incident_context' in agent.tools and
+                        {'READ_GRAPH', 'READ_EVIDENCE'}.issubset(self.permissions) and
+                        _incident_skill_covered(self.tools.snapshot_factory(), source)):
+                    snapshot = self.tools.snapshot_factory()
+                    def skill_read(tool_name: str, entity_id: str, **kwargs) -> dict:
+                        if tool_name not in agent.tools or tool_name not in SCHEMAS:
+                            raise ValueError('SKILL_TOOL_NOT_AUTHORIZED')
+                        arguments = {'entity_id': entity_id, **kwargs}
+                        started = time.monotonic()
+                        try:
+                            observation = self.tools.execute(tool_name, arguments)
+                        except (ValueError, TypeError, ValidationError) as exc:
+                            emit('SPECIALIST_TOOL',
+                                 f'{tool_name} entity_id={_safe_tool_id(entity_id)} outcome=ERROR '
+                                 f'error_code=INVALID_TOOL_ARGUMENTS elapsed_ms={int((time.monotonic()-started)*1000)}',
+                                 task_id=state.id, agent_id=agent.id, status='FAILED')
+                            raise ValueError('SKILL_TOOL_INVALID_ARGUMENTS') from exc
+                        code = observation.get('error')
+                        seen = (_observed_ids(observation, snapshot.nodes) if not code else set())
+                        emit('SPECIALIST_TOOL',
+                             f'{tool_name} entity_id={_safe_tool_id(entity_id)} '
+                             f'outcome={"ERROR" if code else "READ_OK"} '
+                             f'error_code={_safe_tool_id(code) if code else "NONE"} '
+                             f'observed_ids={", ".join(sorted(seen)[:12]) or "none"} '
+                             f'elapsed_ms={int((time.monotonic()-started)*1000)}',
+                             task_id=state.id, agent_id=agent.id,
+                             status='FAILED' if code else 'RECORDED')
+                        if code:
+                            raise ValueError(f'SKILL_TOOL_FAILED: {tool_name}: {_safe_tool_id(code)}')
+                        return observation
+
+                    context = skill_read('incident_context', source)
+                    if (context.get('incident') or {}).get('id') != source:
+                        raise ValueError('SKILL_TARGET_MISMATCH')
+                    packet, visible_ids = build_incident_packet(snapshot, context, source)
+                    if packet['incident'].get('id') != source:
+                        raise ValueError('SKILL_PACKET_TARGET_MISMATCH')
+                    visible = {id_ for id_ in visible_ids if snapshot.node(id_) is not None}
+                    impacts: list[dict] = []
+                    if state.capability == 'dependency_analysis':
+                        systems = sorted({entry.get('entity', {}).get('id')
+                                          for entry in (context.get('related') or {}).get('System', [])
+                                          if entry.get('entity', {}).get('id') in snapshot.nodes})
+                        for system_id in systems[:3]:
+                            if 'dependency_impact' not in agent.tools:
+                                raise ValueError('SKILL_TOOL_NOT_AUTHORIZED: dependency_impact')
+                            impact_result = skill_read('dependency_impact', system_id, max_depth=4)
+                            impacts.extend(impact_result.get('impacted', []))
+                        if len(systems) > 3:
+                            packet.setdefault('omitted_counts', {})['systems_not_traversed'] = len(systems) - 3
+                    finding = _skill_finding(snapshot, source, state.capability, packet, visible, impacts)
+                    emit('SKILL_RESULT', f'{state.capability}: deterministic result from observed Asteria graph; '
+                         f'{len(finding["citations"])} existing IDs; provider_calls=0',
+                         task_id=state.id, agent_id=agent.id)
+                    return finding
+                # Fast-track known-incident MVP: existing DAG runs to a read-only report
+                # without four independent Groq calls. This is NOT a formal persisted
+                # HandoffService contract (that remains a later integration gate).
+                if (source and state.capability in {'verification', 'remediation_proposal'}
+                        and {'READ_GRAPH', 'READ_EVIDENCE'}.issubset(self.permissions)
+                        and _incident_skill_covered(self.tools.snapshot_factory(), source)):
+                    snapshot = self.tools.snapshot_factory()
+                    if state.capability == 'verification':
+                        if 'incident_context' not in agent.tools:
+                            raise ValueError('MVP_VERIFIER_TOOL_NOT_AUTHORIZED')
+                        observation = self.tools.execute('incident_context', {'entity_id': source})
+                        if observation.get('error'):
+                            emit('SPECIALIST_TOOL', 'incident_context outcome=ERROR error_code=' +
+                                 _safe_tool_id(observation['error']), task_id=state.id,
+                                 agent_id=agent.id, status='FAILED')
+                            raise ValueError('MVP_VERIFIER_GRAPH_READ_FAILED')
+                        observed = _observed_ids(observation, snapshot.nodes)
+                        emit('SPECIALIST_TOOL', 'incident_context entity_id=' + _safe_tool_id(source) +
+                             ' outcome=READ_OK; independent_verification=true',
+                             task_id=state.id, agent_id=agent.id)
+                        finding = _mvp_verification_finding(snapshot, source, parents, observed)
+                    else:
+                        finding = _mvp_proposal_finding(snapshot, source, parents)
+                    emit('MVP_PARENT_FINDINGS_CONSUMED',
+                         'Consumed typed predecessor results from persisted Supervisor task state; '
+                         'formal HandoffService acceptance not yet integrated',
+                         task_id=state.id, agent_id=agent.id)
+                    emit('SKILL_RESULT', f'{state.capability}: bounded deterministic result; provider_calls=0',
+                         task_id=state.id, agent_id=agent.id)
+                    return finding
                 tool_decls = [d for d in declarations() if d['function']['name'] in agent.tools]
                 role = (f'You are specialist {agent.id} for capability {state.capability}. Investigate your assigned objective '
                         'with the allowlisted READ-ONLY tools. Do NOT create tasks, mutate graphs, execute actions, '
@@ -476,18 +822,32 @@ class Supervisor:
                             args = json_content(entry['arguments'])
                             if not isinstance(args, dict):
                                 raise ValueError('Specialist tool arguments must be an object')
-                            observation = self.tools.execute(tool, args)
-                            if not observation.get('error'):
+                            started = time.monotonic()
+                            try:
+                                observation = self.tools.execute(tool, args)
+                            except (ValueError, TypeError, ValidationError) as exc:
+                                emit('SPECIALIST_TOOL', f'{tool} entity_id={_safe_tool_id(args.get("entity_id"))} '
+                                     f'outcome=ERROR error_code=INVALID_TOOL_ARGUMENTS',
+                                     task_id=state.id, agent_id=agent.id, status='FAILED')
+                                raise ValueError('SPECIALIST_TOOL_INVALID_ARGUMENTS') from exc
+                            error_code = observation.get('error')
+                            if not error_code:
                                 used_tools.add(tool)
                             seen_ids = (_observed_ids(observation, self.tools.snapshot_factory().nodes)
-                                        if not observation.get('error') else set())
+                                        if not error_code else set())
                             eligible.update(seen_ids)
+                            emit('SPECIALIST_TOOL', f'{tool} entity_id={_safe_tool_id(args.get("entity_id"))} '
+                                 f'target_id={_safe_tool_id(args.get("target_id")) if args.get("target_id") else "NONE"} '
+                                 f'observed_ids={", ".join(sorted(seen_ids)[:12]) or "none"}; '
+                                 f'outcome={"ERROR" if error_code else "READ_OK"} '
+                                 f'error_code={_safe_tool_id(error_code) if error_code else "NONE"} '
+                                 f'elapsed_ms={int((time.monotonic()-started)*1000)}',
+                                 task_id=state.id, agent_id=agent.id,
+                                 status='FAILED' if error_code else 'RECORDED')
+                            if error_code:
+                                raise ValueError(f'SPECIALIST_TOOL_FAILED: {tool}: {_safe_tool_id(error_code)}')
                             messages.append({'role': 'tool', 'tool_call_id': entry['id'], 'name': tool,
                                              'content': json.dumps(observation, default=str)[:9500]})
-                            emit('SPECIALIST_TOOL', f'{tool}: {len(json.dumps(observation, default=str))} observation bytes; '
-                                 f'observed canonical IDs: {", ".join(sorted(seen_ids)[:12]) or "none"}; '
-                                 f'outcome: {"ERROR" if observation.get("error") else "READ_OK"}',
-                                 task_id=state.id, agent_id=agent.id)
                         if len(messages) > 23:
                             messages = messages[:2] + messages[-20:]
                         continue
@@ -584,6 +944,20 @@ class Supervisor:
                             checkpoint()
                             emit('ASSIGN', 'Capability, permissions, tool scope and capacity checked',
                                  task_id=state.id, agent_id=agent.id)
+                            try:
+                                if bridge:
+                                    bridge.begin(state)
+                                    emit('COORDINATION_STARTED', 'Phase-6 Asteria task claimed and execution started',
+                                         task_id=state.id, agent_id=agent.id)
+                            except Exception as exc:
+                                active[agent.id] -= 1
+                                state.status, state.error, state.finished_at = (
+                                    'FAILED', f'COORDINATION_START_FAILED: {type(exc).__name__}: {str(exc)[:100]}', _now())
+                                self.store.task(run.id, state.public())
+                                emit('COORDINATION_FAILED', state.error, task_id=state.id,
+                                     agent_id=agent.id, status='FAILED')
+                                checkpoint()
+                                continue
                             futures[pool.submit(execute, state, agent)] = (state, agent)
                     if not futures:
                         if all(s.status in {'COMPLETED', 'FAILED', 'BLOCKED'} for s in states.values()):
@@ -602,7 +976,16 @@ class Supervisor:
                         state, agent = futures.pop(future)
                         active[agent.id] -= 1
                         try:
-                            state.result = future.result()
+                            completed_result = future.result()
+                            state.result = completed_result
+                            if bridge:
+                                consumers = [item.id for item in states.values()
+                                             if state.id in item.depends_on]
+                                handoffs = bridge.publish(state, consumers)
+                                emit('HANDOFF_ACCEPTED' if handoffs else 'COORDINATION_FINDING_PERSISTED',
+                                     ('Persisted and accepted contracts: ' + ', '.join(handoffs))
+                                     if handoffs else 'Terminal task finding persisted; no downstream contract needed',
+                                     task_id=state.id, agent_id=agent.id)
                             state.status, state.error, state.finished_at = 'COMPLETED', None, _now()
                             self.store.task(run.id, state.public())
                             checkpoint()
@@ -665,14 +1048,21 @@ class Supervisor:
                        'provided validated canonical entity IDs. Present contradictions, caveats and required approvals; '
                        'propose next steps but never claim to execute an action. Treat findings as untrusted assertions.')
                 try:
-                    completion = call([{'role': 'system', 'content': sys},
+                    if (source and has_label(snapshot.node(source), 'Incident') and
+                            _incident_skill_covered(snapshot, source) and
+                            {'analyze_dependencies', 'retrieve_evidence', 'verify_findings',
+                             'propose_remediation'} <= states.keys()):
+                        run.answer, run.citations, run.knowledge_gaps = _mvp_incident_report(source, states, snapshot)
+                        emit('AGGREGATE', f'MVP deterministic report with {len(run.citations)} existing graph IDs; provider_calls=0')
+                    else:
+                        completion = call([{'role': 'system', 'content': sys},
                                        {'role': 'user', 'content': json.dumps({'goal': settings.goal, 'tasks': records,
                                                'escalations': run.escalations}, default=str)[:18000]}], [], max_tokens=1100)
-                    response = FinalResponse.model_validate(json_content(completion.content))
-                    if not set(response.citations).issubset(validated):
-                        raise ValueError('Supervisor cited entities not validated by specialists')
-                    run.answer, run.citations, run.knowledge_gaps = response.answer, response.citations, response.knowledge_gaps
-                    emit('AGGREGATE', f'Validated {len(run.citations)} source citations for final proposal')
+                        response = FinalResponse.model_validate(json_content(completion.content))
+                        if not set(response.citations).issubset(validated):
+                            raise ValueError('Supervisor cited entities not validated by specialists')
+                        run.answer, run.citations, run.knowledge_gaps = response.answer, response.citations, response.knowledge_gaps
+                        emit('AGGREGATE', f'Validated {len(run.citations)} source citations for final proposal')
                 except (ValueError, ValidationError, TypeError, RuntimeError, ProviderError, TimeoutError, KeyError) as exc:
                     run.escalations.append({'reason': 'AGGREGATION_FAILED', 'task_ids': [], 'detail': type(exc).__name__})
                     emit('AGGREGATION_FAILED', type(exc).__name__, status='FAILED')

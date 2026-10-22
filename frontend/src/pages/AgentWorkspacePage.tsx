@@ -8,9 +8,10 @@ import {ErrorPanel} from '../components/AsyncState'
 import {GovernedToolPanel} from '../demo/GovernedToolPanel'
 import {GraphView} from '../components/GraphView'
 import {getEntity,getNeighbors} from '../api/entities'
-import {relationshipsToGraph} from '../graph/adapters'
+import {mergeGraphs,relationshipsToGraph} from '../graph/adapters'
 import {allScenarios} from '../demo/demoModel'
 import './agentWorkspace.css'
+import {workspaceRecoveryState} from './workspaceRecovery'
 
 const base='/api/v1/agent-runtime/workspace'
 type Brain={graph_id:string;display_name:string;available:boolean}
@@ -61,21 +62,31 @@ function TaskGraph({tasks,selected,onSelect}:{tasks:Task[];selected:string;onSel
 
 function CitationLinks({ids,graphId}:{ids:string[];graphId?:string}){return <span className="aw-citations">{ids.map(id=>graphId?<span key={id}>{id}</span>:<Link key={id} to={`/entities/${encodeURIComponent(id)}`}>{id} ↗</Link>)}{!ids.length&&<span className="aw-muted">None verified</span>}</span>}
 
-function EvidenceExplorer({ids,config}:{ids:string[];config:import('../api/types').ApiConfig}){
+export function EvidenceExplorer({ids,config}:{ids:string[];config:import('../api/types').ApiConfig}){
  const [selected,setSelected]=useState('')
  const focus=ids.includes(selected)?selected:ids[0]||''
- const record=useQuery({queryKey:['workspace-evidence-entity',config.tenantId,config.baseUrl,focus],queryFn:()=>getEntity(config,focus),enabled:!!focus,retry:false})
- const neighborhood=useQuery({queryKey:['workspace-evidence-neighbors',config.tenantId,config.baseUrl,focus],queryFn:()=>getNeighbors(config,focus,{limit:40}),enabled:!!focus,retry:false})
+ const record=useQuery({queryKey:['workspace-evidence-entity',config.tenantId,config.baseUrl,config.graphId,focus],queryFn:()=>getEntity(config,focus),enabled:!!focus&&!!config.graphId,retry:false})
+ const neighborhood=useQuery({queryKey:['workspace-evidence-neighbors',config.tenantId,config.baseUrl,config.graphId,focus],queryFn:()=>getNeighbors(config,focus,{limit:40}),enabled:!!focus&&!!config.graphId&&record.isSuccess,retry:false})
  const graph=useMemo(()=>{
   const found=relationshipsToGraph(Array.isArray(neighborhood.data?.items)?neighborhood.data.items:[])
-  if(focus&&!found.nodes.some(n=>n.id===focus)) found.nodes.unshift({id:focus,type:'EvidenceRoot',label:focus,data:{id:focus}})
-  return found
- },[focus,neighborhood.data])
+  const entity=record.data?.entity||record.data
+  if(!entity)return {nodes:[],edges:[]}
+  const labels=Array.isArray(entity._labels)?entity._labels.filter((x:string)=>x!=='Entity'):[]
+  const type=String(labels[0]||entity.type||entity.kind||'Entity')
+  const root={id:focus,type,label:String(entity.name||entity.title||entity.id||focus),status:entity.status,data:entity}
+  return mergeGraphs(found,{nodes:[root],edges:[]})
+ },[focus,record.data,neighborhood.data])
  if(!ids.length)return <p className="aw-muted">No verified final citations to explore.</p>
+ if(!config.graphId)return <p role="alert">Select a Company Brain before retrieving evidence. Unscoped entity lookups are disabled in this explorer.</p>
  return <div className="aw-evidence-explorer"><div className="aw-controls-row"><label className="aw-field aw-grow"><span>Evidence or connected graph entity</span><select value={focus} onChange={e=>setSelected(e.target.value)}>{ids.map(id=><option value={id} key={id}>{id}</option>)}</select></label><span className="aw-muted">Scoped to selected Company Brain</span></div>
-  {record.error&&<ErrorPanel error={record.error}/>}{neighborhood.error&&<ErrorPanel error={neighborhood.error}/>}
-  {record.data&&<div className="aw-inspector"><b>{String(record.data?.entity?.name||record.data?.name||focus)}</b><p className="aw-muted">Record and provenance are backed by the current tenant graph. Edges below are returned graph relationships, not claims inferred by this interface.</p></div>}
-  {neighborhood.isLoading?<p className="aw-muted">Retrieving connected evidence…</p>:<GraphView graph={graph} layout="breadthfirst" height={315}/>}<p className="aw-footnote">Graph paths and provenance are current graph reads. Click any node to inspect its recorded links. Claims still require source verification.</p>
+  {record.isLoading&&<p className="aw-muted">Checking selected citation in the current Company Brain…</p>}
+  {record.error&&<><ErrorPanel error={record.error}/><p role="alert">This citation could not be resolved to a canonical entity in the selected graph. The explorer will not display it as verified evidence.</p></>}
+  {record.data&&<><div className="aw-inspector"><b>{String(record.data?.entity?.name||record.data?.name||focus)}</b><p className="aw-muted">Canonical entity found in the selected graph. This alone does not verify the truth or provenance of associated claims.</p></div>
+   {neighborhood.isLoading&&<p className="aw-muted">Retrieving connected evidence…</p>}
+   {neighborhood.error&&<ErrorPanel error={neighborhood.error}/>}
+   {!neighborhood.isLoading&&!neighborhood.error&&<GraphView key={`${config.tenantId}:${config.graphId}:${focus}`} graph={graph} apiConfig={config} layout="breadthfirst" height={315}/>}
+   <p className="aw-footnote">Relationships are bounded graph reads. Select a node to verify its canonical identity and recorded provenance in this Company Brain. A connection does not establish causality.</p>
+  </>}
  </div>
 }
 
@@ -113,6 +124,7 @@ export function AgentWorkspacePage(){
  const current=detail.data?.workspace
  const result=detail.data?.supervisor
  const tasks=result?.tasks||[]
+ const recovery=workspaceRecoveryState(current,detail.data?.checkpoint,tasks)
  const events=result?.events||[]
  const selectedTask=tasks.find(t=>(t.task_id||t.id)===focused)
  const isActive=!!current&&inProgress.includes(current.status)
@@ -152,7 +164,7 @@ export function AgentWorkspacePage(){
   </section>
   <div className="aw-layout"><aside className="aw-card aw-run-list"><div className="aw-head"><div><span className="aw-overline">EXECUTION QUEUE</span><h2>Investigations</h2></div><button onClick={refresh} aria-label="Refresh runs">↻</button></div>
     {runs.error&&<ErrorPanel error={runs.error}/>}{!runs.data?.items.length&&<div className="aw-empty">No workspace runs yet. Start one above to create a real investigation.</div>}
-    {runs.data?.items.map(run=><button className={`aw-run ${activeId===run.id?'aw-picked':''}`} key={run.id} onClick={()=>{setChosen(run.id);setFocused('');setFrame(0)}}><span className="aw-run-top"><b className={`aw-pill aw-pill-${run.status.toLowerCase()}`}>{run.status.replaceAll('_',' ')}</b><small>{stamp(run.created_at)}</small></span><strong>{run.goal}</strong><small>{run.graph_id||'Legacy default'} · {run.id}</small></button>)}
+    {runs.data?.items.map(run=><button className={`aw-run ${activeId===run.id?'aw-picked':''}`} key={run.id} onClick={()=>{control.reset();setChosen(run.id);setFocused('');setFrame(0)}}><span className="aw-run-top"><b className={`aw-pill aw-pill-${run.status.toLowerCase()}`}>{run.status.replaceAll('_',' ')}</b><small>{stamp(run.created_at)}</small></span><strong>{run.goal}</strong><small>{run.graph_id||'Legacy default'} · {run.id}</small></button>)}
     <p className="aw-footnote">Only runs owned by the authenticated principal are listed.</p>
    </aside>
    <div className="aw-main">
@@ -160,7 +172,10 @@ export function AgentWorkspacePage(){
     {!current?<section className="aw-card aw-empty-state"><span className="aw-overline">AWAITING OBJECTIVE</span><h2>The workspace is ready.</h2><p>Start an investigation or choose one of your saved runs to observe tasks and inspect verified outcomes.</p></section>:<>
      <section className="aw-card"><div className="aw-head"><div><span className="aw-overline">SUPERVISOR / {current.id}</span><h2>{current.goal}</h2><p className="aw-muted">Owner {current.owner} · {stamp(current.created_at)} · Brain: {current.graph_id||'Legacy default'}</p></div><b className={`aw-pill aw-pill-${current.status.toLowerCase()}`}>{current.status}</b></div>
       <div className="aw-metrics"><span><strong>{tasks.length}</strong> scheduled tasks</span><span><strong>{tasks.filter(t=>t.status==='COMPLETED').length}</strong> completed</span><span><strong>{events.length}</strong> recorded events</span><span><strong>{result?.tokens_used??0}</strong> tokens / estimate</span></div>
-      <div className="aw-actions"><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('pause')}>Pause after current tasks</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('cancel')}>Cancel scheduling</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!current.recovery_available||!['PAUSED','INTERRUPTED'].includes(current.status)||control.isPending} onClick={()=>control.mutate('resume')}>Resume</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!['FAILED','PARTIAL','NEEDS_REVIEW'].includes(current.status)||control.isPending} onClick={()=>control.mutate('retry')}>Retry failed work</button><button onClick={()=>detail.refetch()}>Refresh now</button></div>
+      <div className="aw-actions"><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('pause')}>Pause after current tasks</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!isActive||control.isPending} onClick={()=>control.mutate('cancel')}>Cancel scheduling</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!recovery.canResume||control.isPending} onClick={()=>control.mutate('resume')}>Resume</button><button disabled={!hasPermission('CREATE_INVESTIGATION')||!consent||!recovery.canRetry||control.isPending} onClick={()=>control.mutate('retry')}>Retry failed work</button><button onClick={()=>detail.refetch()}>Refresh now</button></div>
+      {recovery.reviewOnly&&<p className="aw-footnote">All specialist tasks completed. This run needs evidence or human review; there is no failed work to retry.</p>}
+      {recovery.missingCheckpoint&&<p className="aw-footnote">No planned checkpoint is available for this run. It cannot safely resume or retry; a new investigation is required.</p>}
+      {recovery.hasCheckpoint&&<p className="aw-footnote">Persisted checkpoint: revision {detail.data?.checkpoint.revision}. Recovery is only offered when there is eligible work.</p>}
       {current.error&&<p role="alert">{current.error}</p>}{control.error&&<ErrorPanel error={control.error}/>}
       <p className="aw-footnote">{live?'Polling persisted operational activity every 2.5 seconds.':'Persisted state, not a fabricated live animation.'} Pause/cancel are cooperative and may wait for active model calls. No rollback or notification is executed by the supervisor.</p>
      </section>

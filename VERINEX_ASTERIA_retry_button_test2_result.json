@@ -1,0 +1,30 @@
+{
+  "phase": "SETUP",
+  "run_id": "SRUN-028D204979B546F0A8B4CBE0C28BBF51",
+  "tenant": "asteria",
+  "graph": "asteria_company_brain_v1",
+  "created_at_utc": "2026-10-22T01:32:37.913590+00:00",
+  "marker": "ASTERIA_RETRY_BUTTON_TEST2_INJECTED_DEPENDENCY_FAILURE",
+  "initial_status": "NEEDS_REVIEW",
+  "initial_tasks": {
+    "analyze_dependencies": "FAILED",
+    "propose_remediation": "BLOCKED",
+    "retrieve_evidence": "COMPLETED",
+    "verify_findings": "BLOCKED"
+  },
+  "checkpoint_revision": 23,
+  "preserve_evidence_attempts": 1,
+  "preserve_evidence_digest": "4d1d9d81e1bbaab4b9fadf4bdb8cb6ee8048145c9293a4142d73a1ea85a108d7",
+  "initial_handoff_accepted": 1,
+  "injected_failure_count": 1,
+  "provider_calls": 0,
+  "checks": {
+    "injected_failure_executed": true,
+    "expected_failed_and_completed_tasks": true,
+    "planned_checkpoint_present": true,
+    "record_owned_and_asteria_scoped": true,
+    "no_model_calls": true,
+    "persisted_supervisor_readback": true
+  },
+  "verdict": "RETRY_TEST2_READY"
+}

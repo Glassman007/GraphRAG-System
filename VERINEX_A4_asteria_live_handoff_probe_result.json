@@ -1,0 +1,77 @@
+{
+  "run_id": "SRUN-F9E340466AB44C34BDB37BF75CEA9044",
+  "status": "NEEDS_REVIEW",
+  "tasks": {
+    "analyze_dependencies": "COMPLETED",
+    "retrieve_evidence": "COMPLETED",
+    "verify_findings": "COMPLETED",
+    "propose_remediation": "COMPLETED"
+  },
+  "checks": {
+    "scope": true,
+    "four_completed_tasks": true,
+    "report_with_citations": true,
+    "persistent_supervisor_readback": true,
+    "two_accepted_verifier_handoffs": true,
+    "one_accepted_remediation_handoff": true,
+    "all_three_handoffs_consumable_from_new_adapter": true,
+    "no_model_calls": true,
+    "supervisor_handoff_consumption_events": true
+  },
+  "accepted_handoff_ids": [
+    "HANDOFF-P6-732D274497F3893A",
+    "HANDOFF-P6-7D1BD3F2087A498B",
+    "HANDOFF-P6-3A1C7297A966D4FF"
+  ],
+  "consumed_artifacts": {
+    "analyze_dependencies->verify_findings": {
+      "handoff_id": "HANDOFF-P6-7D1BD3F2087A498B",
+      "artifact_ids": [
+        "EVD-AST-0001",
+        "EVD-AST-0002",
+        "EVD-AST-0003",
+        "EVD-AST-0004",
+        "EVD-AST-0005",
+        "EVD-AST-0006",
+        "FIND-P6-F29BB1FD88E6AA36"
+      ],
+      "citations": 11
+    },
+    "retrieve_evidence->verify_findings": {
+      "handoff_id": "HANDOFF-P6-732D274497F3893A",
+      "artifact_ids": [
+        "EVD-AST-0001",
+        "EVD-AST-0002",
+        "EVD-AST-0003",
+        "EVD-AST-0004",
+        "EVD-AST-0005",
+        "EVD-AST-0006",
+        "FIND-P6-5F863424FF4C357C"
+      ],
+      "citations": 10
+    },
+    "verify_findings->propose_remediation": {
+      "handoff_id": "HANDOFF-P6-3A1C7297A966D4FF",
+      "artifact_ids": [
+        "EVD-AST-0001",
+        "EVD-AST-0002",
+        "EVD-AST-0003",
+        "EVD-AST-0004",
+        "EVD-AST-0005",
+        "EVD-AST-0006",
+        "FIND-P6-26259C461FD066FA"
+      ],
+      "citations": 11
+    }
+  },
+  "tokens": 0,
+  "model_calls": 0,
+  "note": "Phase-6 execution terminal completion and crash recovery not certified; business graph was read-only except internal coordination telemetry.",
+  "verdict": "A4_VERTICAL_PASS",
+  "package": "A4",
+  "graph": "asteria_company_brain_v1",
+  "tenant": "asteria",
+  "utc": "2026-10-22T00:57:05.809273+00:00",
+  "model_network_enabled": false,
+  "business_side_effects_executed": false
+}

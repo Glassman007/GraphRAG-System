@@ -1,0 +1,73 @@
+{
+  "package": "A2",
+  "stage": "existing_behavior_only",
+  "graph": "asteria_company_brain_v1",
+  "tenant": "asteria",
+  "executed_at_utc": "2026-10-21T23:38:35.663321+00:00",
+  "no_external_model_calls": true,
+  "no_graph_writes": true,
+  "no_persistent_supervisor_runs": true,
+  "outcome": "A2_BASELINE_GAPS_IDENTIFIED",
+  "checks": [
+    {
+      "check": "Canonical Asteria incident",
+      "result": "PASS",
+      "id": "INC-AST-ROUTE-OUTAGE",
+      "graph": "asteria_company_brain_v1",
+      "tenant": "asteria"
+    },
+    {
+      "check": "Existing typed incident DAG",
+      "result": "PASS",
+      "tasks": [
+        {
+          "id": "analyze_dependencies",
+          "capability": "dependency_analysis",
+          "depends_on": []
+        },
+        {
+          "id": "retrieve_evidence",
+          "capability": "evidence_retrieval",
+          "depends_on": []
+        },
+        {
+          "id": "verify_findings",
+          "capability": "verification",
+          "depends_on": [
+            "analyze_dependencies",
+            "retrieve_evidence"
+          ]
+        },
+        {
+          "id": "propose_remediation",
+          "capability": "remediation_proposal",
+          "depends_on": [
+            "verify_findings"
+          ]
+        }
+      ]
+    },
+    {
+      "check": "Unknown starting entity rejected",
+      "result": "PASS",
+      "exception_type": "ValueError",
+      "model_attempts": 0
+    },
+    {
+      "check": "Descriptive objective without ID",
+      "result": "GAP",
+      "provider_attempts": 1,
+      "provider_is_network_disabled": true,
+      "status": "FAILED",
+      "selected_source": null
+    },
+    {
+      "check": "Incident objective with evidence-node target",
+      "result": "GAP",
+      "evidence_id": "EVD-AST-0003",
+      "provider_attempts": 1,
+      "status": "FAILED",
+      "source_accepted": true
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "package": "A3",
+  "stage": "preimplementation_baseline",
+  "graph": "asteria_company_brain_v1",
+  "tenant": "asteria",
+  "executed_at_utc": "2026-10-21T23:57:04.554782+00:00",
+  "outcome": "A3_BASELINE_GAPS_IDENTIFIED",
+  "no_real_model_calls": true,
+  "business_graph_writes": false,
+  "persistent_runs": false,
+  "checks": [
+    {
+      "check": "Asteria-only graph binding",
+      "result": "PASS",
+      "graph": "asteria_company_brain_v1",
+      "tenant": "asteria"
+    },
+    {
+      "check": "Known canonical Asteria Incident",
+      "result": "PASS",
+      "entity_id": "INC-AST-ROUTE-OUTAGE"
+    },
+    {
+      "check": "Existing deterministic incident_context read",
+      "result": "PASS",
+      "related_counts": {
+        "Evidence": 8,
+        "Claim": 3,
+        "Event": 5,
+        "Decision": 0,
+        "System": 1,
+        "Deployment": 1,
+        "Change": 0,
+        "Policy": 0,
+        "Finding": 0
+      }
+    },
+    {
+      "check": "Existing incident skill evidence packet",
+      "result": "PASS",
+      "canonical_ids": 17,
+      "expected_evidence_present": [
+        "EVD-AST-0003",
+        "EVD-AST-0004",
+        "EVD-AST-0005"
+      ],
+      "omitted_counts": {
+        "events": 0,
+        "systems": 0,
+        "deployments": 0,
+        "decisions": 0,
+        "other_claims": 0,
+        "other_evidence": 2
+      }
+    },
+    {
+      "check": "Dependency helper via incident-linked System",
+      "result": "PASS",
+      "system_id": "SYS-AST-ROUTE-API",
+      "impacted_count": 18,
+      "error": null
+    },
+    {
+      "check": "Existing specialist capabilities",
+      "result": "PASS",
+      "investigators": [
+        "incident_investigator"
+      ],
+      "dependency_agents": [
+        "dependency_analyst",
+        "incident_investigator"
+      ],
+      "incident_skill_available": true
+    },
+    {
+      "check": "Supervisor assigned-task deterministic dispatch",
+      "result": "GAP",
+      "run_status": "NEEDS_REVIEW",
+      "task_statuses": {
+        "analyze_dependencies": "FAILED",
+        "retrieve_evidence": "FAILED",
+        "verify_findings": "BLOCKED",
+        "propose_remediation": "BLOCKED"
+      },
+      "blocked_provider_requests": 2,
+      "supervisor_tool_reads": [],
+      "live_model_network_calls": 0
+    },
+    {
+      "check": "No model network calls or persistent stores",
+      "result": "PASS",
+      "actual_model_network_calls": 0,
+      "in_memory_runs": 1,
+      "persistent_supervisor_runs": 0,
+      "business_graph_writes": 0
+    }
+  ]
+}

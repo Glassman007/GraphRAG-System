@@ -1,0 +1,26 @@
+{
+  "package": "A1",
+  "graph": "asteria_company_brain_v1",
+  "tenant": "asteria",
+  "executed_at_utc": "2026-10-21T23:34:46.160135+00:00",
+  "model_calls": 0,
+  "business_graph_writes": 0,
+  "agent_memory_diagnostic_record_created": true,
+  "agent_memory_diagnostic_record_removed": true,
+  "checks": {
+    "session": "PASS",
+    "canonical_asteria_target": "PASS",
+    "list_contains_only_scoped_fixture": "PASS",
+    "detail_readback": "PASS",
+    "events_readback_without_execution": "PASS",
+    "replay_readback_without_execution": "PASS",
+    "invalid_graph_denied": "PASS"
+  },
+  "diagnostic_run_id": "SRUN-CAB1F81CBFA04A55BE4430425ACE5CD2",
+  "list_http_status": 200,
+  "detail_http_status": 200,
+  "events_http_status": 200,
+  "replay_http_status": 200,
+  "invalid_graph_http_status": 404,
+  "outcome": "PASS"
+}

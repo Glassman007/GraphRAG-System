@@ -1,0 +1,164 @@
+{
+  "package": "A1",
+  "graph": "asteria_company_brain_v1",
+  "tenant": "asteria",
+  "executed_at_utc": "2026-10-21T23:19:33.394908+00:00",
+  "no_model_calls": true,
+  "business_data_mutations": false,
+  "checks": [
+    {
+      "check": "Canonical incident exists in Asteria",
+      "result": "PASS",
+      "id": "INC-AST-ROUTE-OUTAGE",
+      "graph": "asteria_company_brain_v1",
+      "tenant": "asteria",
+      "nodes": 519,
+      "relationships": 908
+    },
+    {
+      "check": "Known Asteria evidence records",
+      "result": "PASS",
+      "found": [
+        "EVD-AST-0003",
+        "EVD-AST-0004",
+        "EVD-AST-0005"
+      ],
+      "missing": []
+    },
+    {
+      "check": "Tool get_entity",
+      "result": "PASS",
+      "item_count": 1
+    },
+    {
+      "check": "Tool incident_context",
+      "result": "PASS",
+      "item_count": 18
+    },
+    {
+      "check": "Tool graph_neighbors",
+      "result": "PASS",
+      "item_count": 6
+    },
+    {
+      "check": "Tool graph_paths",
+      "result": "PASS",
+      "item_count": 15
+    },
+    {
+      "check": "Historical run SRUN-E633E01597404F9EADB12F19F9B3B894",
+      "result": "INSPECTED",
+      "status": "NEEDS_REVIEW",
+      "source_entity_id": "",
+      "errors": [
+        {
+          "task_id": "dependency_analysis",
+          "status": "BLOCKED",
+          "error": "Prerequisite task failed or was blocked"
+        },
+        {
+          "task_id": "evidence_gathering",
+          "status": "BLOCKED",
+          "error": "Prerequisite task failed or was blocked"
+        },
+        {
+          "task_id": "initial_investigation",
+          "status": "FAILED",
+          "error": "RuntimeError: Specialist iteration limit reached without a validated result"
+        },
+        {
+          "task_id": "remediation_proposal",
+          "status": "BLOCKED",
+          "error": "Prerequisite task failed or was blocked"
+        },
+        {
+          "task_id": "verification_and_validation",
+          "status": "BLOCKED",
+          "error": "Prerequisite task failed or was blocked"
+        }
+      ],
+      "tool_events": [
+        {
+          "task_id": "initial_investigation",
+          "summary": "graph_neighbors: 57 observation bytes; observed canonical IDs: none; outcome: ERROR"
+        },
+        {
+          "task_id": "initial_investigation",
+          "summary": "graph_neighbors: 58 observation bytes; observed canonical IDs: none; outcome: ERROR"
+        },
+        {
+          "task_id": "initial_investigation",
+          "summary": "graph_neighbors: 59 observation bytes; observed canonical IDs: none; outcome: ERROR"
+        },
+        {
+          "task_id": "initial_investigation",
+          "summary": "graph_neighbors: 64 observation bytes; observed canonical IDs: none; outcome: ERROR"
+        },
+        {
+          "task_id": "initial_investigation",
+          "summary": "graph_paths: 57 observation bytes; observed canonical IDs: none; outcome: ERROR"
+        }
+      ]
+    },
+    {
+      "check": "Historical run SRUN-95541002DA8C4855B7E70BFAC73FF47D",
+      "result": "INSPECTED",
+      "status": "NEEDS_REVIEW",
+      "source_entity_id": "INC-AST-ROUTE-OUTAGE",
+      "errors": [
+        {
+          "task_id": "analyze_dependencies",
+          "status": "FAILED",
+          "error": "ProviderRateLimited: Groq TPM pacing would exceed the remaining agent deadline; wait and retry later"
+        },
+        {
+          "task_id": "propose_remediation",
+          "status": "BLOCKED",
+          "error": "Prerequisite task failed or was blocked"
+        },
+        {
+          "task_id": "retrieve_evidence",
+          "status": "FAILED",
+          "error": "ProviderRateLimited: Groq TPM pacing would exceed the remaining agent deadline; wait and retry later"
+        },
+        {
+          "task_id": "verify_findings",
+          "status": "BLOCKED",
+          "error": "Prerequisite task failed or was blocked"
+        }
+      ],
+      "tool_events": [
+        {
+          "task_id": "retrieve_evidence",
+          "summary": "incident_context: 9868 observation bytes; observed canonical IDs: CLM-AST-ROUTE-CPU, CLM-AST-ROUTE-PENDING, CLM-AST-ROUTE-SCHEMA, DPL-AST-RO"
+        },
+        {
+          "task_id": "analyze_dependencies",
+          "summary": "incident_context: 9868 observation bytes; observed canonical IDs: CLM-AST-ROUTE-CPU, CLM-AST-ROUTE-PENDING, CLM-AST-ROUTE-SCHEMA, DPL-AST-RO"
+        }
+      ]
+    },
+    {
+      "check": "Asteria agent-memory graph binding",
+      "result": "PASS",
+      "memory_graph": "asteria_company_brain_v1_agent_memory",
+      "tenant": "asteria"
+    },
+    {
+      "check": "Authenticated Asteria API session",
+      "result": "PASS",
+      "status_code": 200
+    },
+    {
+      "check": "Agent provider availability (initialization only)",
+      "result": "INSPECTED",
+      "configured": true,
+      "provider": "groq"
+    },
+    {
+      "check": "Asteria Workspace run list",
+      "result": "FAIL",
+      "reason": "Unexpected graph or tenant in result"
+    }
+  ]
+}

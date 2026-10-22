@@ -1,0 +1,23 @@
+{
+  "phase": "VERIFY",
+  "run_id": "SRUN-028D204979B546F0A8B4CBE0C28BBF51",
+  "workspace_status": "NEEDS_REVIEW",
+  "supervisor_status": "NEEDS_REVIEW",
+  "tasks": {
+    "analyze_dependencies": "COMPLETED",
+    "propose_remediation": "COMPLETED",
+    "retrieve_evidence": "COMPLETED",
+    "verify_findings": "COMPLETED"
+  },
+  "checkpoint_revision": 56,
+  "accepted_handoff_event_count": 3,
+  "checks": {
+    "four_tasks_completed": true,
+    "previously_completed_evidence_preserved": true,
+    "checkpoint_revision_advanced": true,
+    "retry_resumed_event": true,
+    "no_duplicate_accepted_handoff_events": true,
+    "report_cites_known_incident": true
+  },
+  "verdict": "RETRY_TEST2_PASS"
+}

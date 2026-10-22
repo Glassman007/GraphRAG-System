@@ -183,6 +183,13 @@ def _workspace_store(principal: Principal) -> WorkspaceStore:
     return WorkspaceStore(client_for(principal))
 
 
+def _workspace_in_selected_graph(principal: Principal, record: dict) -> bool:
+    # Legacy records without a graph_id cannot be attributed to the selected
+    # Company Brain; fail closed instead of assuming the request graph.
+    expected = principal.graph_id or client_for(principal).settings.falkordb_graph
+    return record.get('tenant') == principal.tenant_id and record.get('graph_id') == expected
+
+
 def _workspace_owned(principal: Principal, run_id: str) -> dict:
     import re
     if not re.fullmatch(r'SRUN-[0-9A-F]{32}', run_id):
@@ -190,10 +197,8 @@ def _workspace_owned(principal: Principal, run_id: str) -> dict:
     record = _workspace_store(principal).get(run_id, principal.subject)
     if record is None:
         _not_found('Owned workspace run', run_id)
-    # A run is permanently bound to its creation graph. Do not permit a different
-    # graph selection to resume, inspect or control an unrelated run.
-    expected = principal.graph_id or client_for(principal).settings.falkordb_graph
-    if record.get('graph_id', expected) != expected:
+    # A run is permanently bound to its creation graph, including tenant scope.
+    if not _workspace_in_selected_graph(principal, record):
         _not_found('Owned workspace run', run_id)
     return record
 
@@ -263,7 +268,7 @@ def workspace_runs(limit:int=Query(default=30,ge=1,le=100),
                    principal:Principal=Depends(require('READ_GRAPH','READ_EVIDENCE'))):
     records=_workspace_store(principal).list(principal.subject,limit)
     return {'items':[format_workspace(r,is_live=workspace_runner.live(principal.tenant_id,r['id']))
-                     for r in records]}
+                     for r in records if _workspace_in_selected_graph(principal, r)]}
 
 
 @router.post('/agent-runtime/workspace/runs',tags=['Agent Workspace'],status_code=202)
@@ -380,7 +385,8 @@ def workspace_changes(limit:int=Query(default=30,ge=1,le=100),
     for event in events:
         item=dict(event)
         item['workflow_impacts']=[impact for impact in item.get('workflow_impacts',[])
-           if owned.get(str(impact.get('run_id') or ''),principal.subject)]
+           if (record := owned.get(str(impact.get('run_id') or ''),principal.subject))
+           and _workspace_in_selected_graph(principal, record)]
         scoped.append(item)
     return {'items':scoped,'mode':'PERSISTED_VERIFICATION_EVENTS','count':len(scoped)}
 

@@ -1,0 +1,454 @@
+diff --git a/backend/app/agent_runtime/supervisor.py b/backend/app/agent_runtime/supervisor.py
+--- a/backend/app/agent_runtime/supervisor.py
++++ b/backend/app/agent_runtime/supervisor.py
+@@ -6,6 +6,7 @@
+ from __future__ import annotations
+ 
+ import json
++import os
+ import re
+ import threading
+ import time
+@@ -618,6 +619,23 @@
+                     self.store.task(run.id, state.public())
+                 emit('PLAN_VALIDATED', f'{len(states)} unique tasks; no cyclic prerequisites')
+ 
++            # Asteria-only bridge. Offline/in-memory stores retain the established
++            # scheduler path; other Company Brains never participate in this adapter.
++            bridge = None
++            client = getattr(self.store, 'client', None)
++            client_settings = getattr(client, 'settings', None)
++            if (os.getenv('VERINEX_A4_HANDOFFS') == '1' and
++                    source and has_label(snapshot.node(source), 'Incident') and
++                    self.tenant == 'asteria' and client_settings is not None and
++                    getattr(client_settings, 'tenant_id', None) == 'asteria' and
++                    getattr(client_settings, 'falkordb_graph', None) == 'asteria_company_brain_v1' and
++                    set(states).issuperset({'analyze_dependencies', 'retrieve_evidence',
++                                            'verify_findings', 'propose_remediation'})):
++                from backend.app.agent_runtime.asteria_coordination_bridge import AsteriaCoordinationBridge
++                bridge = AsteriaCoordinationBridge(client, run.id, source, states)
++                bridge.prepare()
++                emit('COORDINATION_ATTACHED', 'Phase-6 Asteria tasks and registry attached to this Supervisor DAG')
++
+             def pick(capability: str, active: dict[str, int], excluded: list[str]) -> AgentProfile | None:
+                 suitable = [a for a in self.agents if capability in a.capabilities
+                             and a.permissions.issubset(self.permissions)
+@@ -633,8 +651,17 @@
+                 for dep in state.depends_on:
+                     parent = states[dep]
+                     assert parent.result is not None and parent.status == 'COMPLETED'
+-                    parents.append({'task_id': dep, 'agent_id': parent.agent_id, 'result': parent.result})
+-                    eligible.update(parent.result['citations'])
++                    if bridge:
++                        persisted = bridge.consume(dep, state.id)
++                        parents.append(persisted)
++                        eligible.update(persisted['result']['citations'])
++                        emit('HANDOFF_CONSUMED',
++                             f"Accepted handoff {persisted['handoff_id']} with persisted artifact IDs: "
++                             + ', '.join(persisted['artifact_ids'][:8]),
++                             task_id=state.id, agent_id=agent.id)
++                    else:
++                        parents.append({'task_id': dep, 'agent_id': parent.agent_id, 'result': parent.result})
++                        eligible.update(parent.result['citations'])
+                 # Skills-first for adequately evidenced incident observations only.
+                 # Do not call a model to decide whether incident_context is needed.
+                 if (source and state.capability in {'investigation', 'dependency_analysis', 'evidence_retrieval'}
+@@ -917,6 +944,20 @@
+                             checkpoint()
+                             emit('ASSIGN', 'Capability, permissions, tool scope and capacity checked',
+                                  task_id=state.id, agent_id=agent.id)
++                            try:
++                                if bridge:
++                                    bridge.begin(state)
++                                    emit('COORDINATION_STARTED', 'Phase-6 Asteria task claimed and execution started',
++                                         task_id=state.id, agent_id=agent.id)
++                            except Exception as exc:
++                                active[agent.id] -= 1
++                                state.status, state.error, state.finished_at = (
++                                    'FAILED', f'COORDINATION_START_FAILED: {type(exc).__name__}: {str(exc)[:100]}', _now())
++                                self.store.task(run.id, state.public())
++                                emit('COORDINATION_FAILED', state.error, task_id=state.id,
++                                     agent_id=agent.id, status='FAILED')
++                                checkpoint()
++                                continue
+                             futures[pool.submit(execute, state, agent)] = (state, agent)
+                     if not futures:
+                         if all(s.status in {'COMPLETED', 'FAILED', 'BLOCKED'} for s in states.values()):
+@@ -935,7 +976,16 @@
+                         state, agent = futures.pop(future)
+                         active[agent.id] -= 1
+                         try:
+-                            state.result = future.result()
++                            completed_result = future.result()
++                            state.result = completed_result
++                            if bridge:
++                                consumers = [item.id for item in states.values()
++                                             if state.id in item.depends_on]
++                                handoffs = bridge.publish(state, consumers)
++                                emit('HANDOFF_ACCEPTED' if handoffs else 'COORDINATION_FINDING_PERSISTED',
++                                     ('Persisted and accepted contracts: ' + ', '.join(handoffs))
++                                     if handoffs else 'Terminal task finding persisted; no downstream contract needed',
++                                     task_id=state.id, agent_id=agent.id)
+                             state.status, state.error, state.finished_at = 'COMPLETED', None, _now()
+                             self.store.task(run.id, state.public())
+                             checkpoint()
+diff --git a/backend/app/agent_runtime/asteria_coordination_bridge.py b/backend/app/agent_runtime/asteria_coordination_bridge.py
+new file mode 100644
+--- /dev/null
++++ b/backend/app/agent_runtime/asteria_coordination_bridge.py
+@@ -0,0 +1,177 @@
++"""Opt-in adapter between Asteria Supervisor DAGs and existing Phase-6 handoff services.
++
++This is agent telemetry, not business actions. The Supervisor owns scheduling and
++terminal task status; Phase-6 execution completion is NOT fabricated by this adapter.
++"""
++from __future__ import annotations
++
++import hashlib
++import json
++
++from backend.app.agent_runtime.supervisor import SpecialistFinding
++from backend.app.graph.mutations import upsert_node, upsert_relationship
++from backend.app.services.agent_registry_service import AgentRegistryService
++from backend.app.services.coordination_service import CoordinationService
++from backend.app.services.handoff_service import HandoffService
++from backend.app.services.phase4_graph import GraphSnapshot, has_label
++
++
++ROLE = {
++    'dependency_analysis': ('AGENT-P6-DEPENDENCY', 'INVESTIGATE'),
++    'evidence_retrieval': ('AGENT-P6-INVESTIGATOR', 'ACQUIRE_EVIDENCE'),
++    'investigation': ('AGENT-P6-INVESTIGATOR', 'INVESTIGATE'),
++    'verification': ('AGENT-P6-VERIFIER', 'VERIFY_CLAIM'),
++    'remediation_proposal': ('AGENT-P6-REMEDIATION', 'PREPARE_ACTION'),
++}
++
++
++def _canonical(result):
++    return SpecialistFinding.model_validate(result).model_dump()
++
++
++def _digest(result):
++    return hashlib.sha256(json.dumps(_canonical(result), sort_keys=True).encode()).hexdigest()
++
++
++class AsteriaCoordinationBridge:
++    """Thin adapter; all formal acceptance/blackboard operations use existing services."""
++
++    def __init__(self, client, run_id: str, source: str, tasks: dict):
++        if client.settings.tenant_id != 'asteria' or client.settings.falkordb_graph != 'asteria_company_brain_v1':
++            raise PermissionError('Asteria bridge cannot access another graph or tenant')
++        self.client = client
++        self.run_id = run_id
++        self.source = source
++        self.tasks = tasks
++        self.coordination = CoordinationService(client)
++        self.handoffs = HandoffService(client)
++        self.task_ids = {name: f'TASK-VERINEX-{run_id}-{name}' for name in tasks}
++        self.plan_id = f'PLAN-VERINEX-{run_id}'
++
++    def prepare(self):
++        AgentRegistryService(self.client).ensure_default_agents()
++        snapshot = GraphSnapshot.load(self.client)
++        if not has_label(snapshot.node(self.source), 'Incident'):
++            raise ValueError('BRIDGE_SOURCE_NOT_INCIDENT')
++        upsert_node(self.client, 'Plan', self.plan_id, {
++            'name': 'VERINEX read-only investigation', 'source_entity_id': self.source,
++            'run_id': self.run_id, 'status': 'IN_PROGRESS',
++        })
++        for name, state in self.tasks.items():
++            _, task_type = ROLE[state.capability]
++            ident = self.task_ids[name]
++            old = snapshot.node(ident)
++            if old and (not has_label(old, 'Task') or old.get('run_id') != self.run_id):
++                raise ValueError('BRIDGE_TASK_ID_COLLISION')
++            if not old:
++                upsert_node(self.client, 'Task', ident, {
++                    'title': state.objective[:140], 'task_type': task_type,
++                    'status': 'OPEN', 'run_id': self.run_id,
++                    'supervisor_task_id': name, 'source_entity_id': self.source,
++                })
++            upsert_relationship(self.client, self.plan_id, 'PLAN_HAS_TASK', ident)
++
++    def begin(self, state):
++        graph_task = self.task_ids[state.id]
++        actor = ROLE[state.capability][0]
++        owner = (self.coordination.get_task_owner(graph_task) or {}).get('owner') or {}
++        if owner.get('id') != actor:
++            self.coordination.claim_task(graph_task, actor)
++        self.coordination.start_execution(graph_task, actor)
++
++    def _existing_accepted(self, from_name: str, to_name: str):
++        board = self.coordination.get_task_blackboard(self.task_ids[to_name])
++        if not board:
++            raise ValueError('BRIDGE_BLACKBOARD_MISSING')
++        matches = [item for item in board['accepted_handoff_context']
++                   if item['handoff'].get('source_task_id') == self.task_ids[from_name]
++                   and item['handoff'].get('destination_task_id') == self.task_ids[to_name]]
++        if len(matches) > 1:
++            raise ValueError('BRIDGE_DUPLICATE_ACCEPTED_HANDOFF')
++        return matches[0] if matches else None
++
++    def publish(self, state, dependents: list):
++        """Persist predecessor finding and accepted, verified receiver contracts."""
++        result = _canonical(state.result)
++        if result['confidence'] == 'insufficient' or not result['citations']:
++            raise ValueError('BRIDGE_INSUFFICIENT_FINDING')
++        snapshot = GraphSnapshot.load(self.client)
++        if any(snapshot.node(cid) is None for cid in result['citations']):
++            raise ValueError('BRIDGE_UNKNOWN_CITATION')
++        agent_id = ROLE[state.capability][0]
++        task_id = self.task_ids[state.id]
++        evidence_ids = [cid for cid in result['citations'] if has_label(snapshot.node(cid), 'Evidence')]
++        existing = [item for item in self.coordination.get_recent_findings(task_id)
++                    if item.get('created_by') == agent_id and item.get('supervisor_digest') == _digest(result)]
++        if existing:
++            finding_id = existing[0]['id']
++        else:
++            finding = self.coordination.add_finding(
++                task_id, agent_id, statement=result['summary'],
++                confidence=0.6 if result['confidence'] == 'uncertain' else 0.85,
++                kind='VERINEX_READ_ONLY', evidence_ids=evidence_ids,
++            )['finding']
++            finding_id = finding['id']
++            upsert_node(self.client, 'Finding', finding_id, {
++                'supervisor_digest': _digest(result),
++                'supervisor_result_json': json.dumps(result, sort_keys=True),
++                'supervisor_run_id': self.run_id,
++            })
++        handoff_ids = []
++        for to_name in dependents:
++            receiver = ROLE[self.tasks[to_name].capability][0]
++            if receiver == agent_id:
++                raise ValueError('BRIDGE_SAME_AGENT_HANDOFF')
++            existing_handoff = self._existing_accepted(state.id, to_name)
++            if existing_handoff:
++                hid = existing_handoff['handoff']['id']
++                artifacts = existing_handoff['artifacts']
++                if not any(a.get('id') == finding_id for a in artifacts):
++                    raise ValueError('BRIDGE_ACCEPTED_HANDOFF_ARTIFACT_CHANGED')
++            else:
++                # Investigator -> Verifier has a mandatory Evidence plus Finding contract.
++                artifact_ids = [finding_id, *evidence_ids[:8]]
++                if agent_id == 'AGENT-P6-INVESTIGATOR' and receiver == 'AGENT-P6-VERIFIER' and not evidence_ids:
++                    raise ValueError('BRIDGE_REQUIRED_EVIDENCE_MISSING')
++                detail = self.handoffs.create_handoff(
++                    task_id, agent_id, receiver, artifact_ids=artifact_ids,
++                    destination_task_id=self.task_ids[to_name], confidence_threshold=0.6,
++                    contradictory_evidence_disclosed=True,
++                )
++                hid = detail['handoff']['id']
++                validation = self.handoffs.validate_handoff(hid)
++                if not validation['valid']:
++                    raise ValueError('BRIDGE_HANDOFF_INVALID: ' + ','.join(validation['errors']))
++                self.handoffs.accept_handoff(hid, receiver)
++            handoff_ids.append(hid)
++        return handoff_ids
++
++    def consume(self, from_name: str, to_name: str):
++        """Read typed predecessor result from the persisted accepted blackboard artifact."""
++        record = self._existing_accepted(from_name, to_name)
++        if record is None:
++            raise ValueError('BRIDGE_HANDOFF_NOT_ACCEPTED')
++        handoff = record['handoff']
++        if handoff.get('to_agent_id') != ROLE[self.tasks[to_name].capability][0]:
++            raise ValueError('BRIDGE_RECEIVER_MISMATCH')
++        findings = [a for a in record['artifacts'] if has_label(a, 'Finding')
++                    and a.get('task_id') == self.task_ids[from_name]
++                    and a.get('created_by') == ROLE[self.tasks[from_name].capability][0]]
++        if len(findings) != 1:
++            raise ValueError('BRIDGE_FINDING_CARDINALITY')
++        original = findings[0]
++        data = original.get('supervisor_result_json')
++        if not data:
++            raise ValueError('BRIDGE_FINDING_MISSING_TYPED_RESULT')
++        result = _canonical(json.loads(data))
++        if _digest(result) != original.get('supervisor_digest'):
++            raise ValueError('BRIDGE_FINDING_DIGEST_MISMATCH')
++        snapshot = GraphSnapshot.load(self.client)
++        if any(snapshot.node(cid) is None for cid in result['citations']):
++            raise ValueError('BRIDGE_STALE_CITATION')
++        linked = {edge.target for edge in snapshot.edges_from(original['id'], {'DERIVED_FROM'})}
++        for citation in result['citations']:
++            if has_label(snapshot.node(citation), 'Evidence') and citation not in linked:
++                raise ValueError('BRIDGE_EVIDENCE_NOT_LINKED')
++        return {'task_id': from_name, 'agent_id': self.tasks[from_name].agent_id,
++                'result': result, 'handoff_id': handoff['id'], 'artifact_ids': [a['id'] for a in record['artifacts']]}
+diff --git a/backend/tests/test_asteria_a4_bridge.py b/backend/tests/test_asteria_a4_bridge.py
+new file mode 100644
+--- /dev/null
++++ b/backend/tests/test_asteria_a4_bridge.py
+@@ -0,0 +1,173 @@
++"""A4 offline graph-contract tests; not a substitute for live FalkorDB integration."""
++from types import SimpleNamespace
++
++import pytest
++
++from backend.app.agent_runtime.asteria_coordination_bridge import AsteriaCoordinationBridge, ROLE
++from backend.app.agent_runtime.supervisor import TaskState
++from backend.app.graph.mutations import upsert_node, upsert_relationship
++from backend.tests.test_coordination_handoff_context import MemoryGraphClient
++
++INC = 'INC-AST-ROUTE-OUTAGE'
++EVD = 'EVD-AST-0003'
++RUN = 'SRUN-' + 'A' * 32
++
++
++def scenario():
++    db = MemoryGraphClient()
++    db.settings.tenant_id = 'asteria'
++    db.settings.falkordb_graph = 'asteria_company_brain_v1'
++    upsert_node(db, 'Incident', INC, {'name': 'Asteria route incident'})
++    upsert_node(db, 'Evidence', EVD, {'name': 'Asteria schema evidence', 'source_ref_id': 'ASTERIA-LOG'})
++    tasks = {
++        'retrieve_evidence': TaskState(id='retrieve_evidence', objective='Retrieve independently cited incident evidence',
++            capability='evidence_retrieval', depends_on=[], agent_id='evidence_retriever'),
++        'verify_findings': TaskState(id='verify_findings', objective='Verify cited incident evidence identities',
++            capability='verification', depends_on=['retrieve_evidence'], agent_id='independent_verifier'),
++    }
++    bridge = AsteriaCoordinationBridge(db, RUN, INC, tasks)
++    bridge.prepare()
++    # The fake Cypher adapter does not implement CoordinationService.claim_task's
++    # conditional query. Create only the ownership relationship as its precondition.
++    upsert_relationship(db, bridge.task_ids['retrieve_evidence'], 'CLAIMED_BY',
++                        ROLE['evidence_retrieval'][0], {'valid_from': '2026-10-22T00:00:00Z'})
++    tasks['retrieve_evidence'].result = {
++        'summary': 'Recorded Asteria evidence linked to route orchestration incident.',
++        'citations': [INC, EVD], 'knowledge_gaps': ['A full causal chain is not proven.'],
++        'confidence': 'uncertain', 'assertions': [], 'conflicts_with': [],
++        'risk': 'low', 'requires_human_review': True,
++    }
++    return bridge, db, tasks
++
++
++def test_formally_accepted_persisted_finding_is_consumed_by_downstream_task():
++    bridge, db, tasks = scenario()
++    ids = bridge.publish(tasks['retrieve_evidence'], ['verify_findings'])
++    assert len(ids) == 1
++    board = bridge.coordination.get_task_blackboard(bridge.task_ids['verify_findings'])
++    assert len(board['accepted_handoff_context']) == 1
++    assert board['accepted_handoff_context'][0]['handoff']['status'] == 'ACCEPTED'
++    persisted = bridge.consume('retrieve_evidence', 'verify_findings')
++    assert persisted['handoff_id'] == ids[0]
++    assert persisted['result'] == tasks['retrieve_evidence'].result
++    assert any(x.startswith('FIND-P6-') for x in persisted['artifact_ids'])
++    assert EVD in persisted['artifact_ids']
++    assert len(bridge.publish(tasks['retrieve_evidence'], ['verify_findings'])) == 1  # retry idempotence
++    assert len(bridge.coordination.get_task_blackboard(bridge.task_ids['verify_findings'])['accepted_handoff_context']) == 1
++
++
++def test_rejected_or_missing_persisted_handoff_blocks_downstream_consumption():
++    bridge, db, tasks = scenario()
++    with pytest.raises(ValueError, match='NOT_ACCEPTED'):
++        bridge.consume('retrieve_evidence', 'verify_findings')
++    # Real service creates PENDING; blackboard must not treat it as accepted.
++    result = bridge.coordination.add_finding(bridge.task_ids['retrieve_evidence'], ROLE['evidence_retrieval'][0],
++        statement='A persisted but unaccepted finding', confidence=0.7, evidence_ids=[EVD])
++    bridge.handoffs.create_handoff(bridge.task_ids['retrieve_evidence'], ROLE['evidence_retrieval'][0],
++        ROLE['verification'][0], artifact_ids=[result['finding']['id'], EVD],
++        destination_task_id=bridge.task_ids['verify_findings'])
++    with pytest.raises(ValueError, match='NOT_ACCEPTED'):
++        bridge.consume('retrieve_evidence', 'verify_findings')
++
++
++def test_tampered_finding_fails_digest_validation():
++    bridge, db, tasks = scenario()
++    bridge.publish(tasks['retrieve_evidence'], ['verify_findings'])
++    board = bridge.coordination.get_task_blackboard(bridge.task_ids['verify_findings'])
++    finding = next(a for a in board['accepted_handoff_context'][0]['artifacts'] if 'Finding' in a['_labels'])
++    upsert_node(db, 'Finding', finding['id'], {'supervisor_digest': 'bad'})
++    with pytest.raises(ValueError, match='DIGEST_MISMATCH'):
++        bridge.consume('retrieve_evidence', 'verify_findings')
++
++
++def test_a4_bridge_denies_wrong_graph_or_tenant():
++    bridge, db, tasks = scenario()
++    db.settings.falkordb_graph = 'not-asteria'
++    with pytest.raises(PermissionError):
++        AsteriaCoordinationBridge(db, RUN, INC, tasks)
++    db.settings.falkordb_graph = 'asteria_company_brain_v1'
++    db.settings.tenant_id = 'another'
++    with pytest.raises(PermissionError):
++        AsteriaCoordinationBridge(db, RUN, INC, tasks)
++
++
++def test_supervisor_opt_in_consumes_persisted_handoff_before_verification(monkeypatch):
++    from backend.app.agent_runtime import asteria_coordination_bridge as bridge_module
++    from backend.app.agent_runtime.supervisor import Supervisor, SupervisorSettings
++    from backend.app.agent_runtime.tools import ToolRegistry
++    from backend.tests.test_agent_runtime_evidence_grounding import asteria_fixture_graph
++    from backend.tests.test_asteria_a3_specialist_dispatch import DeniedProvider, GOAL
++    from backend.tests.test_supervisor_component2 import Store
++
++    calls = []
++
++    class FakeBridge:
++        def __init__(self, client, run_id, source, states):
++            assert source == INC
++            self.states = states
++        def prepare(self):
++            calls.append(('prepare',))
++        def begin(self, state):
++            calls.append(('begin', state.id))
++        def publish(self, state, dependents):
++            calls.append(('publish', state.id, tuple(dependents)))
++            return [f'HANDOFF:{state.id}:{name}' for name in dependents]
++        def consume(self, from_name, to_name):
++            calls.append(('consume', from_name, to_name))
++            return {'task_id': from_name, 'agent_id': 'persisted-role',
++                    'result': self.states[from_name].result,
++                    'handoff_id': f'HANDOFF:{from_name}:{to_name}',
++                    'artifact_ids': ['FIND-ASTERIA-TEST']}
++
++    monkeypatch.setattr(bridge_module, 'AsteriaCoordinationBridge', FakeBridge)
++    monkeypatch.setenv('VERINEX_A4_HANDOFFS', '1')
++    store = Store()
++    store.client = SimpleNamespace(settings=SimpleNamespace(tenant_id='asteria', falkordb_graph='asteria_company_brain_v1'))
++    provider = DeniedProvider()
++    run = Supervisor(provider=provider, tools=ToolRegistry(asteria_fixture_graph),
++        store=store, tenant='asteria', permissions=frozenset({'READ_GRAPH', 'READ_EVIDENCE'})).run(
++        SupervisorSettings(goal=GOAL, source_entity_id=INC, allow_external_model=True, max_parallel=2),
++        subject='a4-offline')
++    assert all(t['status'] == 'COMPLETED' for t in run.tasks)
++    assert run.answer and provider.attempts == 0
++    assert ('consume', 'retrieve_evidence', 'verify_findings') in calls
++    assert ('consume', 'analyze_dependencies', 'verify_findings') in calls
++    assert ('consume', 'verify_findings', 'propose_remediation') in calls
++    assert sum(x[0] == 'publish' for x in calls) == 4
++    assert len([event for event in store.events if event['kind'] == 'HANDOFF_CONSUMED']) == 3
++
++
++def test_supervisor_bridge_rejects_missing_accepted_handoff(monkeypatch):
++    from backend.app.agent_runtime import asteria_coordination_bridge as bridge_module
++    from backend.app.agent_runtime.supervisor import Supervisor, SupervisorSettings
++    from backend.app.agent_runtime.tools import ToolRegistry
++    from backend.tests.test_agent_runtime_evidence_grounding import asteria_fixture_graph
++    from backend.tests.test_asteria_a3_specialist_dispatch import DeniedProvider, GOAL
++    from backend.tests.test_supervisor_component2 import Store
++
++    class RejectBridge:
++        def __init__(self, client, run_id, source, states):
++            pass
++        def prepare(self):
++            pass
++        def begin(self, state):
++            pass
++        def publish(self, state, dependents):
++            return []
++        def consume(self, from_name, to_name):
++            raise ValueError('BRIDGE_HANDOFF_NOT_ACCEPTED')
++
++    monkeypatch.setattr(bridge_module, 'AsteriaCoordinationBridge', RejectBridge)
++    monkeypatch.setenv('VERINEX_A4_HANDOFFS', '1')
++    store = Store()
++    store.client = SimpleNamespace(settings=SimpleNamespace(tenant_id='asteria', falkordb_graph='asteria_company_brain_v1'))
++    run = Supervisor(provider=DeniedProvider(), tools=ToolRegistry(asteria_fixture_graph),
++        store=store, tenant='asteria', permissions=frozenset({'READ_GRAPH', 'READ_EVIDENCE'})).run(
++        SupervisorSettings(goal=GOAL, source_entity_id=INC, allow_external_model=True, max_parallel=2, max_retries=0),
++        subject='a4-offline')
++    statuses = {t['id']:t['status'] for t in run.tasks}
++    assert statuses['analyze_dependencies'] == 'COMPLETED'
++    assert statuses['retrieve_evidence'] == 'COMPLETED'
++    assert statuses['verify_findings'] == 'FAILED'
++    assert statuses['propose_remediation'] == 'BLOCKED'
++    assert not run.answer

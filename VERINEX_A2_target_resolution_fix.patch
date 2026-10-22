@@ -1,0 +1,331 @@
+diff --git a/backend/app/agent_runtime/supervisor.py b/backend/app/agent_runtime/supervisor.py
+--- a/backend/app/agent_runtime/supervisor.py
++++ b/backend/app/agent_runtime/supervisor.py
+@@ -188,6 +188,70 @@
+                  objective=f'Propose read-only, evidence-based next investigation or remediation steps for incident {source}; never execute them.',
+                  depends_on=['verify_findings']),
+     ]
++
++
++
++class TargetResolutionError(ValueError):
++    """Fail-closed source resolution; no provider or specialist should run."""
++
++
++def _resolve_target(snapshot: Any, goal: str, explicit: str | None) -> tuple[str | None, str, str]:
++    """Resolve a uniquely identified Incident without a model or guessed graph IDs.
++
++    Uses only the selected graph snapshot. Inexact free-text matching is deliberately
++    conservative: exact canonical ID tokens or the full recorded incident title.
++    """
++    goal_ids = list(dict.fromkeys(re.findall(r'\bINC-[A-Z0-9]+(?:-[A-Z0-9]+)+\b', goal, re.I)))
++    incident_intent = bool(re.search(r'\b(?:incident|incidents|outage|outages)\b', goal, re.I)) or bool(goal_ids)
++
++    if explicit:
++        node = snapshot.node(explicit)
++        if not node:
++            raise TargetResolutionError(f'TARGET_NOT_FOUND: Starting entity {explicit} is absent from the selected graph')
++        if incident_intent and not has_label(node, 'Incident'):
++            raise TargetResolutionError(f'TARGET_KIND_MISMATCH: Incident investigation requires an Incident, not {explicit}')
++        return explicit, 'EXPLICIT_ENTITY', 'User-supplied canonical target verified against the selected graph'
++
++    if goal_ids:
++        if len(goal_ids) != 1:
++            raise TargetResolutionError('TARGET_AMBIGUOUS: Multiple incident IDs in objective: ' + ', '.join(goal_ids[:8]))
++        target = goal_ids[0]
++        node = snapshot.node(target)
++        if not node:
++            raise TargetResolutionError(f'TARGET_NOT_FOUND: Incident ID {target} is absent from the selected graph')
++        if not has_label(node, 'Incident'):
++            raise TargetResolutionError(f'TARGET_KIND_MISMATCH: {target} is not an Incident')
++        return target, 'OBJECTIVE_CANONICAL_ID', 'Canonical incident ID in objective verified against selected graph'
++
++    if not incident_intent:
++        return None, 'NON_INCIDENT_OBJECTIVE', 'No incident target inferred; bounded general planning required'
++
++    def tokens(value: str) -> list[str]:
++        return re.findall(r'[a-z0-9]+', value.lower())
++
++    goal_tokens = set(tokens(goal))
++    goal_text = ' '.join(tokens(goal))
++    incidents = [node for node in snapshot.nodes.values() if has_label(node, 'Incident')]
++    if len(incidents) > 250:
++        raise TargetResolutionError('TARGET_NEEDS_REVIEW: Too many incident candidates for bounded resolution')
++    candidates = []
++    for node in incidents:
++        entity_id = str(node.get('id') or '')
++        # Only semantic tokens AFTER the incident and namespace prefixes are used.
++        parts = entity_id.upper().split('-')
++        alias_tokens = [part.lower() for part in parts[2:] if len(part) >= 3] if len(parts) > 3 and parts[0] == 'INC' else []
++        id_match = len(set(alias_tokens)) >= 2 and set(alias_tokens).issubset(goal_tokens)
++        exact_title = any(len(tokens(str(node.get(key) or ''))) >= 2 and
++                          ' '.join(tokens(str(node.get(key)))) in goal_text
++                          for key in ('name', 'title'))
++        if id_match or exact_title:
++            candidates.append(entity_id)
++    candidates = sorted(set(candidates))
++    if len(candidates) != 1:
++        reason = 'TARGET_AMBIGUOUS' if candidates else 'TARGET_NEEDS_INPUT'
++        suffix = ', '.join(candidates[:8]) if candidates else 'Provide a canonical Incident ID'
++        raise TargetResolutionError(f'{reason}: Cannot uniquely resolve incident; {suffix}')
++    return candidates[0], 'UNIQUE_GRAPH_INCIDENT_MATCH', 'Unique incident alias/title match in selected graph; no model used'
+ 
+ 
+ def _observed_ids(value: Any, nodes: dict, *, seen: set[str] | None = None) -> set[str]:
+@@ -259,14 +323,6 @@
+         if not settings.allow_external_model:
+             raise ValueError('Explicit model-data transmission consent is required')
+         snapshot = self.tools.snapshot_factory()
+-        source = settings.source_entity_id
+-        if source and not snapshot.node(source):
+-            raise ValueError('Starting entity was not found in the current tenant graph')
+-        if not source:
+-            for possible in re.findall(r'\b[A-Z]{2,8}-[A-Z0-9]+(?:-[A-Z0-9]+){1,12}\b', settings.goal):
+-                if snapshot.node(possible):
+-                    source = possible
+-                    break
+         recovered = None
+         if resume_id:
+             if self.memory is None:
+@@ -281,6 +337,17 @@
+             if not settings.allow_external_model:
+                 raise ValueError('Explicit model consent is required to resume')
+             source = recovered.get('source') or None
++            # The saved plan and target, not new user text, own resume scope.
++            source, method, rationale = _resolve_target(snapshot, settings.goal, source)
++            if source != (recovered.get('source') or None):
++                raise TargetResolutionError('TARGET_SCOPE_CHANGED: Checkpoint source could not be verified')
++            method = recovered.get('source_resolution_method') or method
++            rationale = recovered.get('plan_rationale') or rationale
++        else:
++            source, method, rationale = _resolve_target(snapshot, settings.goal, settings.source_entity_id)
++            if source and has_label(snapshot.node(source), 'Incident'):
++                validate_dag(_incident_plan(source), settings.max_tasks)
++                rationale += '; prevalidated incident dependency/evidence/verification/remediation DAG'
+         run = SupervisorRun(id=resume_id or run_id or 'SRUN-' + uuid.uuid4().hex.upper(), goal=settings.goal)
+         if recovered:
+             run.events = recovered.get('events', [])
+@@ -289,7 +356,8 @@
+         if not recovered:
+             self.store.start({'id': run.id, 'goal': settings.goal, 'subject': subject, 'tenant': self.tenant,
+                               'provider': self.provider.name, 'model': self.provider.model,
+-                              'source_entity_id': source, 'started_at': _now()})
++                              'source_entity_id': source, 'source_resolution_method': method,
++                              'plan_rationale': rationale, 'started_at': _now()})
+         checkpoint_revision = int(recovered.get('revision') or 0) if recovered else 0
+         states: dict[str, TaskState] = {}
+ 
+@@ -301,6 +369,7 @@
+                 checkpoint_revision += 1
+                 payload = {'id': run.id, 'tenant': self.tenant, 'owner': subject,
+                            'settings': settings.model_dump(), 'goal': settings.goal, 'source': source,
++                           'source_resolution_method': method, 'plan_rationale': rationale,
+                            'status': run.status, 'tasks': [s.public() for s in states.values()],
+                            'events': run.events[-250:], 'tokens_used': run.tokens_used,
+                            'revision': checkpoint_revision, 'updated_at': _now()}
+@@ -379,6 +448,12 @@
+                 response = call([{'role': 'system', 'content': prompt},
+                                  {'role': 'user', 'content': json.dumps(context)[:4000]}], [], max_tokens=1000)
+                 specs = Decomposition.model_validate(json_content(response.content)).tasks
++                validate_dag(specs, settings.max_tasks)
++                if any(not any(task.capability in agent.capabilities and
++                               agent.permissions.issubset(self.permissions) and
++                               all(tool in SCHEMAS for tool in agent.tools)
++                               for agent in self.agents) for task in specs):
++                    raise ValueError('Model decomposition includes a task with no authorized executable worker')
+                 emit('DECOMPOSE', 'Model proposed a dependency-aware multi-specialist work plan')
+             if not recovered:
+                 validate_dag(specs, settings.max_tasks)
+diff --git a/backend/app/agent_runtime/supervisor_store.py b/backend/app/agent_runtime/supervisor_store.py
+--- a/backend/app/agent_runtime/supervisor_store.py
++++ b/backend/app/agent_runtime/supervisor_store.py
+@@ -23,10 +23,13 @@
+             self.client.query('''
+                 CREATE (r:Entity:SupervisorRun {tenant_id:$tenant,id:$id,goal:$goal,
+                   subject:$subject,status:'RUNNING',provider:$provider,model:$model,
+-                  source_entity_id:$source_id,started_at:$started_at})
++                  source_entity_id:$source_id,source_resolution_method:$resolution,
++                  plan_rationale:$rationale,started_at:$started_at})
+             ''', {'tenant': self.client.settings.tenant_id, 'id': run['id'],
+                   'goal': run['goal'], 'subject': run['subject'], 'provider': run['provider'],
+                   'model': run['model'], 'source_id': run.get('source_entity_id') or '',
++                  'resolution': run.get('source_resolution_method') or '',
++                  'rationale': run.get('plan_rationale') or '',
+                   'started_at': run['started_at']})
+ 
+     def task(self, run_id: str, task: dict) -> None:
+diff --git a/backend/tests/test_asteria_a2_target_resolution.py b/backend/tests/test_asteria_a2_target_resolution.py
+new file mode 100644
+--- /dev/null
++++ b/backend/tests/test_asteria_a2_target_resolution.py
+@@ -0,0 +1,170 @@
++"""A2: Asteria target selection and typed planning must fail closed before model/tool execution."""
++import pytest
++
++from backend.app.agent_runtime.supervisor import (
++    Supervisor, SupervisorSettings, TargetResolutionError, _resolve_target,
++)
++from backend.app.agent_runtime.tools import ToolRegistry
++from backend.app.services.phase4_graph import GraphSnapshot, GraphEdge
++from backend.tests.test_supervisor_component2 import graph as existing_graph, Store
++
++INCIDENT = 'INC-AST-ROUTE-OUTAGE'
++OBJECTIVE = ('Investigate the route orchestration outage and produce an evidence-backed, '
++             'read-only remediation proposal. Separate observed facts from hypotheses; '
++             'cite real Asteria evidence and identify any missing proof. Do not execute changes.')
++
++
++class NoProvider:
++    name = 'a2-offline'
++    model = 'disabled'
++    def __init__(self):
++        self.calls = 0
++    def complete(self, *args, **kwargs):
++        self.calls += 1
++        raise AssertionError('Target resolution must not call a model')
++
++
++def make(snapshot=None):
++    snap = snapshot or existing_graph()
++    provider = NoProvider()
++    store = Store()
++    runtime = Supervisor(provider=provider, tools=ToolRegistry(lambda: snap), store=store,
++                         tenant='asteria', permissions=frozenset({'READ_GRAPH', 'READ_EVIDENCE'}))
++    return runtime, provider, store
++
++
++def options(**kwargs):
++    return SupervisorSettings(goal=OBJECTIVE, allow_external_model=True, **kwargs)
++
++
++def test_explicit_known_incident_is_prevalidated_without_model_call():
++    runtime, provider, store = make()
++    report = runtime.run(options(source_entity_id=INCIDENT), subject='a2', control_check=lambda: 'PAUSE')
++    assert report.status == 'PAUSED'
++    assert len(report.tasks) == 4
++    assert all(t['status'] == 'PENDING' for t in report.tasks)
++    assert store.run['source_entity_id'] == INCIDENT
++    assert store.run['source_resolution_method'] == 'EXPLICIT_ENTITY'
++    assert 'prevalidated incident' in store.run['plan_rationale']
++    assert provider.calls == 0
++
++
++def test_descriptive_objective_resolves_unique_incident_before_planning():
++    # Unlike the older fake graph, this uses actual fixture-matching Incident title.
++    snap = GraphSnapshot({
++        INCIDENT: {'id': INCIDENT, 'name': 'Route planning failures after schema deployment', '_labels': ['Entity', 'Incident']},
++        'INC-AST-FORECAST-BIAS': {'id': 'INC-AST-FORECAST-BIAS', 'name': 'Demand forecast drifts after routing outage', '_labels': ['Entity','Incident']},
++    }, [])
++    runtime, provider, store = make(snap)
++    report = runtime.run(options(), subject='a2', control_check=lambda: 'PAUSE')
++    assert report.status == 'PAUSED'
++    assert store.run['source_entity_id'] == INCIDENT
++    assert store.run['source_resolution_method'] == 'UNIQUE_GRAPH_INCIDENT_MATCH'
++    assert len(report.tasks) == 4
++    assert provider.calls == 0
++
++
++def test_incident_with_existing_evidence_target_rejected_before_any_run():
++    runtime, provider, store = make()
++    with pytest.raises(TargetResolutionError, match='TARGET_KIND_MISMATCH'):
++        runtime.run(options(source_entity_id='EVD-AST-001'), subject='a2')
++    assert store.run is None and provider.calls == 0
++
++
++def test_unknown_explicit_and_embedded_ids_are_rejected():
++    runtime, provider, store = make()
++    with pytest.raises(TargetResolutionError, match='TARGET_NOT_FOUND'):
++        runtime.run(options(source_entity_id='INC-AST-NOT-FOUND'), subject='a2')
++    with pytest.raises(TargetResolutionError, match='TARGET_NOT_FOUND'):
++        runtime.run(SupervisorSettings(goal='Investigate INC-AST-NOT-FOUND and its incident evidence',
++                                       allow_external_model=True), subject='a2')
++    assert store.run is None and provider.calls == 0
++
++
++def test_ambiguous_incident_matches_do_not_guess_or_call_model():
++    snap = GraphSnapshot({
++        INCIDENT: {'id': INCIDENT, '_labels': ['Entity', 'Incident']},
++        'INC-AST-ROUTE-RETRY': {'id': 'INC-AST-ROUTE-RETRY', '_labels': ['Entity', 'Incident']},
++    }, [])
++    runtime, provider, store = make(snap)
++    with pytest.raises(TargetResolutionError, match='TARGET_AMBIGUOUS'):
++        runtime.run(SupervisorSettings(goal='Investigate route outage and route retry incidents',
++                                       allow_external_model=True), subject='a2')
++    assert store.run is None and provider.calls == 0
++
++
++def test_nonunique_underspecified_incident_requires_input():
++    runtime, provider, store = make()
++    with pytest.raises(TargetResolutionError, match='TARGET_NEEDS_INPUT'):
++        runtime.run(SupervisorSettings(goal='Investigate the incident and cite supporting evidence',
++                                       allow_external_model=True), subject='a2')
++    assert store.run is None and provider.calls == 0
++
++
++def test_exact_title_match_is_accepted_and_multiple_ids_rejected():
++    snap = GraphSnapshot({INCIDENT: {
++        'id': INCIDENT, 'name': 'Route planning failures after schema deployment',
++        '_labels': ['Incident','Entity']},
++    }, [])
++    assert _resolve_target(snap, 'Investigate the route planning failures after schema deployment incident', None)[0] == INCIDENT
++    with pytest.raises(TargetResolutionError, match='TARGET_AMBIGUOUS'):
++        _resolve_target(snap, 'Compare INC-AST-ROUTE-OUTAGE and INC-AST-FORECAST-BIAS incidents', None)
++
++
++def test_incompatible_incident_dag_limit_fails_before_persistence():
++    runtime, provider, store = make()
++    with pytest.raises(ValueError, match='bounds'):
++        runtime.run(options(source_entity_id=INCIDENT, max_tasks=2), subject='a2')
++    assert store.run is None and provider.calls == 0
++
++
++def test_authenticated_asteria_supervisor_api_resolves_plan_without_provider(monkeypatch):
++    """HTTP boundary: real Supervisor planning, forced pause before worker dispatch."""
++    from types import SimpleNamespace
++    from fastapi.testclient import TestClient
++    from backend.app.main import app
++    from backend.app.api_v1 import router as routes
++    from backend.app.config import Settings
++
++    snapshot = GraphSnapshot({
++        INCIDENT: {'id': INCIDENT, '_labels': ['Entity', 'Incident']},
++        'EVD-AST-0003': {'id': 'EVD-AST-0003', '_labels': ['Entity', 'Evidence']},
++    }, [])
++    provider = NoProvider()
++    store = Store()
++
++    class CheckpointSink:
++        def checkpoint(self, *args, **kwargs):
++            return None
++
++    original = Supervisor.run
++
++    def stop_after_planning(self, settings, **kwargs):
++        kwargs['control_check'] = lambda: 'PAUSE'
++        return original(self, settings, **kwargs)
++
++    monkeypatch.setattr(routes, 'OpenAICompatibleProvider', lambda: provider)
++    monkeypatch.setattr(routes, 'client_for', lambda principal: SimpleNamespace(settings=Settings(
++        tenant_id='asteria', falkordb_graph='asteria_company_brain_v1')))
++    monkeypatch.setattr(routes.GraphSnapshot, 'load', classmethod(lambda cls, client: snapshot))
++    monkeypatch.setattr(routes, 'GraphSupervisorStore', lambda client: store)
++    monkeypatch.setattr(routes, 'GraphMemoryStore', lambda client: CheckpointSink())
++    monkeypatch.setattr(Supervisor, 'run', stop_after_planning)
++
++    api = TestClient(app)
++    headers = {'Authorization': 'Bearer test-asteria-admin-token', 'X-Tenant-ID': 'asteria'}
++    route = '/api/v1/agent-runtime/supervisor/runs'
++    response = api.post(route, headers=headers, json={'goal': OBJECTIVE, 'allow_external_model': True})
++    assert response.status_code == 200, response.text
++    assert response.json()['status'] == 'PAUSED'
++    assert len(response.json()['tasks']) == 4
++    assert store.run['source_entity_id'] == INCIDENT
++    assert store.run['source_resolution_method'] == 'UNIQUE_GRAPH_INCIDENT_MATCH'
++    assert provider.calls == 0
++
++    rejected = api.post(route, headers=headers, json={'goal': OBJECTIVE,
++        'source_entity_id': 'EVD-AST-0003', 'allow_external_model': True})
++    assert rejected.status_code == 422, rejected.text
++    assert rejected.json()['error']['code'] == 'AGENT_INPUT_INVALID'
++    assert 'TARGET_KIND_MISMATCH' in rejected.text
++    assert provider.calls == 0

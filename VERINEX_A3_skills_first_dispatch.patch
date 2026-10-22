@@ -1,0 +1,369 @@
+--- a/backend/app/agent_runtime/supervisor.py
++++ b/backend/app/agent_runtime/supervisor.py
+@@ -18,9 +18,10 @@
+ from pydantic import BaseModel, ConfigDict, Field, ValidationError
+ 
+ from backend.app.agent_runtime.harness import FinalResponse, json_content
++from backend.app.agent_runtime.incident_skill import build_incident_packet
+ from backend.app.agent_runtime.memory import AgentMemory, MemoryAssertion, MemorySearch, utcnow
+ from backend.app.agent_runtime.provider import ProviderError
+-from backend.app.agent_runtime.tools import ToolRegistry, SCHEMAS, declarations, thin
++from backend.app.agent_runtime.tools import ToolRegistry, SCHEMAS, current, declarations, thin
+ from backend.app.services.phase4_graph import has_label
+ 
+ 
+@@ -297,6 +298,85 @@
+             else:
+                 index[key] = (task.id, value)
+     return [dict(t) for t in {json.dumps(item, sort_keys=True): item for item in conflicts}.values()]
++
++
++
++def _incident_skill_covered(snapshot: Any, source: str | None) -> bool:
++    """Use deterministic incident skills only with substantive visible graph evidence.
++
++    Sparse/general cases retain the existing model-driven specialist path. The
++    coverage check itself is in-memory and does not dispatch a tool or model.
++    """
++    node = snapshot.node(source) if source else None
++    if not node or not has_label(node, 'Incident') or not current(node):
++        return False
++    kinds = set()
++    for entity_id, _, _ in snapshot.neighbors(source):
++        linked = snapshot.node(entity_id)
++        if linked and current(linked):
++            if has_label(linked, 'Claim'):
++                kinds.add('Claim')
++            if has_label(linked, 'Evidence'):
++                kinds.add('Evidence')
++        if len(kinds) == 2:
++            return True
++    return False
++
++
++def _safe_tool_id(value: Any) -> str:
++    """Log only canonical-looking identifiers, never arbitrary model arguments."""
++    if isinstance(value, str) and (value in {'ENTITY_NOT_FOUND', 'NOT_AN_INCIDENT'} or
++                                   re.fullmatch(r'[A-Z][A-Z0-9]{1,18}(?:-[A-Z0-9]{2,50}){2,}', value)):
++        return value
++    return '[redacted]'
++
++
++def _skill_finding(snapshot: Any, source: str, capability: str, packet: dict,
++                   visible: set[str], impacts: list[dict]) -> dict:
++    """Structured observed facts and epistemic gaps, not an inferred root cause."""
++    evidence = sorted(entity_id for entity_id in visible
++                      if has_label(snapshot.node(entity_id), 'Evidence'))
++    claims = sorted(entity_id for entity_id in visible
++                    if has_label(snapshot.node(entity_id), 'Claim'))
++    events = packet.get('chronology') or []
++    systems = packet.get('affected_systems') or []
++    impacted = sorted({record.get('entity_id') for record in impacts
++                       if record.get('entity_id') and snapshot.node(record['entity_id'])})
++    event_ids = [event['id'] for event in sorted(events, key=lambda e: (str(e.get('occurred_at') or ''),
++                                                                       str(e.get('id') or '')))
++                 if event.get('id') in snapshot.nodes]
++    cited = [source, *evidence[:8], *claims[:4], *event_ids[:5]]
++    gaps = ['Graph links and event timing do not establish a complete causal chain; independent corroboration is required.']
++    omissions = {k: v for k, v in (packet.get('omitted_counts') or {}).items() if v}
++    if omissions:
++        gaps.append('Bounded incident packet omits some records: ' + ', '.join(f'{k}={v}' for k, v in sorted(omissions.items())))
++    if capability == 'dependency_analysis':
++        cited.extend(record['id'] for record in systems if record.get('id') in snapshot.nodes)
++        cited.extend(impacted[:10])
++        summary = (f'Graph records for incident {source} contain {len(systems)} linked system(s) '
++                   f'and {len(impacted)} distinct reverse-DEPENDS_ON reachable system(s) '
++                   f'within bounded traversal; sample reachable IDs: {", ".join(impacted[:5]) or "none"}. '
++                   'These are possible dependencies, not confirmed outage impact.')
++        if not systems:
++            gaps.append('No directly linked System found; dependency blast radius could not be established.')
++    elif capability == 'evidence_retrieval':
++        summary = (f'Incident {source} has {len(evidence)} visibly included Evidence ID(s), '
++                   f'{len(claims)} Claim ID(s), and {len(events)} event(s) in a bounded packet; '
++                   f'event IDs in recorded time order: {", ".join(event_ids[:5]) or "none"}; '
++                   'recorded associations require independent provenance verification.')
++        if not evidence:
++            gaps.append('No citeable Evidence entities were included in the bounded packet.')
++    else:
++        summary = (f'Read-only incident investigation of {source}: bounded graph packet includes '
++                   f'{len(events)} event(s), {len(claims)} claim(s), and {len(evidence)} evidence record(s). '
++                   f'Recorded time-ordered event IDs: {", ".join(event_ids[:5]) or "none"}. '
++                   'Treat schema and CPU claims as hypotheses or observations, not a proven root cause.')
++    cited = list(dict.fromkeys(entity_id for entity_id in cited if entity_id in snapshot.nodes))[:20]
++    finding = SpecialistFinding(summary=summary, citations=cited, knowledge_gaps=gaps[:10],
++                                confidence='uncertain' if evidence else 'insufficient',
++                                assertions=[], conflicts_with=[], risk='low',
++                                requires_human_review=not bool(evidence))
++    return finding.model_dump()
+ 
+ 
+ class Supervisor:
+@@ -479,6 +559,64 @@
+                     assert parent.result is not None and parent.status == 'COMPLETED'
+                     parents.append({'task_id': dep, 'agent_id': parent.agent_id, 'result': parent.result})
+                     eligible.update(parent.result['citations'])
++                # Skills-first for adequately evidenced incident observations only.
++                # Do not call a model to decide whether incident_context is needed.
++                if (source and state.capability in {'investigation', 'dependency_analysis', 'evidence_retrieval'}
++                        and 'incident_context' in agent.tools and
++                        {'READ_GRAPH', 'READ_EVIDENCE'}.issubset(self.permissions) and
++                        _incident_skill_covered(self.tools.snapshot_factory(), source)):
++                    snapshot = self.tools.snapshot_factory()
++                    def skill_read(tool_name: str, entity_id: str, **kwargs) -> dict:
++                        if tool_name not in agent.tools or tool_name not in SCHEMAS:
++                            raise ValueError('SKILL_TOOL_NOT_AUTHORIZED')
++                        arguments = {'entity_id': entity_id, **kwargs}
++                        started = time.monotonic()
++                        try:
++                            observation = self.tools.execute(tool_name, arguments)
++                        except (ValueError, TypeError, ValidationError) as exc:
++                            emit('SPECIALIST_TOOL',
++                                 f'{tool_name} entity_id={_safe_tool_id(entity_id)} outcome=ERROR '
++                                 f'error_code=INVALID_TOOL_ARGUMENTS elapsed_ms={int((time.monotonic()-started)*1000)}',
++                                 task_id=state.id, agent_id=agent.id, status='FAILED')
++                            raise ValueError('SKILL_TOOL_INVALID_ARGUMENTS') from exc
++                        code = observation.get('error')
++                        seen = (_observed_ids(observation, snapshot.nodes) if not code else set())
++                        emit('SPECIALIST_TOOL',
++                             f'{tool_name} entity_id={_safe_tool_id(entity_id)} '
++                             f'outcome={"ERROR" if code else "READ_OK"} '
++                             f'error_code={_safe_tool_id(code) if code else "NONE"} '
++                             f'observed_ids={", ".join(sorted(seen)[:12]) or "none"} '
++                             f'elapsed_ms={int((time.monotonic()-started)*1000)}',
++                             task_id=state.id, agent_id=agent.id,
++                             status='FAILED' if code else 'RECORDED')
++                        if code:
++                            raise ValueError(f'SKILL_TOOL_FAILED: {tool_name}: {_safe_tool_id(code)}')
++                        return observation
++
++                    context = skill_read('incident_context', source)
++                    if (context.get('incident') or {}).get('id') != source:
++                        raise ValueError('SKILL_TARGET_MISMATCH')
++                    packet, visible_ids = build_incident_packet(snapshot, context, source)
++                    if packet['incident'].get('id') != source:
++                        raise ValueError('SKILL_PACKET_TARGET_MISMATCH')
++                    visible = {id_ for id_ in visible_ids if snapshot.node(id_) is not None}
++                    impacts: list[dict] = []
++                    if state.capability == 'dependency_analysis':
++                        systems = sorted({entry.get('entity', {}).get('id')
++                                          for entry in (context.get('related') or {}).get('System', [])
++                                          if entry.get('entity', {}).get('id') in snapshot.nodes})
++                        for system_id in systems[:3]:
++                            if 'dependency_impact' not in agent.tools:
++                                raise ValueError('SKILL_TOOL_NOT_AUTHORIZED: dependency_impact')
++                            impact_result = skill_read('dependency_impact', system_id, max_depth=4)
++                            impacts.extend(impact_result.get('impacted', []))
++                        if len(systems) > 3:
++                            packet.setdefault('omitted_counts', {})['systems_not_traversed'] = len(systems) - 3
++                    finding = _skill_finding(snapshot, source, state.capability, packet, visible, impacts)
++                    emit('SKILL_RESULT', f'{state.capability}: deterministic result from observed Asteria graph; '
++                         f'{len(finding["citations"])} existing IDs; provider_calls=0 tokens=0',
++                         task_id=state.id, agent_id=agent.id)
++                    return finding
+                 tool_decls = [d for d in declarations() if d['function']['name'] in agent.tools]
+                 role = (f'You are specialist {agent.id} for capability {state.capability}. Investigate your assigned objective '
+                         'with the allowlisted READ-ONLY tools. Do NOT create tasks, mutate graphs, execute actions, '
+@@ -551,18 +689,32 @@
+                             args = json_content(entry['arguments'])
+                             if not isinstance(args, dict):
+                                 raise ValueError('Specialist tool arguments must be an object')
+-                            observation = self.tools.execute(tool, args)
+-                            if not observation.get('error'):
++                            started = time.monotonic()
++                            try:
++                                observation = self.tools.execute(tool, args)
++                            except (ValueError, TypeError, ValidationError) as exc:
++                                emit('SPECIALIST_TOOL', f'{tool} entity_id={_safe_tool_id(args.get("entity_id"))} '
++                                     f'outcome=ERROR error_code=INVALID_TOOL_ARGUMENTS',
++                                     task_id=state.id, agent_id=agent.id, status='FAILED')
++                                raise ValueError('SPECIALIST_TOOL_INVALID_ARGUMENTS') from exc
++                            error_code = observation.get('error')
++                            if not error_code:
+                                 used_tools.add(tool)
+                             seen_ids = (_observed_ids(observation, self.tools.snapshot_factory().nodes)
+-                                        if not observation.get('error') else set())
++                                        if not error_code else set())
+                             eligible.update(seen_ids)
++                            emit('SPECIALIST_TOOL', f'{tool} entity_id={_safe_tool_id(args.get("entity_id"))} '
++                                 f'target_id={_safe_tool_id(args.get("target_id")) if args.get("target_id") else "NONE"} '
++                                 f'observed_ids={", ".join(sorted(seen_ids)[:12]) or "none"}; '
++                                 f'outcome={"ERROR" if error_code else "READ_OK"} '
++                                 f'error_code={_safe_tool_id(error_code) if error_code else "NONE"} '
++                                 f'elapsed_ms={int((time.monotonic()-started)*1000)} tokens=0',
++                                 task_id=state.id, agent_id=agent.id,
++                                 status='FAILED' if error_code else 'RECORDED')
++                            if error_code:
++                                raise ValueError(f'SPECIALIST_TOOL_FAILED: {tool}: {_safe_tool_id(error_code)}')
+                             messages.append({'role': 'tool', 'tool_call_id': entry['id'], 'name': tool,
+                                              'content': json.dumps(observation, default=str)[:9500]})
+-                            emit('SPECIALIST_TOOL', f'{tool}: {len(json.dumps(observation, default=str))} observation bytes; '
+-                                 f'observed canonical IDs: {", ".join(sorted(seen_ids)[:12]) or "none"}; '
+-                                 f'outcome: {"ERROR" if observation.get("error") else "READ_OK"}',
+-                                 task_id=state.id, agent_id=agent.id)
+                         if len(messages) > 23:
+                             messages = messages[:2] + messages[-20:]
+                         continue
+--- /dev/null
++++ b/backend/tests/test_asteria_a3_specialist_dispatch.py
+@@ -0,0 +1,161 @@
++"""A3 scoped skills-first tests: evidence comes from Asteria fixture, no Groq."""
++from collections import Counter
++
++import pytest
++
++from backend.app.agent_runtime import supervisor as module
++from backend.app.agent_runtime.supervisor import Supervisor, SupervisorSettings, TaskSpec
++from backend.app.agent_runtime.tools import ToolRegistry
++from backend.tests.test_agent_runtime_evidence_grounding import asteria_fixture_graph
++from backend.tests.test_supervisor_component2 import Store
++
++INCIDENT = 'INC-AST-ROUTE-OUTAGE'
++GOAL = ('Investigate the route orchestration outage and produce an evidence-backed, '
++        'read-only remediation proposal. Identify the missing proof and do not execute changes.')
++
++
++class DeniedProvider:
++    name = 'network-disabled'
++    model = 'none'
++    def __init__(self):
++        self.attempts = 0
++    def complete(self, *args, **kwargs):
++        self.attempts += 1
++        raise AssertionError('Network/model dispatch must not be needed for covered skill tasks')
++
++
++class TrackingTools(ToolRegistry):
++    def __init__(self, snapshot, *, bad_tool=None):
++        super().__init__(lambda: snapshot)
++        self.calls = []
++        self.bad_tool = bad_tool
++    def execute(self, name, args):
++        self.calls.append((name, dict(args)))
++        if name == self.bad_tool:
++            return {'error': 'ENTITY_NOT_FOUND', 'id': args.get('entity_id')}
++        return super().execute(name, args)
++
++
++def setup(*, bad_tool=None):
++    snapshot = asteria_fixture_graph()
++    tools = TrackingTools(snapshot, bad_tool=bad_tool)
++    provider = DeniedProvider()
++    store = Store()
++    supervisor = Supervisor(provider=provider, tools=tools, store=store, tenant='asteria',
++                            permissions=frozenset({'READ_GRAPH', 'READ_EVIDENCE'}))
++    return supervisor, tools, provider, store
++
++
++def settings(**overrides):
++    options = dict(goal=GOAL, source_entity_id=INCIDENT, allow_external_model=True,
++                   max_parallel=1, max_retries=0, max_steps_per_task=1)
++    options.update(overrides)
++    return SupervisorSettings(**options)
++
++
++def pause_after_two_initial_tasks(store):
++    done = {task for task, row in store.tasks.items() if row['status'] == 'COMPLETED'}
++    return 'PAUSE' if {'analyze_dependencies', 'retrieve_evidence'} <= done else ''
++
++
++def test_asteria_assigned_dependency_and_evidence_tasks_read_graph_before_provider():
++    sup, tools, provider, store = setup()
++    run = sup.run(settings(), subject='asteria-a3-offline',
++                  control_check=lambda: pause_after_two_initial_tasks(store))
++    tasks = {t['id']: t for t in run.tasks}
++    assert run.status == 'PAUSED'
++    assert tasks['analyze_dependencies']['status'] == 'COMPLETED'
++    assert tasks['retrieve_evidence']['status'] == 'COMPLETED'
++    assert tasks['verify_findings']['status'] == 'PENDING'
++    assert tasks['propose_remediation']['status'] == 'PENDING'
++    assert provider.attempts == 0
++    assert Counter(name for name, _ in tools.calls) == Counter({'incident_context': 2, 'dependency_impact': 1})
++    assert any(args.get('entity_id') == 'SYS-AST-ROUTE-API'
++               for name, args in tools.calls if name == 'dependency_impact')
++    for task_id in ('analyze_dependencies', 'retrieve_evidence'):
++        finding = tasks[task_id]['result']
++        assert finding['confidence'] == 'uncertain'
++        assert INCIDENT in finding['citations']
++        assert 'EVD-AST-0003' in finding['citations']
++        assert all(tools.snapshot_factory().node(cid) for cid in finding['citations'])
++        assert finding['knowledge_gaps']
++        assert not finding['assertions']
++    assert len([e for e in store.events if e['kind'] == 'SKILL_RESULT']) == 2
++    assert all('READ_OK' in e['summary'] for e in store.events if e['kind'] == 'SPECIALIST_TOOL')
++
++
++def test_investigation_role_uses_existing_incident_packet_without_model(monkeypatch):
++    monkeypatch.setattr(module, '_incident_plan', lambda source: [
++        TaskSpec(id='investigate_route', capability='investigation',
++                 objective='Investigate recorded incident evidence and competing hypotheses'),
++        TaskSpec(id='analyze_dependencies', capability='dependency_analysis',
++                 objective='Identify bounded reverse dependency paths for incident evidence'),
++    ])
++    sup, tools, provider, store = setup()
++    run = sup.run(settings(max_tasks=2), subject='asteria-a3-role',
++                  control_check=lambda: 'PAUSE' if all(
++                      t['status'] == 'COMPLETED' for t in store.tasks.values()) else '')
++    states = {t['id']: t for t in run.tasks}
++    assert all(t['status'] == 'COMPLETED' for t in states.values())
++    assert provider.attempts == 0
++    assert any(e['kind'] == 'SKILL_RESULT' and e['task_id'] == 'investigate_route'
++               for e in store.events)
++    assert 'EVD-AST-0005' in states['investigate_route']['result']['citations']
++    assert 'complete causal chain' in ' '.join(states['investigate_route']['result']['knowledge_gaps'])
++
++
++def test_typed_tool_error_stops_immediately_without_retry_or_model():
++    sup, tools, provider, store = setup(bad_tool='dependency_impact')
++    run = sup.run(settings(), subject='asteria-a3-error')
++    states = {t['id']: t for t in run.tasks}
++    assert states['analyze_dependencies']['status'] == 'FAILED'
++    assert 'SKILL_TOOL_FAILED' in states['analyze_dependencies']['error']
++    assert states['analyze_dependencies']['attempts'] == 1
++    assert states['verify_findings']['status'] == 'BLOCKED'
++    assert states['propose_remediation']['status'] == 'BLOCKED'
++    assert Counter(name for name, _ in tools.calls)['dependency_impact'] == 1
++    assert provider.attempts == 0
++    assert any(e['kind'] == 'SPECIALIST_TOOL' and 'ENTITY_NOT_FOUND' in e['summary']
++               and e['status'] == 'FAILED' for e in store.events)
++
++
++def test_sparse_incident_retains_general_model_driven_specialist_fallback():
++    from backend.tests.test_supervisor_component2 import graph, ScriptedProvider
++    provider = ScriptedProvider()
++    store = Store()
++    sup = Supervisor(provider=provider, tools=ToolRegistry(graph), store=store,
++                     tenant='asteria', permissions=frozenset({'READ_GRAPH', 'READ_EVIDENCE'}))
++    report = sup.run(settings(max_steps_per_task=3), subject='asteria-a3-sparse')
++    assert report.status == 'COMPLETED'
++    assert 'analyze_dependencies' in provider.calls
++    assert not any(e['kind'] == 'SKILL_RESULT' for e in store.events)
++
++
++def test_model_fallback_bad_tool_target_stops_with_first_error():
++    """A sparse incident must not spend five iterations on the same bad model read."""
++    from backend.app.agent_runtime.provider import Completion
++    from backend.tests.test_supervisor_component2 import graph
++
++    class BadModel:
++        name = 'scripted-offline'
++        model = 'none'
++        def __init__(self):
++            self.calls = 0
++        def complete(self, messages, declarations, **kwargs):
++            self.calls += 1
++            assert declarations  # No verified specialist results should reach synthesis.
++            return Completion('', [{'id': f'bad-{self.calls}', 'name': 'incident_context',
++                                    'arguments': '{"entity_id":"INC-AST-UNKNOWN"}'}], 10)
++
++    model = BadModel()
++    store = Store()
++    sup = Supervisor(provider=model, tools=ToolRegistry(graph), store=store, tenant='asteria',
++                     permissions=frozenset({'READ_GRAPH', 'READ_EVIDENCE'}))
++    run = sup.run(settings(max_steps_per_task=5), subject='asteria-a3-bad-model')
++    states = {state['id']: state for state in run.tasks}
++    assert model.calls == 2  # One attempt for each independent first-stage specialist.
++    assert states['analyze_dependencies']['status'] == 'FAILED'
++    assert states['retrieve_evidence']['status'] == 'FAILED'
++    assert 'ENTITY_NOT_FOUND' in states['retrieve_evidence']['error']
++    assert states['verify_findings']['status'] == 'BLOCKED'
++    assert len([e for e in store.events if e['kind'] == 'SPECIALIST_TOOL' and e['status'] == 'FAILED']) == 2

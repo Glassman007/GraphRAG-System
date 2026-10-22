@@ -1,0 +1,103 @@
+{
+  "package": "A3",
+  "scope": {
+    "graph": "asteria_company_brain_v1",
+    "tenant": "asteria"
+  },
+  "time_utc": "2026-10-22T00:15:37.360702+00:00",
+  "verdict": "A3_LIVE_PASS",
+  "checks": [
+    {
+      "name": "Canonical Asteria incident",
+      "status": "PASS",
+      "entity_id": "INC-AST-ROUTE-OUTAGE"
+    },
+    {
+      "name": "Existing incident DAG and pause boundary",
+      "status": "PASS",
+      "run_status": "PAUSED",
+      "tasks": {
+        "analyze_dependencies": "COMPLETED",
+        "retrieve_evidence": "COMPLETED",
+        "verify_findings": "PENDING",
+        "propose_remediation": "PENDING"
+      }
+    },
+    {
+      "name": "Assigned deterministic specialist tasks",
+      "status": "PASS"
+    },
+    {
+      "name": "Verifier and remediation not started",
+      "status": "PASS"
+    },
+    {
+      "name": "Real Supervisor graph tool dispatch",
+      "status": "PASS",
+      "tool_calls": [
+        {
+          "name": "incident_context",
+          "entity_id": "INC-AST-ROUTE-OUTAGE",
+          "status": "READ_OK",
+          "error": ""
+        },
+        {
+          "name": "dependency_impact",
+          "entity_id": "SYS-AST-ROUTE-API",
+          "status": "READ_OK",
+          "error": ""
+        },
+        {
+          "name": "incident_context",
+          "entity_id": "INC-AST-ROUTE-OUTAGE",
+          "status": "READ_OK",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "name": "Canonical evidence and uncertainty retained",
+      "status": "PASS",
+      "findings": {
+        "analyze_dependencies": {
+          "valid": true,
+          "citations_count": 16,
+          "known_evidence_cited": [
+            "EVD-AST-0003",
+            "EVD-AST-0004",
+            "EVD-AST-0005"
+          ],
+          "confidence": "uncertain",
+          "knowledge_gap_count": 2
+        },
+        "retrieve_evidence": {
+          "valid": true,
+          "citations_count": 15,
+          "known_evidence_cited": [
+            "EVD-AST-0003",
+            "EVD-AST-0004",
+            "EVD-AST-0005"
+          ],
+          "confidence": "uncertain",
+          "knowledge_gap_count": 2
+        }
+      }
+    },
+    {
+      "name": "Persistable tool and skill events produced in memory",
+      "status": "PASS",
+      "skill_events": 2,
+      "tool_events": 3
+    },
+    {
+      "name": "No model calls or persistent supervisor/graph writes",
+      "status": "PASS",
+      "provider_attempts": 0,
+      "tokens": 0,
+      "in_memory_runs": 1,
+      "business_graph_writes": 0
+    }
+  ],
+  "provider_network_enabled": false,
+  "persistent_supervisor_store": false
+}

@@ -1,0 +1,321 @@
+--- a/backend/app/agent_runtime/supervisor.py
++++ b/backend/app/agent_runtime/supervisor.py
+@@ -325,8 +325,7 @@
+ 
+ def _safe_tool_id(value: Any) -> str:
+     """Log only canonical-looking identifiers, never arbitrary model arguments."""
+-    if isinstance(value, str) and (value in {'ENTITY_NOT_FOUND', 'NOT_AN_INCIDENT'} or
+-                                   re.fullmatch(r'[A-Z][A-Z0-9]{1,18}(?:-[A-Z0-9]{2,50}){2,}', value)):
++    if isinstance(value, str) and re.fullmatch(r'[A-Za-z0-9_:-]{2,150}', value):
+         return value
+     return '[redacted]'
+ 
+@@ -342,10 +341,7 @@
+     systems = packet.get('affected_systems') or []
+     impacted = sorted({record.get('entity_id') for record in impacts
+                        if record.get('entity_id') and snapshot.node(record['entity_id'])})
+-    event_ids = [event['id'] for event in sorted(events, key=lambda e: (str(e.get('occurred_at') or ''),
+-                                                                       str(e.get('id') or '')))
+-                 if event.get('id') in snapshot.nodes]
+-    cited = [source, *evidence[:8], *claims[:4], *event_ids[:5]]
++    cited = [source, *evidence[:8], *claims[:4]]
+     gaps = ['Graph links and event timing do not establish a complete causal chain; independent corroboration is required.']
+     omissions = {k: v for k, v in (packet.get('omitted_counts') or {}).items() if v}
+     if omissions:
+@@ -355,28 +351,108 @@
+         cited.extend(impacted[:10])
+         summary = (f'Graph records for incident {source} contain {len(systems)} linked system(s) '
+                    f'and {len(impacted)} distinct reverse-DEPENDS_ON reachable system(s) '
+-                   f'within bounded traversal; sample reachable IDs: {", ".join(impacted[:5]) or "none"}. '
+-                   'These are possible dependencies, not confirmed outage impact.')
++                   f'within bounded traversal; these are possible dependencies, not confirmed outage impact.')
+         if not systems:
+             gaps.append('No directly linked System found; dependency blast radius could not be established.')
+     elif capability == 'evidence_retrieval':
+         summary = (f'Incident {source} has {len(evidence)} visibly included Evidence ID(s), '
+                    f'{len(claims)} Claim ID(s), and {len(events)} event(s) in a bounded packet; '
+-                   f'event IDs in recorded time order: {", ".join(event_ids[:5]) or "none"}; '
+-                   'recorded associations require independent provenance verification.')
++                   'their recorded associations require independent provenance verification.')
+         if not evidence:
+             gaps.append('No citeable Evidence entities were included in the bounded packet.')
+     else:
+         summary = (f'Read-only incident investigation of {source}: bounded graph packet includes '
+                    f'{len(events)} event(s), {len(claims)} claim(s), and {len(evidence)} evidence record(s). '
+-                   f'Recorded time-ordered event IDs: {", ".join(event_ids[:5]) or "none"}. '
+-                   'Treat schema and CPU claims as hypotheses or observations, not a proven root cause.')
++                   'Treat recorded schema and CPU observations as hypotheses or observations, not a proven root cause.')
+     cited = list(dict.fromkeys(entity_id for entity_id in cited if entity_id in snapshot.nodes))[:20]
+     finding = SpecialistFinding(summary=summary, citations=cited, knowledge_gaps=gaps[:10],
+                                 confidence='uncertain' if evidence else 'insufficient',
+                                 assertions=[], conflicts_with=[], risk='low',
+                                 requires_human_review=not bool(evidence))
+     return finding.model_dump()
++
++
++def _mvp_verification_finding(snapshot: Any, source: str, parents: list[dict],
++                              observed_ids: set[str]) -> dict:
++    """Limited graph-evidence check, NOT definitive source/causal verification."""
++    if {p['task_id'] for p in parents} != {'analyze_dependencies', 'retrieve_evidence'}:
++        raise ValueError('MVP_VERIFIER_PREREQUISITES_MISSING')
++    citations = set()
++    for parent in parents:
++        finding = SpecialistFinding.model_validate(parent['result'])
++        if finding.confidence == 'insufficient' or not finding.citations:
++            raise ValueError('MVP_VERIFIER_INSUFFICIENT_PREDECESSOR')
++        citations.update(finding.citations)
++    if source not in observed_ids:
++        raise ValueError('MVP_VERIFIER_TARGET_NOT_OBSERVED')
++    if not citations.issubset(snapshot.nodes.keys()):
++        raise ValueError('MVP_VERIFIER_INVALID_CITATION')
++    directly_observed = sorted(citations & observed_ids)
++    evidence = [cid for cid in directly_observed if has_label(snapshot.node(cid), 'Evidence')]
++    if not evidence:
++        raise ValueError('MVP_VERIFIER_NO_DIRECT_EVIDENCE')
++    return SpecialistFinding(
++        summary=(f'Independent graph identity and incident-link check: verified {len(evidence)} '
++                 f'incident-linked Evidence record(s) and {len(directly_observed)} direct '
++                 'canonical citations. This verifies recorded entities/links, not claim truth or causation.'),
++        citations=directly_observed[:20],
++        knowledge_gaps=[
++            'Recorded provenance and links do not independently prove a complete outage causal chain.',
++            'Obtain missing primary logs, retry/load timing, and a reviewed postmortem before asserting root cause.'
++        ],
++        confidence='uncertain', assertions=[], risk='low', requires_human_review=True
++    ).model_dump()
++
++
++def _mvp_proposal_finding(snapshot: Any, source: str, parents: list[dict]) -> dict:
++    """Read-only proposal, consuming only the prior verifier's structured finding."""
++    if len(parents) != 1 or parents[0]['task_id'] != 'verify_findings':
++        raise ValueError('MVP_PROPOSAL_REQUIRES_VERIFIER')
++    verified = SpecialistFinding.model_validate(parents[0]['result'])
++    if verified.confidence == 'insufficient' or not verified.citations:
++        raise ValueError('MVP_PROPOSAL_UNVERIFIED_INPUT')
++    if any(snapshot.node(cid) is None for cid in verified.citations):
++        raise ValueError('MVP_PROPOSAL_STALE_CITATION')
++    # This is a task proposal, never an assertion that investigation or remediation occurred.
++    steps = (
++        'Proposed actions only, NOT executed: (1) collect missing incident-specific primary logs '
++        'and deployment/configuration snapshots; (2) compare the schema/422 error chronology '
++        'with retry and CPU timelines; (3) investigate bounded dependency paths and conflicting '
++        'evidence; (4) prepare change/rollback options with owner approval and pre-change '
++        'validation, and do not deploy or modify any business system.'
++    )
++    return SpecialistFinding(
++        summary=f'Read-only investigation/remediation proposal for {source}: {steps}',
++        citations=verified.citations[:20],
++        knowledge_gaps=list(dict.fromkeys([*verified.knowledge_gaps,
++              'Human authorization, impact validation and rollback readiness are prerequisites to any future execution.']))[:10],
++        confidence='uncertain', assertions=[], risk='low', requires_human_review=True
++    ).model_dump()
++
++
++def _mvp_incident_report(source: str, states: dict[str, TaskState], snapshot: Any) -> tuple[str, list[str], list[str]]:
++    """Deterministic report for a complete scoped DAG. No invented causal claims."""
++    expected = ('analyze_dependencies', 'retrieve_evidence', 'verify_findings', 'propose_remediation')
++    if not all(k in states and states[k].status == 'COMPLETED' and states[k].result for k in expected):
++        raise ValueError('MVP_REPORT_INCOMPLETE_DAG')
++    citations = list(dict.fromkeys(cid for key in expected for cid in states[key].result['citations']
++                                   if snapshot.node(cid) is not None))[:20]
++    if source not in citations or not any(has_label(snapshot.node(cid), 'Evidence') for cid in citations):
++        raise ValueError('MVP_REPORT_MISSING_EVIDENCE')
++    gaps = list(dict.fromkeys(gap for key in expected
++                              for gap in states[key].result['knowledge_gaps']))[:15]
++    cite = ', '.join(citations)
++    report = ('Read-only Asteria investigation — ' + source + '\n\n'
++              'OBSERVED GRAPH RECORDS (not causal proof):\n'
++              + states['retrieve_evidence'].result['summary'] + '\n'
++              + states['analyze_dependencies'].result['summary'] + '\n\n'
++              'INDEPENDENT CHECK (limited to entity and link existence):\n'
++              + states['verify_findings'].result['summary'] + '\n\n'
++              'READ-ONLY PROPOSAL (nothing executed):\n'
++              + states['propose_remediation'].result['summary'] + '\n\n'
++              'CITATIONS: ' + cite + '\n\n'
++              'UNRESOLVED EVIDENCE GAPS / HUMAN REVIEW:\n- ' + '\n- '.join(gaps))
++    return report, citations, gaps
+ 
+ 
+ class Supervisor:
+@@ -614,7 +690,37 @@
+                             packet.setdefault('omitted_counts', {})['systems_not_traversed'] = len(systems) - 3
+                     finding = _skill_finding(snapshot, source, state.capability, packet, visible, impacts)
+                     emit('SKILL_RESULT', f'{state.capability}: deterministic result from observed Asteria graph; '
+-                         f'{len(finding["citations"])} existing IDs; provider_calls=0 tokens=0',
++                         f'{len(finding["citations"])} existing IDs; provider_calls=0',
++                         task_id=state.id, agent_id=agent.id)
++                    return finding
++                # Fast-track known-incident MVP: existing DAG runs to a read-only report
++                # without four independent Groq calls. This is NOT a formal persisted
++                # HandoffService contract (that remains a later integration gate).
++                if (source and state.capability in {'verification', 'remediation_proposal'}
++                        and {'READ_GRAPH', 'READ_EVIDENCE'}.issubset(self.permissions)
++                        and _incident_skill_covered(self.tools.snapshot_factory(), source)):
++                    snapshot = self.tools.snapshot_factory()
++                    if state.capability == 'verification':
++                        if 'incident_context' not in agent.tools:
++                            raise ValueError('MVP_VERIFIER_TOOL_NOT_AUTHORIZED')
++                        observation = self.tools.execute('incident_context', {'entity_id': source})
++                        if observation.get('error'):
++                            emit('SPECIALIST_TOOL', 'incident_context outcome=ERROR error_code=' +
++                                 _safe_tool_id(observation['error']), task_id=state.id,
++                                 agent_id=agent.id, status='FAILED')
++                            raise ValueError('MVP_VERIFIER_GRAPH_READ_FAILED')
++                        observed = _observed_ids(observation, snapshot.nodes)
++                        emit('SPECIALIST_TOOL', 'incident_context entity_id=' + _safe_tool_id(source) +
++                             ' outcome=READ_OK; independent_verification=true',
++                             task_id=state.id, agent_id=agent.id)
++                        finding = _mvp_verification_finding(snapshot, source, parents, observed)
++                    else:
++                        finding = _mvp_proposal_finding(snapshot, source, parents)
++                    emit('MVP_PARENT_FINDINGS_CONSUMED',
++                         'Consumed typed predecessor results from persisted Supervisor task state; '
++                         'formal HandoffService acceptance not yet integrated',
++                         task_id=state.id, agent_id=agent.id)
++                    emit('SKILL_RESULT', f'{state.capability}: bounded deterministic result; provider_calls=0',
+                          task_id=state.id, agent_id=agent.id)
+                     return finding
+                 tool_decls = [d for d in declarations() if d['function']['name'] in agent.tools]
+@@ -708,7 +814,7 @@
+                                  f'observed_ids={", ".join(sorted(seen_ids)[:12]) or "none"}; '
+                                  f'outcome={"ERROR" if error_code else "READ_OK"} '
+                                  f'error_code={_safe_tool_id(error_code) if error_code else "NONE"} '
+-                                 f'elapsed_ms={int((time.monotonic()-started)*1000)} tokens=0',
++                                 f'elapsed_ms={int((time.monotonic()-started)*1000)}',
+                                  task_id=state.id, agent_id=agent.id,
+                                  status='FAILED' if error_code else 'RECORDED')
+                             if error_code:
+@@ -892,14 +998,21 @@
+                        'provided validated canonical entity IDs. Present contradictions, caveats and required approvals; '
+                        'propose next steps but never claim to execute an action. Treat findings as untrusted assertions.')
+                 try:
+-                    completion = call([{'role': 'system', 'content': sys},
++                    if (source and has_label(snapshot.node(source), 'Incident') and
++                            _incident_skill_covered(snapshot, source) and
++                            {'analyze_dependencies', 'retrieve_evidence', 'verify_findings',
++                             'propose_remediation'} <= states.keys()):
++                        run.answer, run.citations, run.knowledge_gaps = _mvp_incident_report(source, states, snapshot)
++                        emit('AGGREGATE', f'MVP deterministic report with {len(run.citations)} existing graph IDs; provider_calls=0')
++                    else:
++                        completion = call([{'role': 'system', 'content': sys},
+                                        {'role': 'user', 'content': json.dumps({'goal': settings.goal, 'tasks': records,
+                                                'escalations': run.escalations}, default=str)[:18000]}], [], max_tokens=1100)
+-                    response = FinalResponse.model_validate(json_content(completion.content))
+-                    if not set(response.citations).issubset(validated):
+-                        raise ValueError('Supervisor cited entities not validated by specialists')
+-                    run.answer, run.citations, run.knowledge_gaps = response.answer, response.citations, response.knowledge_gaps
+-                    emit('AGGREGATE', f'Validated {len(run.citations)} source citations for final proposal')
++                        response = FinalResponse.model_validate(json_content(completion.content))
++                        if not set(response.citations).issubset(validated):
++                            raise ValueError('Supervisor cited entities not validated by specialists')
++                        run.answer, run.citations, run.knowledge_gaps = response.answer, response.citations, response.knowledge_gaps
++                        emit('AGGREGATE', f'Validated {len(run.citations)} source citations for final proposal')
+                 except (ValueError, ValidationError, TypeError, RuntimeError, ProviderError, TimeoutError, KeyError) as exc:
+                     run.escalations.append({'reason': 'AGGREGATION_FAILED', 'task_ids': [], 'detail': type(exc).__name__})
+                     emit('AGGREGATION_FAILED', type(exc).__name__, status='FAILED')
+--- /dev/null
++++ b/backend/tests/test_asteria_mvp_pipeline.py
+@@ -0,0 +1,103 @@
++"""Fast-track MVP: bounded Asteria incident evidence -> verifier -> proposal -> report."""
++from collections import Counter
++
++from backend.tests.test_asteria_a3_specialist_dispatch import setup, settings, INCIDENT, GOAL
++
++
++def test_full_asteria_mvp_pipeline_without_provider_or_business_writes():
++    supervisor, tools, provider, store = setup()
++    report = supervisor.run(settings(), subject='asteria-mvp')
++    states = {task['id']: task for task in report.tasks}
++    assert report.status == 'NEEDS_REVIEW'  # Causation explicitly NOT proven.
++    assert report.error is None
++    assert all(state['status'] == 'COMPLETED' for state in states.values())
++    assert len(states) == 4
++    assert provider.attempts == 0
++    assert report.tokens_used == 0
++    assert 'READ-ONLY PROPOSAL' in report.answer
++    assert 'NOT executed' in report.answer or 'nothing executed' in report.answer
++    assert 'not causal proof' in report.answer.lower()
++    assert INCIDENT in report.citations
++    assert 'EVD-AST-0003' in report.citations
++    assert all(tools.snapshot_factory().node(cid) for cid in report.citations)
++    assert report.knowledge_gaps
++    assert store.result['answer'] == report.answer
++    assert store.result['status'] == report.status
++    assert Counter(name for name, _ in tools.calls) == Counter({'incident_context': 3, 'dependency_impact': 1})
++    assert any(ev['kind'] == 'MVP_PARENT_FINDINGS_CONSUMED' and ev['task_id'] == 'verify_findings' for ev in store.events)
++    assert any(ev['kind'] == 'MVP_PARENT_FINDINGS_CONSUMED' and ev['task_id'] == 'propose_remediation' for ev in store.events)
++    assert any(ev['kind'] == 'AGGREGATE' and 'provider_calls=0' in ev['summary'] for ev in store.events)
++    assert not any(ev['kind'] == 'ERROR' for ev in store.events)
++
++
++def test_mvp_does_not_fake_success_if_independent_read_fails():
++    sup, tools, provider, store = setup(bad_tool='incident_context')
++    report = sup.run(settings(), subject='asteria-mvp-negative')
++    states = {task['id']: task for task in report.tasks}
++    assert states['retrieve_evidence']['status'] == 'FAILED'
++    assert states['verify_findings']['status'] == 'BLOCKED'
++    assert states['propose_remediation']['status'] == 'BLOCKED'
++    assert report.status != 'COMPLETED'
++    assert not report.answer
++    assert provider.attempts == 0
++
++
++def test_mvp_report_refuses_nonexistent_citations():
++    from backend.app.agent_runtime.supervisor import _mvp_incident_report, TaskState, SpecialistFinding
++    from backend.tests.test_agent_runtime_evidence_grounding import asteria_fixture_graph
++    import pytest
++    def state(key, cites):
++        finding = SpecialistFinding(summary='Validated bounded read-only facts', citations=cites, confidence='uncertain')
++        return TaskState(id=key, objective='Recorded incident evidence review', capability='verification',
++                         depends_on=[], status='COMPLETED', result=finding.model_dump())
++    states = {key: state(key, [INCIDENT, 'EVD-AST-FAKE']) for key in
++              ('analyze_dependencies', 'retrieve_evidence', 'verify_findings', 'propose_remediation')}
++    with pytest.raises(ValueError, match='MVP_REPORT_MISSING_EVIDENCE'):
++        _mvp_incident_report(INCIDENT, states, asteria_fixture_graph())
++
++
++def test_independent_verifier_read_failure_blocks_proposal_and_aggregation():
++    from backend.tests.test_asteria_a3_specialist_dispatch import TrackingTools, DeniedProvider
++    from backend.tests.test_agent_runtime_evidence_grounding import asteria_fixture_graph
++    from backend.tests.test_supervisor_component2 import Store
++    from backend.app.agent_runtime.supervisor import Supervisor
++
++    class FailVerifierRead(TrackingTools):
++        def __init__(self, snapshot):
++            super().__init__(snapshot)
++            self.incident_reads = 0
++        def execute(self, name, args):
++            if name == 'incident_context':
++                self.incident_reads += 1
++                if self.incident_reads == 3:
++                    self.calls.append((name, dict(args)))
++                    return {'error': 'ENTITY_NOT_FOUND'}
++            return super().execute(name, args)
++
++    tools = FailVerifierRead(asteria_fixture_graph())
++    provider, store = DeniedProvider(), Store()
++    sup = Supervisor(provider=provider, tools=tools, store=store, tenant='asteria',
++                     permissions=frozenset({'READ_GRAPH', 'READ_EVIDENCE'}))
++    result = sup.run(settings(), subject='asteria-verifier-fails')
++    state = {row['id']: row for row in result.tasks}
++    assert state['analyze_dependencies']['status'] == 'COMPLETED'
++    assert state['retrieve_evidence']['status'] == 'COMPLETED'
++    assert state['verify_findings']['status'] == 'FAILED'
++    assert state['propose_remediation']['status'] == 'BLOCKED'
++    assert not result.answer
++    assert provider.attempts == 0
++    assert any(e['kind'] == 'SPECIALIST_TOOL' and e['status'] == 'FAILED' for e in store.events)
++
++
++def test_verifier_rejects_fabricated_predecessor_id():
++    import pytest
++    from backend.app.agent_runtime.supervisor import _mvp_verification_finding, SpecialistFinding
++    from backend.tests.test_agent_runtime_evidence_grounding import asteria_fixture_graph
++    snapshot = asteria_fixture_graph()
++    parents = []
++    for key in ('analyze_dependencies', 'retrieve_evidence'):
++        finding = SpecialistFinding(summary='Deterministically retrieved incident evidence',
++                                    citations=[INCIDENT, 'EVD-AST-FAKE'], confidence='uncertain')
++        parents.append({'task_id': key, 'result': finding.model_dump()})
++    with pytest.raises(ValueError, match='MVP_VERIFIER_INVALID_CITATION'):
++        _mvp_verification_finding(snapshot, INCIDENT, parents, {INCIDENT, 'EVD-AST-0003'})
